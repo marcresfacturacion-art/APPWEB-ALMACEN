@@ -464,9 +464,12 @@ function viewFicha(){
   let actions="";
   if(!S.canWrite) actions=`<p class="note">Tienes acceso de solo lectura: puedes consultar el stock pero no modificarlo.</p>`;
   else if(p.prestamo) actions=`<div class="stock">
-      <span class="label">Herramienta o maquinaria de préstamo</span>
+      <span class="label">Préstamo</span>
       <span class="note">Para: <b>${esc(destLabel())}</b> · <button class="linkbtn" data-dchange>Cambiar</button></span>
-      <button class="btn primary block" id="lend" ${S.busy||p.cantidad<1?"disabled":""}>${p.cantidad<1?"No queda ninguna disponible":"Llevármela"}</button></div>`;
+      <div class="twobtn">
+        <button class="btn out" id="lend" ${S.busy||p.cantidad<1?"disabled":""}>Llevar</button>
+        <button class="btn in" id="giveback" ${S.busy||!allLoans.length?"disabled":""}>Devolver</button>
+      </div>${p.cantidad<1?'<span class="note">No queda ninguna en el almacén.</span>':""}</div>`;
   else actions=`<div class="stock">
       <span class="label">Cantidad a mover</span>
       <span class="note">Para: <b>${esc(destLabel())}</b> · <button class="linkbtn" data-dchange>Cambiar</button></span>
@@ -489,9 +492,9 @@ function viewFicha(){
       <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">Ver en el mapa</span></div>
     </div>
     ${actions}
-    ${p.prestamo&&loans.length?`<div><div class="label" style="margin-bottom:6px">${S.adminOk?"Quién la tiene":"La tienes tú"}</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
+    ${p.prestamo&&S.adminOk&&loans.length?`<div><div class="label" style="margin-bottom:6px">Quién la tiene</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
     ${S.adminOk?`<div><div class="label" style="margin-bottom:6px">Últimos movimientos</div><div class="log" id="log"></div></div>`:""}
-    ${S.canWrite&&!S.sheet?(p.prestamo&&!S.adminOk?`<button class="btn block" id="edit">Editar producto</button>`:`<div class="twobtn"><button class="btn" id="toggleLoan" ${S.busy?"disabled":""}>${p.prestamo?"Quitar de préstamos":"Llevármela"}</button><button class="btn" id="edit">Editar producto</button></div>`):''}
+    ${S.canWrite&&!S.sheet?(p.prestamo&&!S.adminOk?`<button class="btn block" id="edit">Editar producto</button>`:`<div class="twobtn"><button class="btn" id="toggleLoan" ${S.busy?"disabled":""}>${p.prestamo?"Quitar de préstamos":"Llevar"}</button><button class="btn" id="edit">Editar producto</button></div>`):''}
   </section>`;
   renderLog();
   bindLoanButtons();
@@ -500,7 +503,12 @@ function viewFicha(){
   app.querySelectorAll("[data-dchange]").forEach(b=>b.onclick=changeDest);
   $("#edit").onclick=()=>go("editar",{editCode:p.codigo});
   const tl=$("#toggleLoan"); if(tl) tl.onclick=()=>p.prestamo?toggleLoan(p):takeNew(p);
-  if(p.prestamo){ const l=$("#lend"); if(l) l.onclick=()=>lend(p.codigo); return; }
+  if(p.prestamo){
+    const l=$("#lend"); if(l) l.onclick=()=>lend(p.codigo);
+    /* Devolver: first what this technician took, otherwise the oldest one out (it records who brought it back). */
+    const g=$("#giveback"); if(g) g.onclick=()=>{ const mine=allLoans.find(x=>S.tecnico&&x.tecnicoId===S.tecnico.id); const l2=mine||allLoans[0]; if(l2) returnLoan(l2); };
+    return;
+  }
   const amt=$("#amt");
   const getAmt=()=>Math.max(1,Math.floor(Number(amt.value)||1));
   amt.onchange=()=>{S.amount=getAmt(); amt.value=S.amount};
@@ -523,11 +531,10 @@ async function toggleLoan(p){
   finally{ S.busy=false; if(S.view==="ficha") render(); }
 }
 
-/* «Llevármela» on a normal product: it becomes a loan item and is lent to whoever pressed it. */
+/* «Llevar» on a normal product: it becomes a loan item and is lent to whoever pressed it. */
 async function takeNew(p){
   if(S.busy||!S.tecnico) return;
   if(p.cantidad<1){ toast("No queda ninguna disponible."); return; }
-  if(!confirm(`¿Te llevas «${p.nombre}» como préstamo? Tendrás que devolverla.`)) return;
   S.busy=true;
   try{ await api("api_toggleLoan", S.tecnico.id, p.codigo, true); p.prestamo=true; }
   catch(err){ S.busy=false; handleWriteError(err); if(S.view==="ficha") render(); return; }
