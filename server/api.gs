@@ -18,7 +18,7 @@ function doPost(e) {
     var req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     var fns = {
       api_bootstrap: fastBootstrap_, api_poll: fastPoll_, api_techs: api_techs,
-      api_productMoves: api_productMoves, api_move: api_move, api_lend: api_lend, api_return: api_return,
+      api_productMoves: productMoves_, api_move: api_move, api_lend: api_lend, api_return: api_return,
       api_saveProduct: api_saveProduct, api_deleteProduct: api_deleteProduct, api_toggleLoan: api_toggleLoan,
       api_addClient: api_addClient, api_uploadPhoto: api_uploadPhoto, api_adminSetup: adminSetup_,
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
@@ -49,6 +49,11 @@ function fastBootstrap_() {
     return { products: inv.products, loans: inv.loans, techs: cachedTechs_(), clientes: cli.clientes, proveedores: cli.proveedores,
       url: ScriptApp.getService().getUrl(), hasPassword: hasPassword_() };
   });
+}
+
+/** Movimientos de un producto: solo con la contraseña de acceso restringido. */
+function productMoves_(code, token) {
+  return guard_(function () { admin_(token); return api_productMoves(code); });
 }
 
 /* ---------- Contraseña ---------- */

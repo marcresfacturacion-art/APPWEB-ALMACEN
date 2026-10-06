@@ -112,6 +112,20 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 .qrcard canvas,.qrcard img{width:100%;max-width:150px;height:auto}
 .qrcard b{font-family:var(--f-display);font-size:16px;line-height:1.1}
 .qrcard .code{color:#444}
+.qrcard .pick{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.qrcard .pick input{width:20px;height:20px}
+.qrprint{display:grid;gap:8px}
+#printsheet{display:none}
+@media print{
+  @page{size:A4;margin:8mm}
+  html,body{background:#fff!important;margin:0!important;padding:0!important}
+  body>*:not(#printsheet){display:none!important}
+  #printsheet{display:grid!important;grid-template-columns:repeat(4,var(--lbl));gap:3mm;justify-content:center}
+  #printsheet .lbl{width:var(--lbl);height:var(--lbl);box-sizing:border-box;border:.2mm dashed #999;padding:2.5mm 1.5mm 1.5mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between;break-inside:avoid;page-break-inside:avoid;color:#000;font-family:Arial,sans-serif;text-align:center;overflow:hidden}
+  #printsheet .lbl img{width:calc(var(--lbl) * .60);height:calc(var(--lbl) * .60);flex:none;image-rendering:pixelated}
+  #printsheet .lbl b{font-size:calc(var(--lbl) * .062);line-height:1.15;max-height:2.3em;flex:none;margin-top:.6mm;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;width:100%}
+  #printsheet .lbl span{flex:none;font-size:calc(var(--lbl) * .09);font-weight:700;font-family:monospace}
+}
 .qrcard button{border:1px solid #bbb;background:#f4f4f4;color:#111;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer}
 .groups{display:flex;flex-direction:column;gap:8px}
 .group{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
@@ -276,12 +290,12 @@ const locKey = p => p.prestamo ? "prestamos" : (SHELVES[p.ubicacion] ? p.ubicaci
 const locName = k => k==="prestamos" ? LOAN_LOC.name : k==="none" ? NO_LOC.name : SHELVES[k].name;
 const isLow = p => Number(p.minimo)>0 && p.cantidad < Number(p.minimo);
 const IDLE_MS = 15*60*1000;
-const TIPOS = {salida:"Sacado", entrada:"Ingresado", prestamo:"Préstamo", devolucion:"Devuelto", recuento:"Recuento", alta:"Alta", ajuste:"Ajuste", edicion:"Cambio", baja:"Baja"};
+const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolucion:"Devuelto", recuento:"Recuento", alta:"Alta", ajuste:"Ajuste", edicion:"Cambio", baja:"Baja"};
 
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -313,11 +327,11 @@ function render(){
   $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", ficha:"Ficha", mapa:"Mapa del almacén", editar:S.editCode?"Editar producto":"Nuevo producto", admin:"Restringido", prestamos:"Préstamos", destino:"¿Para qué es?"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", ficha:"Ficha", mapa:"Mapa del almacén", editar:S.editCode?"Editar producto":"Nuevo producto", admin:"Restringido", destino:"¿Para qué es?"};
   $("#title").textContent = titles[S.view];
   VIEWS[S.view]();
 }
-const VIEWS={login:viewLogin, buscar:viewSearch, ficha:viewFicha, mapa:viewMap, editar:viewEdit, admin:viewAdmin, prestamos:viewLoans, destino:viewDest};
+const VIEWS={login:viewLogin, buscar:viewSearch, ficha:viewFicha, mapa:viewMap, editar:viewEdit, admin:viewAdmin, destino:viewDest};
 
 const LOGIN_MIN=3;
 function techMatches(q){
@@ -408,9 +422,9 @@ function viewSearch(){
          return `<details class="group" data-g="${k}" ${S.openGroups.has(k)?"open":""}><summary><span class="dot" style="background:${v.color}"></span><span class="gname">${v.name}</span><span class="gcount">${items.length}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary><div class="list">${items.map(productRow).join("")}</div></details>`;
        }).join("")}</div>`}
     ${canRestricted()&&lowList().length?`<button class="alert" id="tolow">⚠ ${lowList().length} producto${lowList().length===1?"":"s"} por debajo del mínimo</button>`:""}
+    ${myLoans().length?`<div><div class="label" style="margin-bottom:6px">Lo que tienes prestado</div><div class="list">${myLoans().map(l=>`<div class="loan"><span class="txt"><div class="name">${esc(l.producto)}</div><div class="sub">${since(l.salida)}</div></span><button class="btn" data-ret="${esc(l.id)}">Devolver</button></div>`).join("")}</div></div>`:""}
     <div class="links">
       <button class="btn" id="tomap">Mapa</button>
-      <button class="btn" id="toloans">Préstamos${S.loans.length?` · ${S.loans.length} fuera`:""}</button>
     </div>
     ${canRestricted()?`<button class="btn block" id="tohist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Acceso restringido</button>`:""}`;
   const qi=$("#q");
@@ -418,9 +432,9 @@ function viewSearch(){
   qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
   $("#scan").onclick=()=>{ S.scanFor=null; openScanner(); };
   $("#tomap").onclick=()=>go("mapa",{mapSel:null});
+  bindLoanButtons();
   const th=$("#tohist"); if(th) th.onclick=()=>{ S.adminWant=null; go("admin"); };
   const tl=$("#tolow"); if(tl) tl.onclick=()=>{ S.adminWant="ped"; if(S.adminOk) S.adminTab="ped"; go("admin"); };
-  $("#toloans").onclick=()=>go("prestamos");
   const dc=$("#d_change"); if(dc) dc.onclick=changeDest;
   const tn=$("#tonew"); if(tn) tn.onclick=()=>go("editar",{editCode:null});
   app.querySelectorAll("details.group").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.openGroups.add(d.dataset.g):S.openGroups.delete(d.dataset.g); }));
@@ -432,7 +446,9 @@ function viewFicha(){
   const sh = locOf(p);
   const img = imgFor(p);
   const low = isLow(p);
-  const loans = S.loans.filter(l=>l.codigo===p.codigo).sort((a,b)=>a.salida-b.salida);
+  const allLoans = S.loans.filter(l=>l.codigo===p.codigo).sort((a,b)=>a.salida-b.salida);
+  /* Who has what is only for Xavi (with the password); a technician only sees what they took. */
+  const loans = S.adminOk ? allLoans : allLoans.filter(l=>S.tecnico&&l.tecnicoId===S.tecnico.id);
   let actions="";
   if(!S.canWrite) actions=`<p class="note">Tienes acceso de solo lectura: puedes consultar el stock pero no modificarlo.</p>`;
   else if(p.prestamo) actions=`<div class="stock">
@@ -449,7 +465,7 @@ function viewFicha(){
       </div>
       <div class="twobtn">
         <button class="btn out" id="out" ${S.busy?"disabled":""}>− Sacar</button>
-        <button class="btn in" id="in" ${S.busy?"disabled":""}>+ Ingresar</button>
+        <button class="btn in" id="in" ${S.busy?"disabled":""}>+ Añadir</button>
       </div></div>`;
   app.innerHTML = `<section class="ficha" style="display:flex;flex-direction:column;gap:14px">
     <div class="photo">${img?`<img src="${img}" alt="Foto de ${esc(p.nombre)}">`:esc(initials(p.nombre))}</div>
@@ -457,13 +473,13 @@ function viewFicha(){
     ${p.descripcion?`<p>${esc(p.descripcion)}</p>`:""}
     ${p.proveedor?`<p class="note" style="margin:0">Proveedor: <b>${esc(p.proveedor)}</b></p>`:""}
     <div class="facts">
-      <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
+      <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&S.adminOk&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
       <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">Ver en el mapa</span></div>
     </div>
     ${actions}
-    ${p.prestamo&&loans.length?`<div><div class="label" style="margin-bottom:6px">Quién la tiene</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
-    <div><div class="label" style="margin-bottom:6px">Últimos movimientos</div><div class="log" id="log"></div></div>
-    ${S.canWrite&&!S.sheet?`<div class="twobtn"><button class="btn" id="toggleLoan" ${S.busy?"disabled":""}>${p.prestamo?"Quitar de préstamos":"Préstamo"}</button><button class="btn" id="edit">Editar producto</button></div>`:''}
+    ${p.prestamo&&loans.length?`<div><div class="label" style="margin-bottom:6px">${S.adminOk?"Quién la tiene":"La tienes tú"}</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
+    ${S.adminOk?`<div><div class="label" style="margin-bottom:6px">Últimos movimientos</div><div class="log" id="log"></div></div>`:""}
+    ${S.canWrite&&!S.sheet?(p.prestamo&&!S.adminOk?`<button class="btn block" id="edit">Editar producto</button>`:`<div class="twobtn"><button class="btn" id="toggleLoan" ${S.busy?"disabled":""}>${p.prestamo?"Quitar de préstamos":"Llevármela"}</button><button class="btn" id="edit">Editar producto</button></div>`):''}
   </section>`;
   renderLog();
   bindLoanButtons();
@@ -471,7 +487,7 @@ function viewFicha(){
   if(!S.canWrite) return;
   app.querySelectorAll("[data-dchange]").forEach(b=>b.onclick=changeDest);
   $("#edit").onclick=()=>go("editar",{editCode:p.codigo});
-  $("#toggleLoan").onclick=()=>toggleLoan(p);
+  const tl=$("#toggleLoan"); if(tl) tl.onclick=()=>p.prestamo?toggleLoan(p):takeNew(p);
   if(p.prestamo){ const l=$("#lend"); if(l) l.onclick=()=>lend(p.codigo); return; }
   const amt=$("#amt");
   const getAmt=()=>Math.max(1,Math.floor(Number(amt.value)||1));
@@ -493,6 +509,17 @@ async function toggleLoan(p){
     toast(on?`${p.nombre} está ahora en Préstamos.`:`${p.nombre} vuelve a ${(SHELVES[p.ubicacion]||NO_LOC).name.toLowerCase()}.`);
   }catch(err){ if(err&&err.code==="lent") toast("Antes de quitarlo de préstamos tienen que devolverlo."); else handleWriteError(err); }
   finally{ S.busy=false; if(S.view==="ficha") render(); }
+}
+
+/* «Llevármela» on a normal product: it becomes a loan item and is lent to whoever pressed it. */
+async function takeNew(p){
+  if(S.busy||!S.tecnico) return;
+  if(p.cantidad<1){ toast("No queda ninguna disponible."); return; }
+  if(!confirm(`¿Te llevas «${p.nombre}» como préstamo? Tendrás que devolverla.`)) return;
+  S.busy=true;
+  try{ await api("api_toggleLoan", S.tecnico.id, p.codigo, true); p.prestamo=true; }
+  catch(err){ S.busy=false; handleWriteError(err); if(S.view==="ficha") render(); return; }
+  S.busy=false; await lend(p.codigo);
 }
 
 /* ---------- Destino: obligatorio tras elegir el nombre ---------- */
@@ -571,13 +598,15 @@ function loanRow(l){
     <div class="sub">${esc([l.empresa,l.comunidad].filter(Boolean).join(" · ")||"Sin comunidad")} · ${since(l.salida)} (${fmtDate(l.salida)})</div></span>
     ${S.canWrite?`<button class="btn" data-ret="${esc(l.id)}">Devolver</button>`:""}</div>`;
 }
+const myLoans = () => S.tecnico ? S.loans.filter(l=>l.tecnicoId===S.tecnico.id).sort((a,b)=>a.salida-b.salida) : [];
 function bindLoanButtons(){
   app.querySelectorAll("[data-ret]").forEach(b=>b.onclick=()=>{ const l=S.loans.find(x=>x.id===b.dataset.ret); if(l) returnLoan(l); });
 }
 function viewLoans(){
+  const box=$("#adm"); if(!box||!S.adminOk) return;
   const open=[...S.loans].sort((a,b)=>a.salida-b.salida);
   const tools=[...S.products.values()].filter(p=>p.prestamo).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
-  app.innerHTML = `
+  box.innerHTML = `
     <div class="label">Prestadas ahora · ${open.length}</div>
     <div class="list">${open.length?open.map(l=>`<div class="loan"><span class="txt"><div class="name">${esc(l.producto)} <span class="code">${esc(l.codigo)}</span></div>
       <div class="sub"><b style="color:var(--fg)">${esc(l.tecnico)}</b> · ${esc([l.empresa,l.comunidad].filter(Boolean).join(" · ")||"Sin comunidad")} · ${since(l.salida)}</div></span>
@@ -613,7 +642,7 @@ async function returnLoan(l){
     if(err&&err.code==="done"){ S.loans=S.loans.filter(x=>x.id!==l.id); toast("Este préstamo ya estaba devuelto."); }
     else handleWriteError(err);
   }
-  finally{ S.busy=false; if(S.view==="ficha"||S.view==="prestamos") render(); }
+  finally{ S.busy=false; if(S.view==="ficha"||S.view==="admin"||S.view==="buscar") render(); }
 }
 
 function renderLog(){
@@ -746,11 +775,12 @@ function viewAdmin(){
       <button role="tab" aria-selected="${S.adminTab==="ped"}" data-tab="ped">Pedir${lowList().length?` (${lowList().length})`:""}</button>
       <button role="tab" aria-selected="${S.adminTab==="rec"}" data-tab="rec">Recuento</button>
       <button role="tab" aria-selected="${S.adminTab==="tec"}" data-tab="tec">Técnicos</button>
+      <button role="tab" aria-selected="${S.adminTab==="pre"}" data-tab="pre">Préstamos${S.loans.length?` (${S.loans.length})`:""}</button>
       <button role="tab" aria-selected="${S.adminTab==="qr"}" data-tab="qr">Etiquetas QR</button>
     </div>
     <div id="adm"></div>`;
   app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="hist") loadHist(); viewAdmin(); });
-  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs, qr:viewQR})[S.adminTab]();
+  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs, pre:viewLoans, qr:viewQR})[S.adminTab]();
 }
 
 function viewAdminLock(){
@@ -1023,13 +1053,35 @@ function qrCanvas(text){
   new QRCode(holder,{text,width:256,height:256,correctLevel:QRCode.CorrectLevel.M});
   return holder.querySelector("canvas");
 }
+/* Downloaded label: square, 4 x 4 cm at 300 ppp (472 px), with the size written in the PNG so it prints at 4 cm. */
+const LABEL_CM=4;
 function labelPng(title,code,text){
-  const qr=qrCanvas(text); const W=400,H=500; const c=document.createElement("canvas"); c.width=W;c.height=H;
-  const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,W,H);
-  g.drawImage(qr,40,30,320,320); g.fillStyle="#111"; g.textAlign="center";
-  g.font="bold 30px 'Barlow Condensed', Arial Narrow, sans-serif"; wrapText(g,title,W/2,395,360,32);
-  g.font="20px 'JetBrains Mono', monospace"; g.fillStyle="#444"; g.fillText(code,W/2,470);
-  return new Promise(r=>c.toBlob(r,"image/png"));
+  const qr=qrCanvas(text); const W=Math.round(LABEL_CM/2.54*300); const c=document.createElement("canvas"); c.width=W;c.height=W;
+  const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,W,W); g.imageSmoothingEnabled=false;
+  const q=Math.round(W*.70); g.drawImage(qr,(W-q)/2,12,q,q); g.fillStyle="#111"; g.textAlign="center";
+  g.font="bold 28px Arial, sans-serif"; wrapText(g,title,W/2,q+42,W-24,28);
+  g.font="bold 30px monospace"; g.fillText(code,W/2,W-14);
+  return new Promise(r=>c.toBlob(async b=>{ try{ r(await pngDpi(b,300)); }catch(e){ r(b); } },"image/png"));
+}
+/* Adds a pHYs chunk (pixels per metre) right after the PNG header. */
+async function pngDpi(blob,dpi){
+  const src=new Uint8Array(await blob.arrayBuffer()), ppm=Math.round(dpi/0.0254);
+  const chunk=new Uint8Array(21), dv=new DataView(chunk.buffer);
+  dv.setUint32(0,9); chunk.set([112,72,89,115],4); dv.setUint32(8,ppm); dv.setUint32(12,ppm); chunk[16]=1;
+  let crc=-1; for(let i=4;i<17;i++){ crc^=chunk[i]; for(let k=0;k<8;k++) crc=(crc>>>1)^(0xEDB88320&-(crc&1)); }
+  dv.setUint32(17,(crc^-1)>>>0);
+  const at=33, out=new Uint8Array(src.length+21); out.set(src.subarray(0,at)); out.set(chunk,at); out.set(src.subarray(at),at+21);
+  return new Blob([out],{type:"image/png"});
+}
+/* Print sheet: A4, 4 labels per row, exact size in cm, dashed lines to cut along. */
+function printLabels(items,cm){
+  if(!items.length){ toast("Marca al menos una etiqueta."); return; }
+  let sheet=$("#printsheet"); if(!sheet){ sheet=document.createElement("div"); sheet.id="printsheet"; document.body.appendChild(sheet); }
+  sheet.style.setProperty("--lbl",cm+"cm");
+  sheet.innerHTML=items.map(it=>`<div class="lbl"><img src="${qrCanvas(it.text).toDataURL("image/png")}" alt=""><b>${esc(it.title)}</b><span>${esc(it.code)}</span></div>`).join("");
+  const clean=()=>{ window.removeEventListener("afterprint",clean); sheet.innerHTML=""; };
+  window.addEventListener("afterprint",clean);
+  setTimeout(()=>window.print(),300);
 }
 function wrapText(g,t,x,y,max,lh){ const words=String(t).split(" "); let line="",lines=[]; for(const w of words){ const tt=line?line+" "+w:w; if(g.measureText(tt).width>max&&line){lines.push(line);line=w}else line=tt;} lines.push(line); lines.slice(0,2).forEach((l,i)=>g.fillText(l,x,y+i*lh)); }
 
@@ -1040,12 +1092,20 @@ function viewQR(){
   box.innerHTML = `
     <p class="note">Imprime estas etiquetas y pégalas en cada producto. Al escanearlas con la cámara del móvil se abre directamente su ficha. El QR general abre el buscador; ponlo en la entrada del almacén.</p>
     ${base?"":'<p class="note" style="color:var(--danger)">Falta configurar la dirección de la app para generar los QR.</p>'}
+    <div class="qrprint">
+      <label class="field"><span class="label">Tamaño de la etiqueta</span><select id="q_cm">${[3,4,5].map(n=>`<option value="${n}" ${S.qrCm===n?"selected":""}>${n} × ${n} cm</option>`).join("")}</select></label>
+      <button class="btn primary block" id="q_print">🖨️ Imprimir las marcadas</button>
+      <div class="links"><button class="btn" id="q_all">Marcar todas</button><button class="btn" id="q_none">Ninguna</button></div>
+      <p class="note">Al imprimir, elige papel A4 y escala <b>100 %</b> (o «Tamaño real»), sin «Ajustar a la página», para que salgan del tamaño exacto. Salen 4 por fila con una línea para recortar.</p>
+    </div>
     <div class="qrgrid" id="qg"></div>
-    <p class="note">Si «Descargar» no funciona en tu móvil, mantén pulsado el QR para guardarlo o haz una captura.</p>`;
+    <p class="note">«Descargar etiqueta» guarda una sola etiqueta de 4 × 4 cm. Si no funciona en tu móvil, mantén pulsado el QR para guardarlo.</p>`;
   if(!base || typeof QRCode==="undefined") return;
-  const qg=$("#qg");
+  const qg=$("#qg"), items=[];
   const add=(title,code,text,file)=>{
     const card=document.createElement("div"); card.className="qrcard";
+    const it={title,code,text}; items.push(it);
+    card.insertAdjacentHTML("beforeend",`<label class="pick"><input type="checkbox" data-pick="${items.length-1}" ${S.qrSkip.has(code)?"":"checked"}>Imprimir</label>`);
     card.appendChild(qrCanvas(text));
     card.insertAdjacentHTML("beforeend",`<b>${esc(title)}</b><span class="code">${esc(code)}</span>`);
     const b=document.createElement("button"); b.textContent="Descargar etiqueta"; b.onclick=async()=>{ try{ const blob=await labelPng(title,code,text); saveFile(file,blob); }catch(e){ toast("No se pudo descargar la etiqueta."); } }; card.appendChild(b);
@@ -1053,6 +1113,12 @@ function viewQR(){
   };
   add("QR general · Buscador","ALMACÉN",base,"qr-general.png");
   list.forEach(p=>add(p.nombre,p.codigo,base+"?p="+encodeURIComponent(p.codigo),"qr-"+p.codigo+".png"));
+  const boxes=()=>[...qg.querySelectorAll("[data-pick]")];
+  boxes().forEach(b=>b.onchange=()=>{ const c=items[b.dataset.pick].code; if(b.checked) S.qrSkip.delete(c); else S.qrSkip.add(c); });
+  $("#q_all").onclick=()=>{ S.qrSkip.clear(); boxes().forEach(b=>b.checked=true); };
+  $("#q_none").onclick=()=>{ items.forEach(i=>S.qrSkip.add(i.code)); boxes().forEach(b=>b.checked=false); };
+  $("#q_cm").onchange=e=>{ S.qrCm=Number(e.target.value); };
+  $("#q_print").onclick=()=>printLabels(items.filter(i=>!S.qrSkip.has(i.code)),S.qrCm);
 }
 
 /* ---------- Data ---------- */
@@ -1072,7 +1138,7 @@ async function move(code,delta){
   const p=S.products.get(code); if(!p||S.busy||!S.tecnico) return;
   if(p.cantidad+delta<0){ toast(`Solo quedan ${p.cantidad}. No puedes sacar ${-delta}.`); return; }
   p.cantidad+=delta; PEND.set(code,(PEND.get(code)||0)+1);
-  toast(delta<0?`Sacadas ${-delta} uds. Quedan ${p.cantidad}.`:`Ingresadas ${delta} uds. Hay ${p.cantidad}.`);
+  toast(delta<0?`Sacadas ${-delta} uds. Quedan ${p.cantidad}.`:`Añadidas ${delta} uds. Hay ${p.cantidad}.`);
   S.amount=1; if(S.view==="ficha") render();
   let r=null;
   try{ r=await api("api_move", S.tecnico.id, code, delta, S.destino); }
@@ -1092,7 +1158,8 @@ async function move(code,delta){
 function watchMoves(code){
   if(!code) return;
   S.unMoves=()=>{};
-  api("api_productMoves", code).then(m=>{ if(S.view==="ficha"&&S.code===code){ S.moves=m||[]; renderLog(); } }).catch(()=>{});
+  if(!S.adminOk||!S.adminToken){ S.moves=[]; return; }
+  api("api_productMoves", code, S.adminToken).then(m=>{ if(S.view==="ficha"&&S.code===code){ S.moves=m||[]; renderLog(); } }).catch(()=>{});
 }
 function refreshMoves(){ if(S.view==="ficha"&&S.code){ S.unMoves=null; watchMoves(S.code); } }
 function blobToBase64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=rej; r.readAsDataURL(blob); }); }
