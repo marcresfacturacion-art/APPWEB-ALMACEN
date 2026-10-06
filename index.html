@@ -1120,8 +1120,15 @@ async function poll(){
   if(BOOT.p) S.pending=normCode(BOOT.p);
   const cached=IN_GAS?null:loadCache();
   if(cached&&cached.products&&cached.techs){ applyData(cached); render(); }
+  /* First visit on this phone: ask for the technicians on their own so the name search works while the rest loads. */
+  let full=false;
+  if(!IN_GAS&&!(cached&&cached.techs)) api("api_techs").then(r=>{
+    if(full||!r||!r.techs) return;
+    applyData(r);
+    if(S.view==="login"){ if($("#l_q")) drawLoginResults(); else render(); }
+  }).catch(()=>{});
   try{
-    const r=await api("api_bootstrap"); applyData(r); saveCache(r);
+    const r=await api("api_bootstrap"); full=true; applyData(r); saveCache(r);
   }catch(err){
     if(!cached){
       app.innerHTML = err&&err.code==="no_instalado"
