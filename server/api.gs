@@ -24,6 +24,7 @@ function doPost(e) {
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech
     };
+    addShelves_();
     var fn = fns[req.fn];
     out = fn ? fn.apply(null, Array.isArray(req.args) ? req.args : []) : { err: 'bad', msg: 'función desconocida' };
     if (fn && !READS_[req.fn]) dropCache_(req.fn === 'api_addClient');
@@ -31,6 +32,12 @@ function doPost(e) {
     out = { err: 'server', msg: String(err && err.message || err) };
   }
   return ContentService.createTextOutput(JSON.stringify(out === undefined ? null : out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* Estantes del Cuarto blanco (lo eléctrico y las bombas), además de los del almacén principal. */
+var CB_SHELVES_ = ['cb_amarillo', 'cb_naranja', 'cb_turquesa', 'cb_lima', 'cb_bombas', 'cb_rosa', 'cb_armario'];
+function addShelves_() {
+  CB_SHELVES_.forEach(function (k) { if (SHELVES.indexOf(k) < 0) SHELVES.push(k); });
 }
 
 /** Solo la lista de técnicos: es lo primero que necesita la pantalla de entrada. */

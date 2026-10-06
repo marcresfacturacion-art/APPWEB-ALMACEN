@@ -19,7 +19,7 @@
 :root{
   --bg:#f4fbff; --surface:#def1fc; --surface-2:#c8e7fa; --fg:#0d2a3d; --muted:#45606f; --line:#a7d3ee;
   --accent:#1597dc; --accent-fg:#ffffff; --brand:#1597dc; --brand-fg:#ffffff; --danger:#c8372d; --ok:#2f8a4e;
-  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0;
+  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-armario:#c99a1e; --cb-bombas:#cdb38a;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -128,6 +128,10 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 }
 .qrcard button{border:1px solid #bbb;background:#f4f4f4;color:#111;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer}
 .groups{display:flex;flex-direction:column;gap:8px}
+.roomlbl{margin-top:6px}
+.roomtabs{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--brand);border:2px solid var(--brand);border-radius:10px;overflow:hidden}
+.roomtabs button{border:0;background:var(--surface);min-height:46px;font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.roomtabs button[aria-pressed="true"]{background:var(--brand);color:var(--brand-fg)}
 .group{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
 .group summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:54px;padding:0 14px;cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.03em}
 .group summary::-webkit-details-marker{display:none}
@@ -292,7 +296,18 @@ const SHELVES = {
   azul:   {name:"Estante azul",   color:"var(--sh-azul)"},
   marron: {name:"Estante marrón", color:"var(--sh-marron)"},
   negro:  {name:"Estante negro",  color:"var(--sh-negro)"},
+  /* Cuarto blanco: lo eléctrico y las bombas. Colores que no se repiten en el almacén principal. */
+  cb_amarillo: {name:"Estante amarillo", color:"var(--cb-amarillo)", room:"cb"}, /* estanterías blancas, material eléctrico */
+  cb_naranja:  {name:"Estante naranja",  color:"var(--cb-naranja)",  room:"cb"}, /* estanterías negras delante de la ventana iluminada */
+  cb_turquesa: {name:"Estante turquesa", color:"var(--cb-turquesa)", room:"cb"}, /* rincón del fondo, cables */
+  cb_lima:     {name:"Estante lima",     color:"var(--cb-lima)",     room:"cb"}, /* mueble de madera bajo la ventana del despacho */
+  cb_bombas:   {name:"Zona de bombas",   color:"var(--cb-bombas)",   room:"cb"}, /* bombas en el suelo, al fondo */
+  cb_rosa:     {name:"Estante rosa",     color:"var(--cb-rosa)",     room:"cb"}, /* estantería larga de la derecha, cajas azules */
+  cb_armario:  {name:"Armario",          color:"var(--cb-armario)",  room:"cb"}, /* armario metálico junto a la puerta */
 };
+const ROOMS = {main:"Almacén principal", cb:"Cuarto blanco"};
+const roomOf = k => (SHELVES[k]&&SHELVES[k].room)||"main";
+const shelvesIn = room => Object.entries(SHELVES).filter(([k])=>roomOf(k)===room);
 const EMPRESAS = ["Marcres","Rivagua"];
 const LOAN_LOC = {name:"Préstamos", color:"var(--sh-loan)"};
 const NO_LOC = {name:"Sin ubicación", color:"var(--line)"};
@@ -339,7 +354,7 @@ function render(){
   $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", ficha:"Ficha", mapa:"Mapa del almacén", editar:S.editCode?"Editar producto":"Nuevo producto", admin:"Restringido", destino:"¿Para qué es?"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", admin:"Restringido", destino:"¿Para qué es?"};
   $("#title").textContent = titles[S.view];
   VIEWS[S.view]();
 }
@@ -428,7 +443,8 @@ function viewSearch(){
       q?`<div class="label">${hits.length} resultado${hits.length===1?"":"s"}</div>
         <div class="list">${hits.length?hits.map(productRow).join(""):`<div class="empty">Ningún producto coincide con «${esc(S.q)}».</div>`}</div>`:
       `<div class="label">Productos por estante · ${all.length}</div>
-       <div class="groups">${[...Object.entries(SHELVES),["prestamos",LOAN_LOC],["none",NO_LOC]].map(([k,v])=>{
+       <div class="groups">${[["@main"],...shelvesIn("main"),["@cb"],...shelvesIn("cb"),["@other"],["prestamos",LOAN_LOC],["none",NO_LOC]].map(([k,v],i,arr)=>{
+         if(k[0]==="@"){ const next=arr.slice(i+1); const end=next.findIndex(([x])=>x[0]==="@"); const some=(end<0?next:next.slice(0,end)).some(([x])=>all.some(p=>locKey(p)===x)); return some&&k!=="@other"?`<div class="label roomlbl">${ROOMS[k.slice(1)]}</div>`:""; }
          const items=all.filter(p=>locKey(p)===k);
          if(!items.length) return "";
          return `<details class="group" data-g="${k}" ${S.openGroups.has(k)?"open":""}><summary><span class="dot" style="background:${v.color}"></span><span class="gname">${v.name}</span><span class="gcount">${items.length}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary><div class="list">${items.map(productRow).join("")}</div></details>`;
@@ -489,7 +505,7 @@ function viewFicha(){
     ${p.proveedor?`<p class="note" style="margin:0">Proveedor: <b>${esc(p.proveedor)}</b></p>`:""}
     <div class="facts">
       <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&S.adminOk&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
-      <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">Ver en el mapa</span></div>
+      <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
     </div>
     ${actions}
     ${p.prestamo&&S.adminOk&&loans.length?`<div><div class="label" style="margin-bottom:6px">Quién la tiene</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
@@ -694,12 +710,39 @@ function shelfSvg(sel){
   </svg>`;
 }
 
+/* Cuarto blanco, visto desde la puerta (abajo): a la izquierda la cristalera a la nave, al fondo la ventana del despacho. */
+function cbSvg(sel){
+  const g=(key,inner,lx,ly,anchor="middle",label)=>`<g class="shelf ${sel===key?'on':''}" data-shelf="${key}" role="button" tabindex="0" aria-label="${SHELVES[key].name}">
+    ${inner}<text x="${lx}" y="${ly}" text-anchor="${anchor}">${label||SHELVES[key].name.replace("Estante ","").toUpperCase()}</text></g>`;
+  const r=(key,x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${SHELVES[key].color}"/>`;
+  const note=(x,y,t,a="middle")=>`<text x="${x}" y="${y}" text-anchor="${a}" style="font-size:9px;fill:var(--muted);font-weight:600">${t}</text>`;
+  return `<svg viewBox="0 0 360 300" aria-label="Plano del Cuarto blanco">
+    <rect x="40" y="30" width="290" height="240" fill="var(--surface-2)" stroke="var(--fg)" stroke-width="2.5"/>
+    <line x1="140" y1="30" x2="270" y2="30" stroke="var(--muted)" stroke-width="5" stroke-dasharray="10 4"/>${note(205,24,"VENTANA DEL DESPACHO")}
+    <line x1="40" y1="45" x2="40" y2="110" stroke="var(--cb-naranja)" stroke-width="5" stroke-dasharray="3 3" opacity=".5"/>
+    <line x1="40" y1="150" x2="40" y2="215" stroke="var(--muted)" stroke-width="5" stroke-dasharray="10 4"/><text transform="translate(32 182) rotate(-90)" text-anchor="middle" style="font-size:9px;fill:var(--muted);font-weight:600">CRISTALERA</text>
+    <line x1="215" y1="270" x2="262" y2="270" stroke="var(--surface-2)" stroke-width="5"/>
+    <path d="M238 296 v-18 m-6 6 l6 -6 l6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>${note(238,264,"PUERTA")}
+    <rect x="46" y="226" width="60" height="38" rx="3" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>${note(76,249,"MESA")}
+    ${g("cb_naranja",r("cb_naranja",46,44,18,70),70,100,"start")}
+    ${g("cb_amarillo",r("cb_amarillo",46,124,18,94),70,175,"start")}
+    ${g("cb_turquesa",r("cb_turquesa",76,36,46,16),104,66)}
+    ${g("cb_lima",r("cb_lima",150,36,100,16),200,64)}
+    ${g("cb_bombas",r("cb_bombas",160,82,100,56),210,115,"middle","BOMBAS")}
+    ${g("cb_rosa",r("cb_rosa",306,62,18,128),300,128,"end")}
+    ${g("cb_armario",r("cb_armario",300,198,24,44),296,224,"end")}
+    <rect x="306" y="36" width="18" height="22" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  </svg>`;
+}
 function viewMap(){
   const sel=S.mapSel;
+  if(sel&&SHELVES[sel]) S.mapRoom=roomOf(sel);
+  const room=S.mapRoom||"main";
   const items = sel ? [...S.products.values()].filter(p=>locKey(p)===sel).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")) : [];
   app.innerHTML = `
-    <div class="map">${shelfSvg(sel)}</div>
-    <div class="legend">${Object.entries(SHELVES).map(([k,v])=>`<button data-shelf="${k}" aria-pressed="${sel===k}"><span class="dot" style="background:${v.color}"></span>${v.name}</button>`).join("")} <button data-shelf="prestamos" aria-pressed="${sel==="prestamos"}"><span class="dot" style="background:var(--sh-loan)"></span>Préstamos · ${[...S.products.values()].filter(p=>p.prestamo).length}</button><button data-shelf="none" aria-pressed="${sel==="none"}"><span class="dot" style="background:var(--line)"></span>Sin ubicación · ${[...S.products.values()].filter(p=>locKey(p)==="none").length}</button></div>
+    <div class="roomtabs">${Object.entries(ROOMS).map(([k,v])=>`<button data-room="${k}" aria-pressed="${room===k}">${v}</button>`).join("")}</div>
+    <div class="map">${room==="cb"?cbSvg(sel):shelfSvg(sel)}</div>
+    <div class="legend">${shelvesIn(room).map(([k,v])=>`<button data-shelf="${k}" aria-pressed="${sel===k}"><span class="dot" style="background:${v.color}"></span>${v.name}</button>`).join("")}${room==="main"?` <button data-shelf="prestamos" aria-pressed="${sel==="prestamos"}"><span class="dot" style="background:var(--sh-loan)"></span>Préstamos · ${[...S.products.values()].filter(p=>p.prestamo).length}</button><button data-shelf="none" aria-pressed="${sel==="none"}"><span class="dot" style="background:var(--line)"></span>Sin ubicación · ${[...S.products.values()].filter(p=>locKey(p)==="none").length}</button>`:""}</div>
     ${sel?`<div class="label">${locName(sel)} · ${items.length} producto${items.length===1?"":"s"}</div>
       <div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">No hay productos en esta ubicación.</div>'}</div>`
       :'<p class="note">Toca un estante para ver qué hay en él.</p>'}
@@ -708,6 +751,7 @@ function viewMap(){
     const f=()=>{S.mapSel=el.dataset.shelf; viewMap();};
     el.addEventListener("click",f); el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();f();}});
   });
+  app.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ S.mapRoom=b.dataset.room; if(S.mapSel&&SHELVES[S.mapSel]&&roomOf(S.mapSel)!==S.mapRoom) S.mapSel=null; viewMap(); });
   const tf=$("#toficha"); if(tf) tf.onclick=()=>go("ficha",{code:S.code});
 }
 
@@ -729,7 +773,7 @@ function viewEdit(){
     <label><span class="label">Nombre</span><input id="e_nombre" required value="${esc(p?.nombre||"")}" placeholder="Ej. Bomba Espa Multi 35 5" autocomplete="off"></label>
     <div class="twobtn">
       <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
-      <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(SHELVES).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</select></label>
+      <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${shelvesIn(rk).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</optgroup>`).join("")}</select></label>
     </div>
     ${canRestricted()?`<label><span class="label">Stock mínimo (avisa si hay menos)</span><input id="e_min" type="number" inputmode="numeric" min="0" step="1" value="${Number(p?.minimo)||""}" placeholder="Sin mínimo"></label>`:""}
     <label><span class="label">Proveedor habitual (opcional)</span><input id="e_prov" list="provlist" autocomplete="off" value="${esc(p?.proveedor||"")}" placeholder="Escribe para buscar"><datalist id="provlist">${S.proveedores.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
@@ -765,6 +809,7 @@ function viewEdit(){
       const data={codigo,...fields,cantidad};
       const r=await api("api_saveProduct", S.tecnico.id, data, !p);
       S.products.set(r.product.codigo, r.product);
+      if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce el Cuarto blanco: hay que pegar el api.gs nuevo en Apps Script."); go("ficha",{code:r.product.codigo}); return; }
       if(!p){
         if(again){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
         toast("Guardado"); S.busy=false; go("ficha",{code:r.product.codigo}); return;
@@ -938,10 +983,10 @@ async function exportOrderCsv(){
 
 function recountItems(){
   const k=S.rc.shelf; if(!k) return [];
-  return [...S.products.values()].filter(p=>k==="all"||locKey(p)===k).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  return [...S.products.values()].filter(p=>k==="all"||locKey(p)===k||(k[0]==="@"&&SHELVES[locKey(p)]&&roomOf(locKey(p))===k.slice(1))).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
 }
 function viewRecount(){
-  const opts=[["","Elige qué vas a contar…"],["all","Todo el almacén"],...Object.entries(SHELVES).map(([k,v])=>[k,v.name]),["prestamos","Préstamos"],["none","Sin ubicación"]];
+  const opts=[["","Elige qué vas a contar…"],["all","Todo"],["@main","Todo el almacén principal"],...shelvesIn("main").map(([k,v])=>[k,"&nbsp;&nbsp;&nbsp;"+v.name]),["@cb","Todo el Cuarto blanco"],...shelvesIn("cb").map(([k,v])=>[k,"&nbsp;&nbsp;&nbsp;"+v.name]),["prestamos","Préstamos"],["none","Sin ubicación"]];
   const items=recountItems(), done=Object.keys(S.rc.done).length;
   $("#adm").innerHTML = `
     ${S.rc.cur?countCard():`<button class="btn primary block" id="r_scan">📷 Contar escaneando</button>
