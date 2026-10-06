@@ -1,6 +1,8 @@
 # Almacén Marcres
 
-App del almacén de Marcres y Rivagua para los técnicos: escanear el QR de un producto, ver su ficha y sacar o meter stock.
+Para todos los tecnicos, Administrativos y personas asociadas a Marcres S.L / Rivagua S.L unicamente.
+
+App del almacén: escanear el QR de un producto, ver su ficha y sacar o meter stock.
 
 - **App:** https://marcresfacturacion-art.github.io/APPWEB-ALMACEN/
 - **Datos:** hoja de Google «Almacén Marcres - Datos» (carpeta de Drive «Almacén Marcres»). La página guarda y lee todo a través del script de Google.
