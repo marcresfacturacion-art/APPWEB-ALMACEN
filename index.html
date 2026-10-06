@@ -187,6 +187,9 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 .cnt .stepper{display:grid;grid-template-columns:1fr 1fr 2fr 1fr 1fr;gap:6px;align-items:stretch}
 .cnt .stepper button{min-height:56px;border-radius:10px;border:2px solid var(--brand);background:var(--surface);font-size:18px;font-weight:700;cursor:pointer}
 .cnt .stepper input::-webkit-inner-spin-button,.cnt .stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.cnt .wgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cnt .wgrid input{width:100%;min-height:48px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:18px;text-align:center}
+.cnt .wres{font-size:18px;font-weight:700;color:var(--brand);text-align:center}
 .cnt .stepper input{-moz-appearance:textfield;min-height:56px;border-radius:10px;border:2px solid var(--brand);font-size:28px;font-weight:700;text-align:center;width:100%;min-width:0}
 .hwho{flex:none;display:flex;flex-direction:column;align-items:flex-end;font-size:13px;max-width:34%;min-width:0;text-align:right}
 .hwho b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -278,7 +281,7 @@ const TIPOS = {salida:"Sacado", entrada:"Ingresado", prestamo:"Préstamo", devol
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{}}, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -370,7 +373,7 @@ function login(t){
   toast(`Hola, ${t.nombre}`);
 }
 function logout(msg){
-  S.tecnico=null; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{}};
+  S.tecnico=null; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{},w:false};
   go("login"); if(msg) toast(msg);
 }
 
@@ -920,6 +923,7 @@ function countCard(){
       <span><div class="pname">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)}${sh?` · ${esc(sh.name)}`:""} · en la app: <b>${p.cantidad}</b></div>${prev!==undefined?`<div class="code">Ya lo contaste: ${prev}</div>`:""}</span></div>
     <label class="label" for="c_val">¿Cuántos hay de verdad?</label>
     <div class="stepper"><button data-cs="-10">−10</button><button data-cs="-1">−1</button><input id="c_val" type="number" inputmode="numeric" min="0" step="1" value="${esc(S.rc.val)}" placeholder="?"><button data-cs="1">+1</button><button data-cs="10">+10</button></div>
+    ${S.rc.w?weighBox(p):`<button class="btn block" id="c_wopen">⚖️ Contar por peso</button>`}
     <button class="btn primary block" id="c_next">Guardar y escanear el siguiente</button>
     <div class="links"><button class="btn" id="c_save">Guardar y terminar</button><button class="btn" id="c_cancel">Cancelar</button></div>
   </div>`;
@@ -932,7 +936,34 @@ function bindCountCard(){
   $("#c_next").onclick=()=>saveCount(true);
   $("#c_save").onclick=()=>saveCount(false);
   $("#c_cancel").onclick=()=>{ S.rc.cur=null; S.rc.val=""; viewRecount(); };
+  const wo=$("#c_wopen"); if(wo) wo.onclick=()=>{ S.rc.w=true; viewRecount(); const f=$("#w_g"); if(f&&!f.value) f.focus(); };
+  if(S.rc.w) bindWeigh(p);
   if(!("ontouchstart" in window)) i.focus();
+}
+/* Counting by weight: weigh a few units once (remembered on this phone), then weigh the whole lot. */
+const WKEY="almacen_pesos_v1";
+function weights(){ try{ return JSON.parse(localStorage.getItem(WKEY)||"{}")||{}; }catch(e){ return {}; } }
+function numIn(v){ const n=Number(String(v||"").trim().replace(",",".")); return isFinite(n)?n:NaN; }
+function weighBox(p){
+  const w=weights()[p.codigo]||{};
+  const f=(id,label,val,ph)=>`<label class="field"><span class="label">${label}</span><input id="${id}" type="text" inputmode="decimal" value="${val??""}" placeholder="${ph}"></label>`;
+  return `<div class="wbox">
+    <p class="note">Pon unas cuantas en la báscula (por ejemplo 10) y apunta lo que pesan. Luego pesa todas juntas. ${w.g?"La muestra de este producto ya está guardada en este móvil.":""}</p>
+    <div class="wgrid">${f("w_n","Unidades de muestra",w.n||10,"10")}${f("w_g","Peso de la muestra (g)",w.g||"","g")}${f("w_t","Peso de todo (g)","","g")}${f("w_e","Bolsa o caja vacía (g)",w.e||"","0")}</div>
+    <div class="wres" id="w_res">Escribe los pesos</div>
+  </div>`;
+}
+function bindWeigh(p){
+  const calc=()=>{
+    const n=numIn($("#w_n").value), g=numIn($("#w_g").value), t=numIn($("#w_t").value), e=numIn($("#w_e").value)||0, res=$("#w_res");
+    if(!(n>0&&g>0)){ res.textContent="Pesa primero la muestra"; return; }
+    const all=weights(); all[p.codigo]={n,g,e}; try{ localStorage.setItem(WKEY,JSON.stringify(all)); }catch(x){}
+    if(!(t>0)){ res.textContent=`1 unidad ≈ ${(Math.round(g/n*100)/100).toLocaleString("es")} g`; return; }
+    const u=Math.max(0,Math.round((t-e)*n/g));
+    res.textContent=`≈ ${u} unidades`; $("#c_val").value=u; S.rc.val=String(u);
+  };
+  ["#w_n","#w_g","#w_t","#w_e"].forEach(id=>{ $(id).oninput=calc; });
+  calc();
 }
 let RCQ=Promise.resolve();
 function saveCount(next){
@@ -1082,7 +1113,7 @@ function handleScanText(found){
   if(S.scanFor==="count"){
     S.scanFor=null;
     if(S.view==="admin"&&S.adminTab==="rec"&&S.adminOk){
-      if(code&&S.products.has(code)){ S.rc.cur=code; S.rc.val=""; }
+      if(code&&S.products.has(code)){ S.rc.cur=code; S.rc.val=""; S.rc.w=!!weights()[code]; }
       else toast(code?`No hay ningún producto con el código ${code}.`:"Ese es el QR general. Escanea la etiqueta de un producto.");
       viewRecount(); return;
     }
