@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Almacén Marcres</title>
+<meta name="description" content="Inventario del almacén de Marcres y Rivagua: escanear, sacar y meter material.">
+<meta name="theme-color" content="#1597dc">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Almacén">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one-column phone app, sticky header, big touch targets; Marcres brand: celeste and white (logo blue ~#24adfc, deepened for text contrast) */
+:root{
+  --bg:#f4fbff; --surface:#def1fc; --surface-2:#c8e7fa; --fg:#0d2a3d; --muted:#45606f; --line:#a7d3ee;
+  --accent:#1597dc; --accent-fg:#ffffff; --brand:#1597dc; --brand-fg:#ffffff; --danger:#c8372d; --ok:#2f8a4e;
+  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b1a24; --surface:#12293a; --surface-2:#1b3a51; --fg:#e4f3fd; --muted:#9bb9cc; --line:#28495f;
+  --accent:#3db3f0; --accent-fg:#06202f; --brand:#1478b0; --brand-fg:#ffffff; --danger:#ef6157; --ok:#4cbc72; --sh-negro:#c9d2db; --sh-gris:#7d8995; --sh-loan:#a98bf0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1a24; --surface:#12293a; --surface-2:#1b3a51; --fg:#e4f3fd; --muted:#9bb9cc; --line:#28495f;
+  --accent:#3db3f0; --accent-fg:#06202f; --brand:#1478b0; --brand-fg:#ffffff; --danger:#ef6157; --ok:#4cbc72; --sh-negro:#c9d2db; --sh-gris:#7d8995; --sh-loan:#a98bf0; color-scheme:dark}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-body);font-size:16px;line-height:1.45}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.scanner{position:fixed;inset:0;z-index:50;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.scanner video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scanframe{position:relative;width:min(70vw,300px);aspect-ratio:1;border:3px solid #fff;border-radius:16px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+.scanmsg{position:relative;color:#fff;font-weight:600;margin:18px 16px 0;text-align:center;text-shadow:0 1px 3px #000}
+.scanbar{position:absolute;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:10px}
+.scanbar .btn{flex:1}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
+.top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .tag{background:var(--brand-fg);color:var(--brand);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:2px 8px;border-radius:3px}
+.iconbtn{background:none;border:0;color:inherit;width:40px;height:40px;display:grid;place-items:center;border-radius:6px;cursor:pointer;flex:none}
+.iconbtn svg{width:24px;height:24px}
+main{max-width:560px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.label{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 18px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+.btn svg{width:22px;height:22px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.search{display:flex;gap:8px}
+.search input{flex:1;min-width:0;height:52px;padding:0 14px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-family:var(--f-mono);font-size:16px}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;cursor:pointer;width:100%}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.thumb{width:52px;height:52px;border-radius:6px;background:var(--surface-2);flex:none;display:grid;place-items:center;overflow:hidden;font-family:var(--f-display);font-weight:700;font-size:20px;color:var(--muted)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.row .txt{flex:1;min-width:0}
+.row .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.code{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.qty{font-family:var(--f-display);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums;text-align:right;min-width:44px}
+.qty.low{color:var(--danger)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:2px;flex:none}
+.pill{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:3px;background:var(--surface-2);color:var(--muted);margin-left:6px;vertical-align:2px}
+.empty{padding:24px 16px;text-align:center;color:var(--muted)}
+.photo{aspect-ratio:4/3;max-width:100%;width:100%;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;overflow:hidden;font-family:var(--f-display);font-size:64px;font-weight:700;color:var(--muted)}
+.photo img{width:100%;height:100%;object-fit:cover}
+.ficha h2{margin:0;font-family:var(--f-display);font-size:30px;line-height:1.1;text-wrap:balance}
+.ficha p{margin:0;color:var(--muted)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.fact .big{font-family:var(--f-display);font-weight:700;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.locbtn{border:0;background:none;padding:0;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:22px;text-decoration:underline;text-underline-offset:3px}
+.stock{background:var(--surface);border:2px solid var(--fg);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper input{width:90px;height:52px;text-align:center;border-radius:8px;border:2px solid var(--line);background:var(--bg);font-family:var(--f-display);font-weight:700;font-size:26px}
+.stepper .iconbtn{border:2px solid var(--line);width:52px;height:52px}
+.twobtn{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn.out{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.in{background:var(--ok);border-color:var(--ok);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:8px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.log{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.log div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding-bottom:6px}
+.log .d{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.d.neg{color:var(--danger)} .d.pos{color:var(--ok)}
+.map{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
+.map svg{width:100%;height:auto;display:block}
+.map text{font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.04em;fill:var(--fg)}
+.shelf{cursor:pointer}
+.shelf rect{stroke:var(--fg);stroke-width:1.5}
+.shelf.on rect{stroke:var(--accent);stroke-width:5}
+@keyframes pulse{50%{opacity:.35}}
+.shelf.on rect{animation:pulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.shelf.on rect{animation:none}}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.legend button{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:6px 12px;display:flex;gap:6px;align-items:center;cursor:pointer;font-size:14px;font-weight:600}
+.legend button[aria-pressed="true"]{border-color:var(--fg);background:var(--surface-2)}
+form.edit{display:flex;flex-direction:column;gap:12px}
+form.edit label{display:flex;flex-direction:column;gap:4px;min-width:0}
+form.edit input,form.edit select,form.edit textarea{width:100%;min-width:0}
+form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px 12px;border-radius:8px;border:2px solid var(--line);background:var(--surface)}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.qrcard{background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.qrcard canvas,.qrcard img{width:100%;max-width:150px;height:auto}
+.qrcard b{font-family:var(--f-display);font-size:16px;line-height:1.1}
+.qrcard .code{color:#444}
+.qrcard button{border:1px solid #bbb;background:#f4f4f4;color:#111;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer}
+.groups{display:flex;flex-direction:column;gap:8px}
+.group{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.group summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:54px;padding:0 14px;cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.03em}
+.group summary::-webkit-details-marker{display:none}
+.group .gname{flex:1}
+.group .gcount{font-family:var(--f-body);font-size:14px;font-weight:600;color:var(--muted);background:var(--surface-2);border-radius:20px;padding:2px 10px;font-variant-numeric:tabular-nums}
+.group .chev{width:20px;height:20px;transition:transform .15s}
+.group[open] .chev{transform:rotate(180deg)}
+.group .list{border:0;border-top:1px solid var(--line);border-radius:0}
+.group .dot{width:14px;height:14px}
+.whobtn{display:flex;align-items:center;gap:6px;background:none;border:1px solid currentColor;color:inherit;border-radius:20px;padding:5px 10px;font-weight:600;font-size:14px;cursor:pointer;max-width:45%;min-width:0}
+.whobtn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.whobtn svg{width:16px;height:16px;flex:none}
+.login{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.login h2{margin:0;font-family:var(--f-display);font-size:30px;line-height:1.1;text-wrap:balance}
+.login .lock{width:56px;height:56px;border-radius:12px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center}
+.login .lock svg{width:30px;height:30px}
+.techpick{min-height:56px}
+.techpick .go{font-weight:700;font-size:14px;background:var(--accent);color:var(--accent-fg);padding:6px 12px;border-radius:6px}
+.field{display:flex;flex-direction:column;gap:4px}
+.check{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:10px;font-size:16px}
+.check input{width:24px;height:24px;flex:none;margin:0}
+.field select,.field input,.filters select,.filters input,#t_name{min-height:52px;padding:10px 12px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:17px;width:100%;min-width:0}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-weight:600;cursor:pointer;padding:8px 0;align-self:center}
+.linkbtn.danger{color:var(--danger);align-self:auto;padding:4px 0}
+.tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:var(--brand);border:2px solid var(--brand);border-radius:10px;overflow:hidden}
+.tabs button{border:0;background:var(--surface);min-height:46px;padding:0 2px;font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--brand);color:var(--brand-fg)}
+#adm{display:flex;flex-direction:column;gap:12px}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.filters input{grid-column:1/-1}
+.hrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%;cursor:pointer}
+.hrow:last-child{border-bottom:0}
+.hrow .txt{flex:1;min-width:0}
+.hrow .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.htipo{flex:none;width:74px;text-align:center;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 0;border-radius:4px;background:var(--surface-2);color:var(--muted)}
+.htipo.t-salida{background:var(--danger);color:#fff}
+.htipo.t-entrada{background:var(--ok);color:#fff}
+.htipo.t-alta{background:var(--accent);color:var(--accent-fg)}
+.htipo.t-prestamo{background:var(--sh-azul);color:#fff}
+.htipo.t-devolucion{background:var(--ok);color:#fff}
+.htipo.t-recuento{background:var(--fg);color:var(--bg)}
+.hwho .com{color:var(--fg);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.destbar{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--fg);border-radius:10px;padding:10px 12px;background:var(--surface);font-size:15px}
+.destbar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bigyes{min-height:72px;font-size:22px}
+.sheet{display:flex;flex-direction:column;gap:10px;border:2px solid var(--fg);border-radius:12px;padding:14px;background:var(--surface)}
+.sheet h3{margin:0;font-family:var(--f-display);font-size:20px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg .btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-fg);border-color:var(--brand)}
+.sug{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.sug button{border:0;border-bottom:1px solid var(--line);background:var(--surface);text-align:left;padding:12px;font-size:16px;cursor:pointer}
+.sug button:last-child{border-bottom:0}
+.alert{display:flex;align-items:center;gap:10px;width:100%;border:2px solid var(--danger);border-radius:10px;background:var(--surface);color:var(--danger);font-weight:700;padding:12px;text-align:left;cursor:pointer;font-size:16px}
+.loan{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.loan:last-child{border-bottom:0}
+.loan .txt{flex:1;min-width:0}
+.loan .name{font-weight:600}
+.loan .sub{font-size:13px;color:var(--muted)}
+.rcrow{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.rcrow:last-child{border-bottom:0}
+.rcrow .txt{flex:1;min-width:0}
+.rcrow .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcrow input{width:84px;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:18px;text-align:center;flex:none}
+.rcrow input.diff{border-color:var(--danger)}
+.hwho{flex:none;display:flex;flex-direction:column;align-items:flex-end;font-size:13px;max-width:34%;min-width:0;text-align:right}
+.hwho b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hwho span{color:var(--muted);font-variant-numeric:tabular-nums}
+.trow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.trow:last-child{border-bottom:0}
+.note{font-size:14px;color:var(--muted);margin:0}
+.hidden-file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links .btn{flex:1;min-width:140px;font-size:16px;min-height:46px}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="iconbtn" id="back" aria-label="Volver al buscador" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <h1 id="title">Almacén</h1>
+  <span class="tag" id="rotag" hidden>Solo ver</span>
+  <button class="whobtn" id="who" hidden aria-label="Cerrar sesión"><span id="whoname"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
+</header>
+
+<main id="app">
+  <div class="empty">Cargando…</div>
+</main>
+
+<input type="file" id="qrfile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del código QR">
+<input type="file" id="photofile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del producto">
+<div class="toast" id="toast" hidden></div>
+<div class="scanner" id="scanner" hidden role="dialog" aria-label="Escanear código QR">
+  <video id="scanvideo" muted playsinline></video>
+  <div class="scanframe" aria-hidden="true"></div>
+  <p class="scanmsg" id="scanmsg">Apunta al código QR</p>
+  <div class="scanbar"><button class="btn" id="scanphoto">Hacer foto</button><button class="btn primary" id="scanclose">Cerrar</button></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+
+/*__BOOT__*/
+const BOOT = window.__BOOT || {};
+/* Google Apps Script web app that owns the sheet (Code.gs + api.gs). The GitHub page talks to it with fetch. */
+const API_URL = "https://script.google.com/macros/s/AKfycbwMxcgdZ6ru4q9l3j6-bDN9NwUoR7itOoHkXqAWf7H8zpHB9kqFUQD33En7RobZnWmB/exec";
+const IN_GAS = !!(window.google&&google.script&&google.script.run);
+const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
+if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
+/* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
+function api(fn, ...args){
+  if(IN_GAS) return new Promise((res,rej)=>{
+    google.script.run
+      .withSuccessHandler(r=>{ if(r&&r.err) rej({...r, code:r.err}); else res(r); })
+      .withFailureHandler(e=>rej({code:"network", msg:String(e&&e.message||e)}))[fn](...args);
+  });
+  // text/plain keeps it a "simple" request, so the browser sends it without a CORS preflight.
+  return fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn,args}),redirect:"follow"})
+    .then(r=>{ if(!r.ok) throw {code:"network", msg:"HTTP "+r.status}; return r.json(); },
+          e=>{ throw {code:"network", msg:String(e&&e.message||e)}; })
+    .then(r=>{ if(r&&r.err) throw {...r, code:r.err}; return r; },
+          e=>{ throw e&&e.code ? e : {code:"network", msg:String(e&&e.message||e)}; });
+}
+/* Last good copy of the inventory, so the app opens instantly and the server refresh lands a moment later. */
+const CACHE_KEY="almacen_cache_v1";
+function saveCache(r){ try{ const keep={}; ["products","techs","loans","clientes","proveedores","hasPassword"].forEach(k=>{ if(r[k]!==undefined) keep[k]=r[k]; }); const old=loadCache()||{}; localStorage.setItem(CACHE_KEY, JSON.stringify({...old,...keep,at:Date.now()})); }catch(e){} }
+function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); }catch(e){ return null; } }
+function saveFile(filename, data){
+  const blob = data instanceof Blob ? data : new Blob([data],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },2000);
+}
+const SHELVES = {
+  celeste:{name:"Estante celeste",color:"var(--sh-celeste)"},
+  verde:  {name:"Estante verde",  color:"var(--sh-verde)"},
+  gris:   {name:"Estante gris",   color:"var(--sh-gris)"},
+  rojo:   {name:"Estante rojo",   color:"var(--sh-rojo)"},
+  azul:   {name:"Estante azul",   color:"var(--sh-azul)"},
+  marron: {name:"Estante marrón", color:"var(--sh-marron)"},
+  negro:  {name:"Estante negro",  color:"var(--sh-negro)"},
+};
+const EMPRESAS = ["Marcres","Rivagua"];
+const LOAN_LOC = {name:"Préstamos", color:"var(--sh-loan)"};
+const NO_LOC = {name:"Sin ubicación", color:"var(--line)"};
+/* Loan items live in the "Préstamos" location, whatever shelf they had. */
+const locOf = p => p.prestamo ? LOAN_LOC : (SHELVES[p.ubicacion] || NO_LOC);
+const locKey = p => p.prestamo ? "prestamos" : (SHELVES[p.ubicacion] ? p.ubicacion : "none");
+const locName = k => k==="prestamos" ? LOAN_LOC.name : k==="none" ? NO_LOC.name : SHELVES[k].name;
+const isLow = p => Number(p.minimo)>0 && p.cantidad < Number(p.minimo);
+const IDLE_MS = 15*60*1000;
+const TIPOS = {salida:"Sacado", entrada:"Ingresado", prestamo:"Préstamo", devolucion:"Devuelto", recuento:"Recuento", alta:"Alta", ajuste:"Ajuste", edicion:"Cambio", baja:"Baja"};
+
+const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
+  db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
+  techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{}}, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const normCode = s => String(s||"").trim().toUpperCase().replace(/\s+/g,"-").replace(/[^A-Z0-9._~-]/g,"");
+const initials = n => String(n||"?").split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
+const imgFor = p => p && p.foto ? "https://drive.google.com/thumbnail?id=" + encodeURIComponent(p.foto) + "&sz=w800" : null;
+const BOM = String.fromCharCode(0xFEFF), LAST_CHAR = String.fromCharCode(0xFFFF);
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const fold = s => String(s||"").normalize("NFD").replace(/\p{Mn}/gu,"").toLowerCase().trim();
+const fmtDate = t => new Date(t).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"});
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,3000); }
+
+const OPEN_VIEWS = new Set(["login","admin"]);
+function go(view, extra={}){
+  if (S.unMoves && !(view==="ficha" && extra.code===S.code)) { S.unMoves(); S.unMoves=null; S.moves=[]; }
+  if (!S.tecnico && !OPEN_VIEWS.has(view)) { if(view==="ficha"&&extra.code) S.pending=extra.code; view="login"; extra={}; }
+  if (S.tecnico && !S.destino && view!=="destino" && view!=="login") { if(view==="ficha"&&extra.code) S.pending=extra.code; view="destino"; extra={}; }
+  if (!(view==="ficha" && extra.code===S.code)) S.sheet=null;
+  Object.assign(S, {view}, extra);
+  if (view==="ficha") watchMoves(S.code);
+  render(); window.scrollTo(0,0);
+}
+
+/* ---------- Views ---------- */
+function render(){
+  $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
+  $("#rotag").hidden = S.canWrite;
+  const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
+  const titles={login:"Almacén Marcres", buscar:"Almacén", ficha:"Ficha", mapa:"Mapa del almacén", editar:S.editCode?"Editar producto":"Nuevo producto", qr:"Etiquetas QR", admin:"Restringido", prestamos:"Préstamos", destino:"¿Para qué es?"};
+  $("#title").textContent = titles[S.view];
+  ({login:viewLogin, buscar:viewSearch, ficha:viewFicha, mapa:viewMap, editar:viewEdit, qr:viewQR, admin:viewAdmin, prestamos:viewLoans, destino:viewDest})[S.view]();
+}
+
+const LOGIN_MIN=3;
+function techMatches(q){
+  const parts=fold(q).split(/\s+/).filter(Boolean);
+  if(parts.join("").length<LOGIN_MIN) return [];
+  return S.techs.filter(t=>t.activo!==false).filter(t=>{
+    const words=fold(t.nombre).split(/\s+/);
+    return parts.every(p=>words.some(w=>w.startsWith(p)));
+  }).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,4);
+}
+function viewLogin(){
+  const any=S.techs.some(t=>t.activo!==false);
+  app.innerHTML = `<section class="login">
+    <div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+    <h2>¿Quién eres?</h2>
+    <p class="note">Escribe tu nombre o apellido y tócalo para entrar. Cada producto que saques o ingreses quedará registrado a tu nombre.</p>
+    ${!S.techsLoaded?'<div class="empty">Cargando técnicos…</div>':
+      !any?'<div class="empty">Todavía no hay técnicos en la lista. Se añaden desde «Acceso restringido».</div>':
+      `<label class="field"><span class="label">Tu nombre</span><input id="l_q" type="search" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Empieza a escribir…" value="${esc(S.loginQ||"")}"></label>
+       <div id="l_res"></div>`}
+    ${S.pending?`<p class="note">Después se abrirá el producto <b>${esc(S.pending)}</b>.</p>`:""}
+    ${S.techsLoaded&&!any?'<button class="linkbtn" id="l_admin">Acceso restringido</button>':""}
+  </section>`;
+  const q=$("#l_q");
+  if(q){
+    q.oninput=()=>{ S.loginQ=q.value; drawLoginResults(); };
+    q.onkeydown=e=>{ if(e.key==="Enter"){ const m=techMatches(q.value); if(m.length===1) login(m[0]); } };
+    drawLoginResults();
+    setTimeout(()=>{ try{ q.focus(); }catch(e){} },50);
+  }
+  const la=$("#l_admin"); if(la) la.onclick=()=>go("admin");
+}
+function drawLoginResults(){
+  const box=$("#l_res"), q=$("#l_q"); if(!box||!q) return;
+  const typed=fold(q.value).replace(/\s+/g,"").length;
+  if(typed<LOGIN_MIN){ box.innerHTML=typed?`<p class="note">Sigue escribiendo…</p>`:""; return; }
+  const m=techMatches(q.value);
+  box.innerHTML = m.length
+    ? `<div class="list">${m.map(t=>`<button class="row techpick" data-tec="${esc(t.id)}"><span class="txt"><div class="name">${esc(t.nombre)}</div></span><span class="go">Entrar</span></button>`).join("")}</div>`
+    : `<div class="empty">No hay ningún técnico con ese nombre. Si eres nuevo, pide a Xavi que te añada.</div>`;
+  box.querySelectorAll("[data-tec]").forEach(b=>b.onclick=()=>{ const t=m.find(x=>x.id===b.dataset.tec); if(t) login(t); });
+}
+
+function canRestricted(){
+  if(!S.tecnico) return false;
+  const t=S.techs.find(x=>x.id===S.tecnico.id);
+  return !!(t&&t.restringido&&t.activo!==false);
+}
+function login(t){
+  S.tecnico={id:t.id,nombre:t.nombre}; S.lastActive=Date.now(); S.loginQ="";
+  S.destino=null; S.destStep="q1"; S.destNew=false; S.empresa=""; S.comunidad="";
+  go("destino");
+  toast(`Hola, ${t.nombre}`);
+}
+function logout(msg){
+  S.tecnico=null; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{}};
+  go("login"); if(msg) toast(msg);
+}
+
+function productRow(p){
+  const sh = locKey(p)==="none" ? null : locOf(p);
+  const img = imgFor(p);
+  return `<button class="row" data-open="${esc(p.codigo)}">
+    <span class="thumb">${img?`<img src="${img}" alt="">`:esc(initials(p.nombre))}</span>
+    <span class="txt"><div class="name">${esc(p.nombre)}${p.ejemplo?'<span class="pill">Ejemplo</span>':''}</div>
+      <div class="code">${esc(p.codigo)}</div>
+      ${sh?`<span class="chip"><span class="dot" style="background:${sh.color}"></span>${sh.name}</span>`:""}</span>
+    <span class="qty ${isLow(p)?'low':''}">${p.cantidad}</span></button>`;
+}
+
+function viewSearch(){
+  const q = S.q.trim().toLowerCase();
+  const all = [...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  const hits = q ? all.filter(p => (p.codigo+" "+p.nombre+" "+(p.descripcion||"")).toLowerCase().includes(q)) : all;
+  app.innerHTML = `
+    ${S.destino?`<div class="destbar"><span>Para: <b>${esc(destLabel())}</b></span><button class="linkbtn" id="d_change">Cambiar</button></div>`:""}
+    <button class="btn primary block" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR</button>
+    ${S.canWrite?'<button class="btn block" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':''}
+    <div class="search"><input id="q" type="search" inputmode="search" placeholder="Buscar por código o nombre" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
+    ${!S.loaded?'<div class="list"><div class="empty">Cargando inventario…</div></div>':
+      !all.length?'<div class="list"><div class="empty">Aún no hay productos. Pulsa «Nuevo producto» para dar de alta el primero.</div></div>':
+      q?`<div class="label">${hits.length} resultado${hits.length===1?"":"s"}</div>
+        <div class="list">${hits.length?hits.map(productRow).join(""):`<div class="empty">Ningún producto coincide con «${esc(S.q)}».</div>`}</div>`:
+      `<div class="label">Productos por estante · ${all.length}</div>
+       <div class="groups">${[...Object.entries(SHELVES),["prestamos",LOAN_LOC],["none",NO_LOC]].map(([k,v])=>{
+         const items=all.filter(p=>locKey(p)===k);
+         if(!items.length) return "";
+         return `<details class="group" data-g="${k}" ${S.openGroups.has(k)?"open":""}><summary><span class="dot" style="background:${v.color}"></span><span class="gname">${v.name}</span><span class="gcount">${items.length}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary><div class="list">${items.map(productRow).join("")}</div></details>`;
+       }).join("")}</div>`}
+    ${canRestricted()&&lowList().length?`<button class="alert" id="tolow">⚠ ${lowList().length} producto${lowList().length===1?"":"s"} por debajo del mínimo</button>`:""}
+    <div class="links">
+      <button class="btn" id="tomap">Mapa</button>
+      <button class="btn" id="toqr">Etiquetas QR</button>
+      <button class="btn" id="toloans">Préstamos${S.loans.length?` · ${S.loans.length} fuera`:""}</button>
+    </div>
+    ${canRestricted()?`<button class="btn block" id="tohist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Acceso restringido</button>`:""}`;
+  const qi=$("#q");
+  qi.addEventListener("input",()=>{ S.q=qi.value; const pos=qi.selectionStart; viewSearch(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
+  qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
+  $("#scan").onclick=openScanner;
+  $("#tomap").onclick=()=>go("mapa",{mapSel:null});
+  $("#toqr").onclick=()=>go("qr");
+  const th=$("#tohist"); if(th) th.onclick=()=>{ S.adminWant=null; go("admin"); };
+  const tl=$("#tolow"); if(tl) tl.onclick=()=>{ S.adminWant="ped"; if(S.adminOk) S.adminTab="ped"; go("admin"); };
+  $("#toloans").onclick=()=>go("prestamos");
+  const dc=$("#d_change"); if(dc) dc.onclick=changeDest;
+  const tn=$("#tonew"); if(tn) tn.onclick=()=>go("editar",{editCode:null});
+  app.querySelectorAll("details.group").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.openGroups.add(d.dataset.g):S.openGroups.delete(d.dataset.g); }));
+}
+
+function viewFicha(){
+  const p = S.products.get(S.code);
+  if(!p){ app.innerHTML=`<div class="empty">${S.loaded?`No existe ningún producto con el código <b>${esc(S.code)}</b>.`:"Cargando…"}</div><button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); return; }
+  const sh = locOf(p);
+  const img = imgFor(p);
+  const low = isLow(p);
+  const loans = S.loans.filter(l=>l.codigo===p.codigo).sort((a,b)=>a.salida-b.salida);
+  let actions="";
+  if(!S.canWrite) actions=`<p class="note">Tienes acceso de solo lectura: puedes consultar el stock pero no modificarlo.</p>`;
+  else if(p.prestamo) actions=`<div class="stock">
+      <span class="label">Herramienta o maquinaria de préstamo</span>
+      <span class="note">Para: <b>${esc(destLabel())}</b> · <button class="linkbtn" data-dchange>Cambiar</button></span>
+      <button class="btn primary block" id="lend" ${S.busy||p.cantidad<1?"disabled":""}>${p.cantidad<1?"No queda ninguna disponible":"Llevármela"}</button></div>`;
+  else actions=`<div class="stock">
+      <span class="label">Cantidad a mover</span>
+      <span class="note">Para: <b>${esc(destLabel())}</b> · <button class="linkbtn" data-dchange>Cambiar</button></span>
+      <div class="stepper">
+        <button class="iconbtn" id="dec" aria-label="Menos"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 12h14"/></svg></button>
+        <input id="amt" type="number" inputmode="numeric" min="1" step="1" value="${S.amount}" aria-label="Cantidad a mover">
+        <button class="iconbtn" id="inc" aria-label="Más"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5v14"/></svg></button>
+      </div>
+      <div class="twobtn">
+        <button class="btn out" id="out" ${S.busy?"disabled":""}>− Sacar</button>
+        <button class="btn in" id="in" ${S.busy?"disabled":""}>+ Ingresar</button>
+      </div></div>`;
+  app.innerHTML = `<section class="ficha" style="display:flex;flex-direction:column;gap:14px">
+    <div class="photo">${img?`<img src="${img}" alt="Foto de ${esc(p.nombre)}">`:esc(initials(p.nombre))}</div>
+    <div><div class="code">${esc(p.codigo)}${p.prestamo?'<span class="pill">Préstamo</span>':''}</div><h2>${esc(p.nombre)}</h2></div>
+    ${p.descripcion?`<p>${esc(p.descripcion)}</p>`:""}
+    ${p.proveedor?`<p class="note" style="margin:0">Proveedor: <b>${esc(p.proveedor)}</b></p>`:""}
+    <div class="facts">
+      <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
+      <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">Ver en el mapa</span></div>
+    </div>
+    ${actions}
+    ${p.prestamo&&loans.length?`<div><div class="label" style="margin-bottom:6px">Quién la tiene</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
+    <div><div class="label" style="margin-bottom:6px">Últimos movimientos</div><div class="log" id="log"></div></div>
+    ${S.canWrite&&!S.sheet?`<div class="twobtn"><button class="btn" id="toggleLoan" ${S.busy?"disabled":""}>${p.prestamo?"Quitar de préstamos":"Préstamo"}</button><button class="btn" id="edit">Editar producto</button></div>`:''}
+  </section>`;
+  renderLog();
+  bindLoanButtons();
+  $("#loc").onclick=()=>go("mapa",{mapSel:locKey(p)});
+  if(!S.canWrite) return;
+  app.querySelectorAll("[data-dchange]").forEach(b=>b.onclick=changeDest);
+  $("#edit").onclick=()=>go("editar",{editCode:p.codigo});
+  $("#toggleLoan").onclick=()=>toggleLoan(p);
+  if(p.prestamo){ const l=$("#lend"); if(l) l.onclick=()=>lend(p.codigo); return; }
+  const amt=$("#amt");
+  const getAmt=()=>Math.max(1,Math.floor(Number(amt.value)||1));
+  amt.onchange=()=>{S.amount=getAmt(); amt.value=S.amount};
+  $("#dec").onclick=()=>{S.amount=Math.max(1,getAmt()-1); amt.value=S.amount};
+  $("#inc").onclick=()=>{S.amount=getAmt()+1; amt.value=S.amount};
+  $("#out").onclick=()=>move(p.codigo,-getAmt());
+  $("#in").onclick=()=>move(p.codigo,getAmt());
+}
+
+async function toggleLoan(p){
+  if(S.busy) return;
+  const on=!p.prestamo;
+  if(!on&&S.loans.some(l=>l.codigo===p.codigo)){ toast("Antes de quitarlo de préstamos tienen que devolverlo."); return; }
+  S.busy=true;
+  try{
+    await api("api_toggleLoan", S.tecnico.id, p.codigo, on);
+    p.prestamo=on; refreshMoves();
+    toast(on?`${p.nombre} está ahora en Préstamos.`:`${p.nombre} vuelve a ${(SHELVES[p.ubicacion]||NO_LOC).name.toLowerCase()}.`);
+  }catch(err){ if(err&&err.code==="lent") toast("Antes de quitarlo de préstamos tienen que devolverlo."); else handleWriteError(err); }
+  finally{ S.busy=false; if(S.view==="ficha") render(); }
+}
+
+/* ---------- Destino: obligatorio tras elegir el nombre ---------- */
+function destLabel(){ const d=S.destino; if(!d) return "—"; return d.tipo==="almacen"?"Almacén":`${d.comunidad} (${d.empresa})`; }
+function destFields(){ const d=S.destino; if(!d) return {}; return d.tipo==="almacen"?{destino:"almacen",empresa:"",comunidad:"Almacén"}:{destino:"comunidad",empresa:d.empresa,comunidad:d.comunidad}; }
+function changeDest(){ S.destStep="q1"; S.destNew=false; S.comunidad=""; go("destino"); }
+function exactClient(){ const i=$("#pk_com"); if(!i||!S.empresa) return null; const q=fold(i.value); return q?S.clientes.find(c=>fold(c.nombre)===q&&(!c.empresa||c.empresa===S.empresa))||null:null; }
+function finishDest(d){
+  S.destino=d; S.destStep="q1"; S.destNew=false;
+  const c=S.pending; S.pending=null;
+  if(c&&S.products.has(c)) go("ficha",{code:c}); else go("buscar");
+  toast(`Para: ${destLabel()}`);
+}
+function viewDest(){
+  const st=S.destStep||"q1";
+  const yesNo=`<div class="seg"><button class="btn primary bigyes" id="d_si">Sí</button><button class="btn bigyes" id="d_no">No</button></div>`;
+  app.innerHTML = `<section class="login">
+    ${st==="q1"?`<h2>¿Es para una comunidad?</h2>${yesNo}`:
+      st==="alm"?`<h2>¿Es para almacén?</h2>${yesNo}`:
+      `<h2>¿Para qué comunidad?</h2>${pickerHtml("Comunidad o cliente")}
+       <button class="btn primary block" id="d_ok" disabled>Continuar</button>
+       <button class="linkbtn" id="d_back">Atrás</button>`}
+    ${S.pending?`<p class="note">Después se abrirá el producto <b>${esc(S.pending)}</b>.</p>`:""}
+  </section>`;
+  if(st==="q1"){ $("#d_si").onclick=()=>{ S.destStep="com"; viewDest(); setTimeout(()=>{const i=$("#pk_com"); if(i) i.focus();},50); }; $("#d_no").onclick=()=>{ S.destStep="alm"; viewDest(); }; return; }
+  if(st==="alm"){ $("#d_si").onclick=()=>finishDest({tipo:"almacen"}); $("#d_no").onclick=()=>{ S.destStep="q1"; viewDest(); }; return; }
+  bindPicker();
+  $("#d_back").onclick=()=>{ S.destStep="q1"; viewDest(); };
+  $("#d_ok").onclick=()=>{
+    const typed=($("#pk_com").value||"").trim(), ex=exactClient();
+    if(!S.empresa){ toast("Elige la empresa: Marcres o Rivagua."); return; }
+    if(!ex&&!(S.destNew&&typed)){ toast("Elige la comunidad de la lista."); return; }
+    if(!ex) rememberClient(S.empresa,typed);
+    finishDest({tipo:"comunidad",empresa:S.empresa,comunidad:ex?ex.nombre:typed});
+  };
+}
+function updateDestOk(){ const b=$("#d_ok"); if(!b) return; const typed=($("#pk_com")?.value||"").trim(); b.disabled=!(S.empresa&&(exactClient()||(S.destNew&&typed))); }
+
+/* Empresa + comunidad picker used by the destination step. */
+function pickerHtml(label){
+  return `<div><span class="label">Empresa</span><div class="seg" style="margin-top:4px">${EMPRESAS.map(e=>`<button type="button" class="btn" data-emp="${e}" aria-pressed="${S.empresa===e}">${e}</button>`).join("")}</div></div>
+    <label class="field"><span class="label">${label}</span><input id="pk_com" autocomplete="off" placeholder="Escribe para buscar" value="${esc(S.comunidad)}"></label>
+    <div id="pk_sug"></div>`;
+}
+function bindPicker(){
+  app.querySelectorAll("[data-emp]").forEach(b=>b.onclick=()=>{ S.empresa=b.dataset.emp; S.destNew=false; app.querySelectorAll("[data-emp]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.emp===S.empresa)); drawSug(); });
+  const i=$("#pk_com"); i.oninput=()=>{ S.comunidad=i.value; S.destNew=false; drawSug(); };
+  drawSug();
+}
+function drawSug(){
+  const box=$("#pk_sug"), i=$("#pk_com"); if(!box||!i) return;
+  const q=fold(i.value); updateDestOk();
+  if(!S.empresa){ box.innerHTML=q?'<p class="note">Primero elige Marcres o Rivagua.</p>':""; return; }
+  if(q.length<2){ box.innerHTML=""; return; }
+  const parts=q.split(/\s+/);
+  const seen=new Set();
+  const hits=S.clientes.filter(c=>(!S.empresa||!c.empresa||c.empresa===S.empresa)&&parts.every(w=>fold(c.nombre).includes(w)))
+    .filter(c=>{ const k=fold(c.nombre); if(seen.has(k)) return false; seen.add(k); return true; })
+    .sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,5);
+  if(hits.some(c=>fold(c.nombre)===q)&&hits.length===1){ box.innerHTML=""; return; }
+  box.innerHTML = (hits.length?`<div class="sug">${hits.map(c=>`<button type="button" data-cli="${esc(c.nombre)}">${esc(c.nombre)}</button>`).join("")}</div>`:`<p class="note">No está en la lista de ${esc(S.empresa)}.</p>`)
+    + (hits.length?"":S.destNew?`<p class="note">Se añadirá «${esc(i.value.trim())}» como nueva.</p>`:`<button type="button" class="linkbtn" id="pk_new">Es nueva: añadir «${esc(i.value.trim())}»</button>`);
+  box.querySelectorAll("[data-cli]").forEach(b=>b.onclick=()=>{ i.value=b.dataset.cli; S.comunidad=i.value; S.destNew=false; box.innerHTML=""; updateDestOk(); });
+  const nb=$("#pk_new"); if(nb) nb.onclick=()=>{ S.destNew=true; drawSug(); };
+}
+function rememberClient(empresa,nombre){
+  const k=fold(nombre); if(!k||S.clientes.some(c=>fold(c.nombre)===k&&(!c.empresa||c.empresa===empresa))) return;
+  S.appClients.push({nombre,empresa}); S.clientes.push({nombre,empresa});
+  if(S.tecnico) api("api_addClient", S.tecnico.id, nombre, empresa).catch(()=>{});
+}
+
+/* ---------- Préstamos ---------- */
+const since = t => { const d=Math.floor((Date.now()-t)/86400000); return d<=0?"hoy":d===1?"desde ayer":`hace ${d} días`; };
+function loanRow(l){
+  return `<div class="loan"><span class="txt"><div class="name">${esc(l.tecnico)}</div>
+    <div class="sub">${esc([l.empresa,l.comunidad].filter(Boolean).join(" · ")||"Sin comunidad")} · ${since(l.salida)} (${fmtDate(l.salida)})</div></span>
+    ${S.canWrite?`<button class="btn" data-ret="${esc(l.id)}">Devolver</button>`:""}</div>`;
+}
+function bindLoanButtons(){
+  app.querySelectorAll("[data-ret]").forEach(b=>b.onclick=()=>{ const l=S.loans.find(x=>x.id===b.dataset.ret); if(l) returnLoan(l); });
+}
+function viewLoans(){
+  const open=[...S.loans].sort((a,b)=>a.salida-b.salida);
+  const tools=[...S.products.values()].filter(p=>p.prestamo).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  app.innerHTML = `
+    <div class="label">Prestadas ahora · ${open.length}</div>
+    <div class="list">${open.length?open.map(l=>`<div class="loan"><span class="txt"><div class="name">${esc(l.producto)} <span class="code">${esc(l.codigo)}</span></div>
+      <div class="sub"><b style="color:var(--fg)">${esc(l.tecnico)}</b> · ${esc([l.empresa,l.comunidad].filter(Boolean).join(" · ")||"Sin comunidad")} · ${since(l.salida)}</div></span>
+      ${S.canWrite?`<button class="btn" data-ret="${esc(l.id)}">Devolver</button>`:""}</div>`).join(""):'<div class="empty">Ahora mismo no hay nada prestado.</div>'}</div>
+    <div class="label">Herramientas y maquinaria · ${tools.length}</div>
+    <div class="list">${tools.length?tools.map(productRow).join(""):'<div class="empty">Ningún producto está marcado como préstamo. Márcalo en «Editar producto».</div>'}</div>`;
+  bindLoanButtons();
+}
+async function lend(code){
+  const p=S.products.get(code); if(!p||S.busy||!S.tecnico) return;
+  S.busy=true; viewFicha();
+  try{
+    const r=await api("api_lend", S.tecnico.id, code, S.destino);
+    p.cantidad=r.next;
+    S.loans=[...S.loans.filter(l=>l.id!==r.loan.id), r.loan];
+    toast(`Apuntado: te llevas ${p.nombre}.`); refreshMoves();
+  }catch(err){
+    if(err&&err.code==="gone") toast("Este producto ya no existe.");
+    else if(err&&err.code==="none") toast("No queda ninguna disponible.");
+    else handleWriteError(err);
+  }
+  finally{ S.busy=false; if(S.view==="ficha") render(); }
+}
+async function returnLoan(l){
+  if(S.busy||!S.tecnico) return;
+  S.busy=true;
+  try{
+    const r=await api("api_return", S.tecnico.id, l.id);
+    S.loans=S.loans.filter(x=>x.id!==l.id);
+    const p=S.products.get(l.codigo); if(p&&!r.gone) p.cantidad=r.next;
+    toast(`${l.producto} devuelto.`); refreshMoves();
+  }catch(err){
+    if(err&&err.code==="done"){ S.loans=S.loans.filter(x=>x.id!==l.id); toast("Este préstamo ya estaba devuelto."); }
+    else handleWriteError(err);
+  }
+  finally{ S.busy=false; if(S.view==="ficha"||S.view==="prestamos") render(); }
+}
+
+function renderLog(){
+  const el=$("#log"); if(!el) return;
+  if(!S.moves.length){ el.innerHTML='<span class="note">Sin movimientos registrados todavía.</span>'; return; }
+  el.innerHTML = S.moves.map(m=>{
+    const d=Number(m.delta)||0;
+    const amount = (m.tipo!=="edicion"&&m.tipo!=="baja") ? `<span class="d ${d<0?'neg':'pos'}">${d>0?"+":""}${d} → ${m.despues}</span>` : `<span class="d">${esc(TIPOS[m.tipo]||m.tipo||"")}</span>`;
+    return `<div><span>${fmtDate(m.fecha)} · ${esc(m.tecnico||"—")}${m.comunidad?` · ${esc(m.comunidad)}`:""}</span>${amount}</div>`;
+  }).join("");
+}
+
+function shelfSvg(sel){
+  const lbl=k=>SHELVES[k].name.replace("Estante ","").toUpperCase();
+  const g=(key,inner,lx,ly,anchor="middle")=>`<g class="shelf ${sel===key?'on':''}" data-shelf="${key}" role="button" tabindex="0" aria-label="${SHELVES[key].name}">
+    ${inner}<text x="${lx}" y="${ly}" text-anchor="${anchor}">${lbl(key)}</text></g>`;
+  const r=(key,x,y,w,h,t="")=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${SHELVES[key].color}" ${t}/>`;
+  return `<svg viewBox="0 0 360 300" aria-label="Plano del almacén">
+    <polygon points="40,30 340,30 130,285 40,285" fill="var(--surface-2)" stroke="var(--fg)" stroke-width="2.5" stroke-linejoin="round"/>
+    <line x1="40" y1="82" x2="40" y2="112" stroke="var(--surface-2)" stroke-width="5"/>
+    <path d="M8 97 h20 m-6 -6 l6 6 l-6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>
+    <text x="48" y="101" style="font-size:11px;fill:var(--muted)">PUERTA</text>
+    ${g("negro",r("negro",50,38,30,30),65,22)}
+    ${g("marron",r("marron",90,38,28,14),114,68)}
+    ${g("azul",r("azul",126,38,28,14),140,22)}
+    ${g("rojo",r("rojo",166,38,134,14),233,22)}
+    ${g("celeste",r("celeste",50,122,16,150),74,200,"start")}
+    ${g("verde",r("verde",110.1,206.8,119,16,'transform="rotate(-50.5 169.6 214.8)"'),212,246,"start")}
+    ${g("gris",r("gris",194.8,106.1,115.5,16,'transform="rotate(-50.5 252.55 114.1)"'),284,150,"start")}
+  </svg>`;
+}
+
+function viewMap(){
+  const sel=S.mapSel;
+  const items = sel ? [...S.products.values()].filter(p=>locKey(p)===sel).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")) : [];
+  app.innerHTML = `
+    <div class="map">${shelfSvg(sel)}</div>
+    <div class="legend">${Object.entries(SHELVES).map(([k,v])=>`<button data-shelf="${k}" aria-pressed="${sel===k}"><span class="dot" style="background:${v.color}"></span>${v.name}</button>`).join("")} <button data-shelf="prestamos" aria-pressed="${sel==="prestamos"}"><span class="dot" style="background:var(--sh-loan)"></span>Préstamos · ${[...S.products.values()].filter(p=>p.prestamo).length}</button><button data-shelf="none" aria-pressed="${sel==="none"}"><span class="dot" style="background:var(--line)"></span>Sin ubicación · ${[...S.products.values()].filter(p=>locKey(p)==="none").length}</button></div>
+    ${sel?`<div class="label">${locName(sel)} · ${items.length} producto${items.length===1?"":"s"}</div>
+      <div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">No hay productos en esta ubicación.</div>'}</div>`
+      :'<p class="note">Toca un estante para ver qué hay en él.</p>'}
+    ${S.code&&S.products.get(S.code)?`<button class="btn block" id="toficha">Volver a ${esc(S.products.get(S.code).nombre)}</button>`:""}`;
+  app.querySelectorAll("[data-shelf]").forEach(el=>{
+    const f=()=>{S.mapSel=el.dataset.shelf; viewMap();};
+    el.addEventListener("click",f); el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();f();}});
+  });
+  const tf=$("#toficha"); if(tf) tf.onclick=()=>go("ficha",{code:S.code});
+}
+
+function nextCode(){
+  let n=0; for(const c of S.products.keys()){ const m=/^MAT-(\d+)$/.exec(c); if(m) n=Math.max(n,+m[1]); }
+  return "MAT-"+String(n+1).padStart(3,"0");
+}
+
+function viewEdit(){
+  const p = S.editCode ? S.products.get(S.editCode) : null;
+  const img = imgFor(p);
+  const baseCant = p ? p.cantidad : null;
+  app.innerHTML = `<form class="edit" id="f" novalidate>
+    <div><span class="label">Foto</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:6px">
+        <span class="thumb" id="e_thumb" style="width:84px;height:84px">${img?`<img src="${img}" alt="">`:"—"}</span>
+        <button type="button" class="btn" id="e_photo">${img?"Cambiar foto":"Hacer foto"}</button>
+      </div></div>
+    <label><span class="label">Nombre</span><input id="e_nombre" required value="${esc(p?.nombre||"")}" placeholder="Ej. Bomba Espa Multi 35 5" autocomplete="off"></label>
+    <div class="twobtn">
+      <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
+      <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(SHELVES).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</select></label>
+    </div>
+    ${canRestricted()?`<label><span class="label">Stock mínimo (avisa si hay menos)</span><input id="e_min" type="number" inputmode="numeric" min="0" step="1" value="${Number(p?.minimo)||""}" placeholder="Sin mínimo"></label>`:""}
+    <label><span class="label">Proveedor habitual (opcional)</span><input id="e_prov" list="provlist" autocomplete="off" value="${esc(p?.proveedor||"")}" placeholder="Escribe para buscar"><datalist id="provlist">${S.proveedores.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
+    <label class="check"><input type="checkbox" id="e_prest" ${p?.prestamo?"checked":""}> <span>Herramienta o maquinaria de préstamo (se presta y se devuelve)</span></label>
+    <label><span class="label">Descripción (opcional)</span><textarea id="e_desc" rows="2" placeholder="Medidas, material, modelo…">${esc(p?.descripcion||"")}</textarea></label>
+    <label><span class="label">Código del QR ${p?"":"(se pone solo)"}</span><input id="e_codigo" required value="${esc(p?.codigo||nextCode())}" ${p?"readonly":""} style="font-family:var(--f-mono)"></label>
+    <button class="btn primary block" type="submit" id="e_save">Guardar</button>
+    ${p?"":'<button class="btn block" type="submit" id="e_again" data-again="1">Guardar y añadir otro</button>'}
+    ${p?`<button class="btn block" type="button" id="e_del" style="color:var(--danger)">Eliminar producto</button><div id="e_confirm" hidden class="stock"><span>¿Eliminar <b>${esc(p.nombre)}</b> del inventario? No se puede deshacer.</span><div class="twobtn"><button type="button" class="btn" id="e_no">Cancelar</button><button type="button" class="btn out" id="e_yes">Eliminar</button></div></div>`:""}
+  </form>`;
+  let fotoId = p?.foto || "";
+  const ph=$("#e_photo");
+  if(ph) ph.onclick=()=>{ const inp=$("#photofile"); inp.value=""; inp.onchange=async()=>{
+      const file=inp.files[0]; if(!file) return;
+      ph.disabled=true; ph.textContent="Subiendo…";
+      try{ const blob=await shrink(file,1000); const b64=await blobToBase64(blob); const r=await api("api_uploadPhoto", S.tecnico.id, b64); fotoId=r.id; $("#e_thumb").innerHTML=`<img src="data:image/jpeg;base64,${b64}" alt="">`; toast("Foto lista. Pulsa Guardar."); }
+      catch(e){ toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Inténtalo de nuevo."); }
+      ph.disabled=false; ph.textContent="Cambiar foto"; };
+    inp.click(); };
+  const setBusy=b=>{ $("#e_save").disabled=b; const a=$("#e_again"); if(a) a.disabled=b; };
+  $("#f").onsubmit=async e=>{
+    e.preventDefault();
+    if(S.busy) return;
+    const codigo=normCode($("#e_codigo").value), nombre=$("#e_nombre").value.trim();
+    if(!nombre){ toast("Escribe el nombre del producto."); $("#e_nombre").focus(); return; }
+    if(!codigo){ toast("Falta el código del QR."); return; }
+    const cantidad=Math.max(0,Math.floor(Number($("#e_cant").value)||0));
+    const fields={nombre,descripcion:$("#e_desc").value.trim(),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:$("#e_prov").value.trim()};
+    if($("#e_min")) fields.minimo=Math.max(0,Math.floor(Number($("#e_min").value)||0));
+    const again = !!(e.submitter && e.submitter.dataset.again);
+    S.busy=true; setBusy(true);
+    try{
+      const data={codigo,...fields,cantidad};
+      const r=await api("api_saveProduct", S.tecnico.id, data, !p);
+      S.products.set(r.product.codigo, r.product);
+      if(!p){
+        if(again){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
+        toast("Guardado"); S.busy=false; go("ficha",{code:r.product.codigo}); return;
+      }
+      toast(r.same?"No había cambios":"Guardado"); S.busy=false; go("ficha",{code:p.codigo});
+    }catch(err){
+      if(err&&err.code==="exists"){ toast(`Ya existe un producto con el código ${codigo}.`); const c=$("#e_codigo"); if(c) c.value=nextCode(); }
+      else handleWriteError(err);
+    }
+    finally{ S.busy=false; const b=$("#e_save"); if(b) setBusy(false); }
+  };
+  if(p){
+    $("#e_del").onclick=()=>{ $("#e_confirm").hidden=false; $("#e_del").hidden=true; };
+    $("#e_no").onclick=()=>{ $("#e_confirm").hidden=true; $("#e_del").hidden=false; };
+    $("#e_yes").onclick=async()=>{ try{ await api("api_deleteProduct", S.tecnico.id, p.codigo); S.products.delete(p.codigo); toast("Producto eliminado"); go("buscar"); }catch(err){ handleWriteError(err); } };
+  }
+}
+
+/* ---------- Responsable: historial y técnicos ---------- */
+function viewAdmin(){
+  const noTechs=S.techsLoaded&&!S.techs.some(t=>t.activo!==false);
+  if(!canRestricted()&&!noTechs){ S.adminOk=false; app.innerHTML=`<div class="empty">Acceso restringido. Solo pueden entrar las personas autorizadas.</div>`; return; }
+  if(!S.adminOk||!S.adminToken) return viewAdminLock();
+  app.innerHTML = `
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="${S.adminTab==="hist"}" data-tab="hist">Historial</button>
+      <button role="tab" aria-selected="${S.adminTab==="ped"}" data-tab="ped">Pedir${lowList().length?` (${lowList().length})`:""}</button>
+      <button role="tab" aria-selected="${S.adminTab==="rec"}" data-tab="rec">Recuento</button>
+      <button role="tab" aria-selected="${S.adminTab==="tec"}" data-tab="tec">Técnicos</button>
+    </div>
+    <div id="adm"></div>`;
+  app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="hist") loadHist(); viewAdmin(); });
+  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs})[S.adminTab]();
+}
+
+function viewAdminLock(){
+  const mode = S.changePw ? "change" : (S.hasPassword ? "login" : "first");
+  app.innerHTML = `<form class="login" id="pw" novalidate>
+    <div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+    <h2>${mode==="first"?"Crea tu contraseña de acceso restringido":mode==="change"?"Nueva contraseña":"Acceso restringido"}</h2>
+    <p class="note">${mode==="login"?"Escribe la contraseña para ver el historial.":"Con esta contraseña verás el historial de movimientos y podrás editar la lista de técnicos. Mínimo 6 caracteres."}</p>
+    <label class="field"><span class="label">Contraseña</span><input id="pw1" type="password" autocomplete="${mode==="login"?"current-password":"new-password"}"></label>
+    ${mode!=="login"?'<label class="field"><span class="label">Repite la contraseña</span><input id="pw2" type="password" autocomplete="new-password"></label>':""}
+    <button class="btn primary block" type="submit">${mode==="login"?"Entrar":"Guardar contraseña"}</button>
+    ${mode==="change"?'<button class="linkbtn" type="button" id="pw_cancel">Cancelar</button>':""}
+  </form>`;
+  const f=$("#pw");
+  const c=$("#pw_cancel"); if(c) c.onclick=()=>{ S.changePw=false; viewAdmin(); };
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    const pw=$("#pw1").value||"", btn=f.querySelector('button[type=submit]');
+    if(mode!=="login"){
+      if(pw.length<6){ toast("La contraseña debe tener al menos 6 caracteres."); return; }
+      if(pw!==($("#pw2").value||"")){ toast("Las dos contraseñas no coinciden."); return; }
+    }
+    btn.disabled=true;
+    try{
+      if(mode==="first"){ const r=await api("api_adminSetup", S.tecnico.id, pw); S.hasPassword=true; S.adminToken=r.token; unlockAdmin(); toast("Contraseña guardada"); }
+      else if(mode==="change"){ await api("api_adminChangePassword", S.adminToken, pw); S.changePw=false; toast("Contraseña cambiada"); viewAdmin(); }
+      else { const r=await api("api_adminLogin", S.tecnico.id, pw); S.adminToken=r.token; unlockAdmin(); }
+    }catch(err){
+      btn.disabled=false;
+      if(err&&err.code==="wrong"){ toast("Contraseña incorrecta."); $("#pw1").value=""; $("#pw1").focus(); }
+      else if(err&&err.code==="exists"){ S.hasPassword=true; toast("La contraseña ya estaba creada. Escríbela para entrar."); viewAdminLock(); }
+      else if(err&&err.code==="auth"){ S.adminOk=false; S.adminToken=null; toast("Tu sesión de acceso restringido ha caducado. Vuelve a entrar."); S.changePw=false; viewAdminLock(); }
+      else handleWriteError(err);
+    }
+  };
+  setTimeout(()=>{ const i=$("#pw1"); if(i) i.focus(); },50);
+}
+
+function unlockAdmin(){
+  S.adminOk=true; S.adminTab=S.adminWant||"hist"; S.adminWant=null; S.lastActive=Date.now();
+  loadHist();
+  viewAdmin();
+}
+async function loadHist(){
+  try{ const r=await api("api_history", S.adminToken); S.hist=r.moves||[]; S.sheetUrl=r.sheetUrl||""; if(S.view==="admin"&&S.adminTab==="hist") viewHist(); }
+  catch(err){ adminError(err); }
+}
+function adminError(err){
+  if(err&&err.code==="auth"){ S.adminOk=false; S.adminToken=null; toast("Tu sesión de acceso restringido ha caducado. Vuelve a entrar."); if(S.view==="admin") viewAdmin(); }
+  else handleWriteError(err);
+}
+
+function viewHist(){
+  const tecs=[...new Set([...S.techs.map(t=>t.nombre),...S.hist.map(m=>m.tecnico).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,"es"));
+  $("#adm").innerHTML = `
+    <div class="filters">
+      <select id="h_tec" aria-label="Técnico"><option value="">Todos los técnicos</option>${tecs.map(t=>`<option ${S.hf.tec===t?"selected":""}>${esc(t)}</option>`).join("")}</select>
+      <select id="h_tipo" aria-label="Tipo"><option value="">Todo</option>${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${S.hf.tipo===k?"selected":""}>${v}</option>`).join("")}</select>
+      <input id="h_q" type="search" placeholder="Producto, código o comunidad" value="${esc(S.hf.q)}" aria-label="Buscar">
+    </div>
+    <div id="h_list"></div>
+    <button class="btn block" id="h_csv">Descargar historial (CSV)</button>
+    ${S.sheetUrl?`<a class="btn block" href="${esc(S.sheetUrl)}" target="_blank" rel="noopener">Abrir la hoja de Google</a>`:""}`;
+  $("#h_tec").onchange=e=>{S.hf.tec=e.target.value; drawHist();};
+  $("#h_tipo").onchange=e=>{S.hf.tipo=e.target.value; drawHist();};
+  $("#h_q").oninput=e=>{S.hf.q=e.target.value; drawHist();};
+  const c=$("#h_csv"); if(c) c.onclick=exportCsv;
+  drawHist();
+}
+function histFiltered(){
+  const q=S.hf.q.trim().toLowerCase();
+  return S.hist.filter(m=>(!S.hf.tec||m.tecnico===S.hf.tec)&&(!S.hf.tipo||m.tipo===S.hf.tipo)&&(!q||fold((m.producto||"")+" "+(m.codigo||"")+" "+(m.comunidad||"")+" "+(m.empresa||"")).includes(fold(q))));
+}
+function drawHist(){
+  const el=$("#h_list"); if(!el) return;
+  const rows=histFiltered();
+  if(!S.hist.length){ el.innerHTML='<div class="list"><div class="empty">Todavía no hay movimientos (o se están cargando). Aquí aparecerá cada vez que alguien saque o ingrese material.</div></div>'; return; }
+  el.innerHTML = `<div class="label" style="margin-bottom:6px">${rows.length} movimiento${rows.length===1?"":"s"}</div>
+    <div class="list">${rows.length?rows.slice(0,300).map(m=>{
+      const d=Number(m.delta)||0;
+      const qty = m.tipo==="edicion" ? esc(m.detalle||"") : `<b class="d ${d<0?'neg':'pos'}">${d>0?"+":""}${d}</b> · quedan ${m.despues}`;
+      return `<button class="hrow" data-open="${esc(m.codigo)}">
+        <span class="htipo t-${esc(m.tipo)}">${esc(TIPOS[m.tipo]||m.tipo)}</span>
+        <span class="txt"><div class="name">${esc(m.producto||m.codigo)}</div><div class="code">${esc(m.codigo)} · ${qty}</div></span>
+        <span class="hwho"><b>${esc(m.tecnico||"—")}</b>${m.comunidad?`<span class="com">${esc(m.comunidad)}</span>`:""}<span>${fmtDate(m.fecha)}</span></span></button>`;}).join(""):'<div class="empty">Ningún movimiento coincide con el filtro.</div>'}</div>
+    ${rows.length>300?'<p class="note">Se muestran los 300 más recientes. Descarga el CSV para verlos todos.</p>':""}`;
+}
+async function exportCsv(){
+  const rows=histFiltered();
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const lines=[["Fecha","Hora","Técnico","Empresa","Comunidad","Tipo","Código","Producto","Cantidad","Stock antes","Stock después","Detalle"].map(q).join(";")];
+  rows.forEach(m=>{ const d=new Date(m.fecha); lines.push([d.toLocaleDateString("es-ES"),d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"}),m.tecnico,m.empresa||"",m.comunidad||"",TIPOS[m.tipo]||m.tipo,m.codigo,m.producto,m.delta,m.antes,m.despues,m.detalle||""].map(q).join(";")); });
+  try{ saveFile(`historial-almacen-${new Date().toISOString().slice(0,10)}.csv`, BOM+lines.join("\r\n")); }
+  catch(e){ toast("No se pudo descargar. Ábrelo en la hoja de Google."); }
+}
+
+function lowList(){ return [...S.products.values()].filter(isLow).sort((a,b)=>(a.proveedor||LAST_CHAR).localeCompare(b.proveedor||LAST_CHAR,"es")||a.nombre.localeCompare(b.nombre,"es")); }
+function viewOrder(){
+  $("#adm").innerHTML = `
+    <div class="label">Por debajo del mínimo</div>
+    <div class="list" id="o_low"></div>
+    <button class="btn block" id="o_csv">Descargar lista para pedir (CSV)</button>
+    <div class="label" style="margin-top:8px">Fijar stock mínimo</div>
+    <p class="note">Pon el mínimo solo en lo que quieras vigilar. Por ejemplo, 2 en una bomba. Déjalo vacío en lo que no quieras que avise. Se guarda solo al salir de la casilla.</p>
+    <div class="search"><input id="o_q" type="search" placeholder="Buscar producto" value="${esc(S.minQ)}" autocomplete="off" aria-label="Buscar producto"></div>
+    <div class="list" id="o_all"></div>`;
+  $("#o_q").oninput=e=>{ S.minQ=e.target.value; drawMinList(); };
+  const c=$("#o_csv"); if(c) c.onclick=exportOrderCsv;
+  drawLowList(); drawMinList();
+}
+function drawLowList(){
+  const el=$("#o_low"); if(!el) return;
+  const l=lowList();
+  el.innerHTML = l.length?l.map(p=>`<button class="row" data-open="${esc(p.codigo)}"><span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · hay ${p.cantidad} · mínimo ${Number(p.minimo)}</div><div class="code">${esc(p.proveedor||"Sin proveedor")}</div></span><span class="qty low">−${Number(p.minimo)-p.cantidad}</span></button>`).join(""):'<div class="empty">Todo está por encima del mínimo.</div>';
+}
+function drawMinList(){
+  const el=$("#o_all"); if(!el) return;
+  const q=fold(S.minQ);
+  const all=[...S.products.values()].filter(p=>!q||fold(p.nombre+" "+p.codigo).includes(q)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  el.innerHTML = all.length?all.slice(0,200).map(p=>`<div class="rcrow"><span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · hay ${p.cantidad}</div></span><input type="number" inputmode="numeric" min="0" step="1" data-min="${esc(p.codigo)}" value="${Number(p.minimo)||""}" placeholder="—" aria-label="Mínimo de ${esc(p.nombre)}"></div>`).join(""):'<div class="empty">Ningún producto coincide.</div>';
+  el.querySelectorAll("[data-min]").forEach(i=>i.onchange=async()=>{
+    const code=i.dataset.min, v=Math.max(0,Math.floor(Number(i.value)||0)), p=S.products.get(code); if(!p) return;
+    if((Number(p.minimo)||0)===v) return;
+    try{ await api("api_setMin", S.adminToken, code, v); p.minimo=v; toast(v?`Mínimo de ${p.nombre}: ${v}`:`${p.nombre} sin mínimo`); drawLowList(); const t=app.querySelector('[data-tab="ped"]'); if(t) t.textContent="Pedir"+(lowList().length?` (${lowList().length})`:""); }
+    catch(err){ adminError(err); }
+  });
+}
+async function exportOrderCsv(){
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const lines=[["Proveedor","Código","Producto","Hay","Mínimo","Faltan"].map(q).join(";")];
+  lowList().forEach(p=>lines.push([p.proveedor||"",p.codigo,p.nombre,p.cantidad,p.minimo,Number(p.minimo)-p.cantidad].map(q).join(";")));
+  try{ saveFile(`para-pedir-${new Date().toISOString().slice(0,10)}.csv`, BOM+lines.join("\r\n")); }
+  catch(e){ toast("No se pudo descargar la lista."); }
+}
+
+function recountItems(){
+  const k=S.rc.shelf; if(!k) return [];
+  return [...S.products.values()].filter(p=>k==="all"||locKey(p)===k).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+}
+function viewRecount(){
+  const opts=[["","Elige qué vas a contar…"],["all","Todo el almacén"],...Object.entries(SHELVES).map(([k,v])=>[k,v.name]),["prestamos","Préstamos"],["none","Sin ubicación"]];
+  const items=recountItems();
+  $("#adm").innerHTML = `
+    <p class="note">Cuenta lo que hay de verdad y escríbelo. Deja vacío lo que no cuentes. Al guardar, la app corrige solo lo que no coincide y lo apunta en el historial como «Recuento».</p>
+    <label class="field"><span class="label">Qué contar</span><select id="r_shelf">${opts.map(([k,v])=>`<option value="${k}" ${S.rc.shelf===k?"selected":""}>${v}</option>`).join("")}</select></label>
+    ${S.rc.shelf?`<div class="list">${items.length?items.map(p=>{ const v=S.rc.counts[p.codigo]; return `<div class="rcrow"><span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · en la app: ${p.cantidad}</div></span><input type="number" inputmode="numeric" min="0" step="1" data-rc="${esc(p.codigo)}" value="${v??""}" placeholder="—" class="${v!==undefined&&v!==p.cantidad?"diff":""}" aria-label="Contado de ${esc(p.nombre)}"></div>`; }).join(""):'<div class="empty">No hay productos aquí.</div>'}</div>
+    <button class="btn primary block" id="r_save">Guardar recuento</button>`:""}`;
+  $("#r_shelf").onchange=e=>{ S.rc.shelf=e.target.value; viewRecount(); };
+  app.querySelectorAll("[data-rc]").forEach(i=>i.oninput=()=>{
+    const code=i.dataset.rc, p=S.products.get(code);
+    if(i.value===""){ delete S.rc.counts[code]; i.classList.remove("diff"); return; }
+    const v=Math.max(0,Math.floor(Number(i.value)||0)); S.rc.counts[code]=v; i.classList.toggle("diff",!!p&&v!==p.cantidad);
+  });
+  const b=$("#r_save"); if(b) b.onclick=saveRecount;
+}
+async function saveRecount(){
+  const counts={}; recountItems().forEach(p=>{ if(S.rc.counts[p.codigo]!==undefined) counts[p.codigo]=S.rc.counts[p.codigo]; });
+  if(!Object.keys(counts).length){ toast("No has escrito ninguna cantidad."); return; }
+  if(S.busy) return; S.busy=true;
+  const b=$("#r_save"); if(b){ b.disabled=true; b.textContent="Guardando…"; }
+  try{
+    const r=await api("api_recount", S.adminToken, counts);
+    Object.keys(counts).forEach(c=>{ const p=S.products.get(c); if(p) p.cantidad=counts[c]; delete S.rc.counts[c]; });
+    toast(`Recuento guardado: ${r.fixed} corregido${r.fixed===1?"":"s"}, ${r.same} coincide${r.same===1?"":"n"}.`);
+  }catch(err){ adminError(err); }
+  S.busy=false;
+  if(S.view==="admin"&&S.adminTab==="rec") viewRecount();
+}
+
+function viewTechs(){
+  const list=S.techs.filter(t=>t.activo!==false).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  $("#adm").innerHTML = `
+    <p class="note">Estos nombres son los que aparecen al entrar en la app.</p>
+    <div class="list">${list.length?list.map(t=>`<div class="trow"><span class="name">${esc(t.nombre)}${t.prueba?'<span class="pill">Prueba</span>':""}${t.restringido?'<span class="pill">Acceso restringido</span>':""}</span>${t.restringido?"":`<button class="linkbtn danger" data-del="${esc(t.id)}">Quitar</button>`}</div>`).join(""):'<div class="empty">No hay técnicos. Añade el primero abajo.</div>'}</div>
+    <div id="t_confirm" class="stock" hidden></div>
+    <form class="search" id="t_add" novalidate><input id="t_name" placeholder="Nombre y apellido" autocomplete="off" aria-label="Nombre del técnico"><button class="btn primary" type="submit">Añadir</button></form>
+    <button class="btn block" id="t_pw">Cambiar contraseña</button>`;
+  $("#t_add").onsubmit=async e=>{
+    e.preventDefault(); const n=$("#t_name").value.trim().replace(/\s+/g," ");
+    if(!n){ toast("Escribe el nombre."); return; }
+    if(list.some(t=>t.nombre.toLowerCase()===n.toLowerCase())){ toast("Ese nombre ya está en la lista."); return; }
+    try{ await api("api_addTech", S.adminToken, n); toast(`${n} añadido`); await poll(); if(S.view==="admin"&&S.adminTab==="tec") viewTechs(); }
+    catch(err){ if(err&&err.code==="exists") toast("Ese nombre ya está en la lista."); else adminError(err); }
+  };
+  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    const t=list.find(x=>x.id===b.dataset.del); const c=$("#t_confirm");
+    c.hidden=false; c.innerHTML=`<span>¿Quitar a <b>${esc(t.nombre)}</b> de la lista? Su historial se conserva.</span><div class="twobtn"><button class="btn" id="tc_no">Cancelar</button><button class="btn out" id="tc_yes">Quitar</button></div>`;
+    $("#tc_no").onclick=()=>{c.hidden=true;};
+    $("#tc_yes").onclick=async()=>{ try{ await api("api_removeTech", S.adminToken, t.id); toast(`${t.nombre} quitado`); await poll(); if(S.view==="admin"&&S.adminTab==="tec") viewTechs(); }catch(err){ adminError(err); } };
+  });
+  $("#t_pw").onclick=()=>{ S.changePw=true; viewAdminLock(); };
+}
+
+function qrCanvas(text){
+  const holder=document.createElement("div");
+  new QRCode(holder,{text,width:256,height:256,correctLevel:QRCode.CorrectLevel.M});
+  return holder.querySelector("canvas");
+}
+function labelPng(title,code,text){
+  const qr=qrCanvas(text); const W=400,H=500; const c=document.createElement("canvas"); c.width=W;c.height=H;
+  const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,W,H);
+  g.drawImage(qr,40,30,320,320); g.fillStyle="#111"; g.textAlign="center";
+  g.font="bold 30px 'Barlow Condensed', Arial Narrow, sans-serif"; wrapText(g,title,W/2,395,360,32);
+  g.font="20px 'JetBrains Mono', monospace"; g.fillStyle="#444"; g.fillText(code,W/2,470);
+  return new Promise(r=>c.toBlob(r,"image/png"));
+}
+function wrapText(g,t,x,y,max,lh){ const words=String(t).split(" "); let line="",lines=[]; for(const w of words){ const tt=line?line+" "+w:w; if(g.measureText(tt).width>max&&line){lines.push(line);line=w}else line=tt;} lines.push(line); lines.slice(0,2).forEach((l,i)=>g.fillText(l,x,y+i*lh)); }
+
+function viewQR(){
+  const base = APP_URL;
+  const list=[...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  app.innerHTML = `
+    <p class="note">Imprime estas etiquetas y pégalas en cada producto. Al escanearlas con la cámara del móvil se abre directamente su ficha. El QR general abre el buscador; ponlo en la entrada del almacén.</p>
+    ${base?"":'<p class="note" style="color:var(--danger)">Falta configurar la dirección de la app para generar los QR.</p>'}
+    <div class="qrgrid" id="qg"></div>
+    <p class="note">Si «Descargar» no funciona en tu móvil, mantén pulsado el QR para guardarlo o haz una captura.</p>`;
+  if(!base || typeof QRCode==="undefined") return;
+  const qg=$("#qg");
+  const add=(title,code,text,file)=>{
+    const card=document.createElement("div"); card.className="qrcard";
+    card.appendChild(qrCanvas(text));
+    card.insertAdjacentHTML("beforeend",`<b>${esc(title)}</b><span class="code">${esc(code)}</span>`);
+    const b=document.createElement("button"); b.textContent="Descargar etiqueta"; b.onclick=async()=>{ try{ const blob=await labelPng(title,code,text); saveFile(file,blob); }catch(e){ toast("No se pudo descargar la etiqueta."); } }; card.appendChild(b);
+    qg.appendChild(card);
+  };
+  add("QR general · Buscador","ALMACÉN",base,"qr-general.png");
+  list.forEach(p=>add(p.nombre,p.codigo,base+"?p="+encodeURIComponent(p.codigo),"qr-"+p.codigo+".png"));
+}
+
+/* ---------- Data ---------- */
+function handleWriteError(err){
+  const c=err&&err.code;
+  if(c==="busy") toast("Otra persona está cambiando el inventario ahora mismo. Inténtalo en unos segundos.");
+  else if(c==="tecnico"){ logout("Tu nombre ya no está en la lista de técnicos. Habla con Xavi."); }
+  else if(c==="network"||c==="offline") toast("Sin conexión. Revisa la cobertura e inténtalo de nuevo.");
+  else if(c==="gone") toast("Este producto ya no existe.");
+  else if(c==="too_large") toast("La foto es demasiado grande.");
+  else toast("No se pudo guardar. Inténtalo de nuevo.");
+}
+
+async function move(code,delta){
+  const p=S.products.get(code); if(!p||S.busy||!S.tecnico) return;
+  S.busy=true; render();
+  try{
+    const r=await api("api_move", S.tecnico.id, code, delta, S.destino);
+    p.cantidad=r.next;
+    toast(delta<0?`Sacadas ${-delta} uds. Quedan ${r.next}.`:`Ingresadas ${delta} uds. Hay ${r.next}.`);
+    S.amount=1; refreshMoves();
+  }catch(err){
+    if(err&&err.code==="short") toast(`Solo quedan ${err.cur}. No puedes sacar ${-delta}.`);
+    else handleWriteError(err);
+  }
+  finally{ S.busy=false; if(S.view==="ficha") render(); }
+}
+
+function watchMoves(code){
+  if(!code) return;
+  S.unMoves=()=>{};
+  api("api_productMoves", code).then(m=>{ if(S.view==="ficha"&&S.code===code){ S.moves=m||[]; renderLog(); } }).catch(()=>{});
+}
+function refreshMoves(){ if(S.view==="ficha"&&S.code){ S.unMoves=null; watchMoves(S.code); } }
+function blobToBase64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=rej; r.readAsDataURL(blob); }); }
+
+function shrink(file,max){
+  return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(img.src); c.toBlob(b=>b?res(b):rej(new Error("blob")),"image/jpeg",0.82); }; img.onerror=rej; img.src=URL.createObjectURL(file); });
+}
+
+function codeFromScan(text){
+  let t=String(text||"").trim();
+  const m=/[?&]p=([^&#]+)/.exec(t); if(m) t=m[1];
+  else { const i=t.indexOf("#"); if(i>=0) t=t.slice(i+1); else if(/^https?:/i.test(t)) t=""; }
+  return normCode(decodeURIComponent(t));
+}
+
+function handleScanText(found){
+  const code=codeFromScan(found);
+  if(!code){ go("buscar"); toast("QR general: busca el producto."); return; }
+  if(S.products.has(code)) go("ficha",{code});
+  else { S.q=code; go("buscar"); toast(`No hay ningún producto con el código ${code}.`); }
+}
+
+/* Live scanner: camera preview, reads the QR on its own (BarcodeDetector when the phone has it, jsQR otherwise). */
+const SCAN={stream:null,raf:0,det:null,busy:false};
+function closeScanner(){
+  cancelAnimationFrame(SCAN.raf); SCAN.raf=0;
+  if(SCAN.stream){ SCAN.stream.getTracks().forEach(t=>t.stop()); SCAN.stream=null; }
+  const v=$("#scanvideo"); if(v) v.srcObject=null;
+  $("#scanner").hidden=true;
+}
+async function openScanner(){
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||IN_GAS){ $("#qrfile").click(); return; }
+  $("#scanner").hidden=false; $("#scanmsg").textContent="Apunta al código QR";
+  try{
+    SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
+  }catch(e){
+    closeScanner(); toast("No se pudo abrir la cámara. Haz una foto del QR."); $("#qrfile").click(); return;
+  }
+  if($("#scanner").hidden){ closeScanner(); return; }
+  const v=$("#scanvideo"); v.srcObject=SCAN.stream; v.setAttribute("playsinline",""); try{ await v.play(); }catch(e){}
+  try{ if(!SCAN.det&&"BarcodeDetector" in window&&(await BarcodeDetector.getSupportedFormats()).includes("qr_code")) SCAN.det=new BarcodeDetector({formats:["qr_code"]}); }catch(e){ SCAN.det=null; }
+  const c=document.createElement("canvas"), g=c.getContext("2d",{willReadFrequently:true});
+  let last=0;
+  const tick=async t=>{
+    if(!SCAN.stream) return;
+    SCAN.raf=requestAnimationFrame(tick);
+    if(SCAN.busy||t-last<120||v.readyState<2) return;
+    last=t; SCAN.busy=true;
+    try{
+      let found=null;
+      if(SCAN.det){ const r=await SCAN.det.detect(v); if(r&&r[0]) found=r[0].rawValue; }
+      else if(typeof jsQR!=="undefined"){
+        const k=Math.min(1,640/Math.max(v.videoWidth,v.videoHeight)); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
+        g.drawImage(v,0,0,c.width,c.height);
+        const r=jsQR(g.getImageData(0,0,c.width,c.height).data,c.width,c.height,{inversionAttempts:"dontInvert"});
+        if(r&&r.data) found=r.data;
+      }
+      if(found){ if(navigator.vibrate) navigator.vibrate(60); closeScanner(); handleScanText(found); }
+    }catch(e){}
+    finally{ SCAN.busy=false; }
+  };
+  SCAN.raf=requestAnimationFrame(tick);
+}
+$("#scanclose").onclick=closeScanner;
+$("#scanphoto").onclick=()=>{ closeScanner(); $("#qrfile").click(); };
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState!=="visible"&&SCAN.stream) closeScanner(); });
+
+$("#qrfile").addEventListener("change",async e=>{
+  const file=e.target.files[0]; e.target.value=""; if(!file) return;
+  if(typeof jsQR==="undefined"){ toast("El lector de QR no ha cargado. Recarga la página."); return; }
+  toast("Leyendo código…");
+  try{
+    const img=new Image(); img.src=URL.createObjectURL(file); await img.decode();
+    let found=null;
+    for(const max of [1000,1600,700]){
+      const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas");
+      c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(img,0,0,c.width,c.height);
+      const r=jsQR(g.getImageData(0,0,c.width,c.height).data,c.width,c.height,{inversionAttempts:"attemptBoth"});
+      if(r&&r.data){ found=r.data; break; }
+    }
+    URL.revokeObjectURL(img.src);
+    if(!found){ toast("No se ve ningún QR. Acércate y haz la foto con buena luz."); return; }
+    handleScanText(found);
+  }catch(err){ toast("No se pudo leer la foto."); }
+});
+
+$("#back").onclick=()=>go(S.tecnico?"buscar":"login");
+$("#who").onclick=()=>logout("Sesión cerrada. Elige tu nombre para entrar.");
+app.addEventListener("click",e=>{ const b=e.target.closest("[data-open]"); if(b&&S.products.has(b.dataset.open)) go("ficha",{code:b.dataset.open}); });
+
+/* Shared phones: after 15 minutes without use, ask for the name again. */
+["pointerdown","keydown"].forEach(ev=>document.addEventListener(ev,()=>{S.lastActive=Date.now();},{passive:true}));
+setInterval(()=>{ if(S.tecnico&&Date.now()-S.lastActive>IDLE_MS) logout("Sesión cerrada por inactividad. Elige tu nombre para entrar."); },30000);
+
+function fromHash(){ const c=normCode(location.hash.slice(1)); if(c) go("ficha",{code:c}); }
+window.addEventListener("hashchange",fromHash);
+
+function applyData(r){
+  if(r.products){ const m=new Map(); r.products.forEach(x=>m.set(x.codigo,{...x,cantidad:Number(x.cantidad)||0})); S.products=m; S.loaded=true; }
+  if(r.techs){ S.techs=r.techs; S.techsLoaded=true; }
+  if(r.loans) S.loans=r.loans;
+  if(r.clientes) S.clientes=r.clientes;
+  if(r.proveedores) S.proveedores=r.proveedores;
+  if(r.hasPassword!==undefined) S.hasPassword=r.hasPassword;
+}
+function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
+async function poll(){
+  try{
+    const r=await api("api_poll"); applyData(r); saveCache(r);
+    if(S.busy) return;
+    if(S.view==="login"){ if($("#l_q")) drawLoginResults(); else render(); return; }
+    if(S.view==="admin"){ if(S.adminOk&&S.adminTab==="ped"&&!typing()) drawLowList(); return; }
+    if(S.view==="editar"||S.view==="destino"||typing()) return;
+    if(S.view==="ficha"){ render(); refreshMoves(); return; }
+    render();
+  }catch(e){}
+}
+
+(async function boot(){
+  render();
+  if(BOOT.p) S.pending=normCode(BOOT.p);
+  const cached=IN_GAS?null:loadCache();
+  if(cached&&cached.products&&cached.techs){ applyData(cached); render(); }
+  try{
+    const r=await api("api_bootstrap"); applyData(r); saveCache(r);
+  }catch(err){
+    if(!cached){
+      app.innerHTML = err&&err.code==="no_instalado"
+        ? '<div class="empty">La app aún no está instalada. Ejecuta «instalar» en el editor de Apps Script.</div>'
+        : '<div class="empty">No se pudo cargar el inventario. Revisa la conexión y recarga la página.</div>';
+      return;
+    }
+    toast("Sin conexión: se muestran los últimos datos guardados.");
+  }
+  if(!(S.view==="login"&&typing())) render(); else if($("#l_q")) drawLoginResults();
+  setInterval(()=>{ if(document.visibilityState==="visible") poll(); }, 20000);
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") poll(); });
+})();
+</script>
+
+</body>
+</html>
