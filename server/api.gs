@@ -77,14 +77,16 @@ function adminLogin_(tecId, pw) {
 function adminSetup_(tecId, pw) { return fixedPw_() ? { err: 'exists' } : api_adminSetup(tecId, pw); }
 function adminChangePassword_(token, pw) { return fixedPw_() ? { err: 'fixed' } : api_adminChangePassword(token, pw); }
 
+/* Si alguien cambia algo mientras se lee la hoja, esa lectura ya es vieja y no se guarda en la caché. */
+function cver_() { return CacheService.getScriptCache().get('ver') || ''; }
 function cachedTechs_() {
   var v = cget_('tec');
-  if (!v) { v = techsOut_(); cput_('tec', v, TTL_TEC_); }
+  if (!v) { var v0 = cver_(); v = techsOut_(); if (cver_() === v0) cput_('tec', v, TTL_TEC_); }
   return v;
 }
 function cachedInv_() {
   var v = cget_('inv');
-  if (!v) { v = { products: rows_('Productos').map(prodOut_), loans: loansOut_() }; cput_('inv', v, TTL_INV_); }
+  if (!v) { var v0 = cver_(); v = { products: rows_('Productos').map(prodOut_), loans: loansOut_() }; if (cver_() === v0) cput_('inv', v, TTL_INV_); }
   return v;
 }
 function cachedCli_() {
@@ -117,5 +119,7 @@ function cput_(k, obj, ttl) {
   } catch (e) { /* sin caché, se lee la hoja cada vez */ }
 }
 function dropCache_(clientes) {
-  CacheService.getScriptCache().removeAll(clientes ? ['tec_n', 'inv_n', 'cli_n'] : ['tec_n', 'inv_n']);
+  var c = CacheService.getScriptCache();
+  c.put('ver', String(Date.now()) + Math.random(), 21600);
+  c.removeAll(clientes ? ['tec_n', 'inv_n', 'cli_n'] : ['tec_n', 'inv_n']);
 }

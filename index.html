@@ -250,7 +250,19 @@ const IN_GAS = !!(window.google&&google.script&&google.script.run);
 const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
 if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
 /* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
+/* Every write is counted, so a refresh that was already on its way can't bring back what was just changed. */
+const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin"]);
+let WSEQ=0, WBUSY=0;
 function api(fn, ...args){
+  if(READ_FNS.has(fn)) return apiRaw(fn, ...args);
+  WSEQ++; WBUSY++;
+  return apiRaw(fn, ...args).finally(()=>{ WBUSY--; WSEQ++; });
+}
+/* What this phone just changed wins for a couple of minutes over older copies from the server. */
+const RECENT={gone:new Map(), added:new Map(), qty:new Map()}, RECENT_MS=120000;
+function remember(kind,key,val){ RECENT[kind].set(key,{val,t:Date.now()}); }
+function fresh(kind,key){ const e=RECENT[kind].get(key); if(!e) return null; if(Date.now()-e.t>RECENT_MS){ RECENT[kind].delete(key); return null; } return e; }
+function apiRaw(fn, ...args){
   if(IN_GAS) return new Promise((res,rej)=>{
     google.script.run
       .withSuccessHandler(r=>{ if(r&&r.err) rej({...r, code:r.err}); else res(r); })
@@ -620,8 +632,8 @@ async function lend(code){
   S.busy=true; viewFicha();
   try{
     const r=await api("api_lend", S.tecnico.id, code, S.destino);
-    p.cantidad=r.next;
-    S.loans=[...S.loans.filter(l=>l.id!==r.loan.id), r.loan];
+    p.cantidad=r.next; remember("qty",code,r.next); remember("added",r.loan.id,r.loan);
+    S.loans=[...S.loans.filter(l=>l.id!==r.loan.id), r.loan]; saveCache({loans:S.loans});
     toast(`Apuntado: te llevas ${p.nombre}.`); refreshMoves();
   }catch(err){
     if(err&&err.code==="gone") toast("Este producto ya no existe.");
@@ -635,11 +647,11 @@ async function returnLoan(l){
   S.busy=true;
   try{
     const r=await api("api_return", S.tecnico.id, l.id);
-    S.loans=S.loans.filter(x=>x.id!==l.id);
-    const p=S.products.get(l.codigo); if(p&&!r.gone) p.cantidad=r.next;
+    remember("gone",l.id,true); S.loans=S.loans.filter(x=>x.id!==l.id); saveCache({loans:S.loans});
+    const p=S.products.get(l.codigo); if(p&&!r.gone){ p.cantidad=r.next; remember("qty",l.codigo,r.next); }
     toast(`${l.producto} devuelto.`); refreshMoves();
   }catch(err){
-    if(err&&err.code==="done"){ S.loans=S.loans.filter(x=>x.id!==l.id); toast("Este préstamo ya estaba devuelto."); }
+    if(err&&err.code==="done"){ remember("gone",l.id,true); S.loans=S.loans.filter(x=>x.id!==l.id); saveCache({loans:S.loans}); toast("Este préstamo ya estaba devuelto."); }
     else handleWriteError(err);
   }
   finally{ S.busy=false; if(S.view==="ficha"||S.view==="admin"||S.view==="buscar") render(); }
@@ -1000,11 +1012,11 @@ function saveCount(next){
   const p=S.products.get(S.rc.cur); if(!p) return;
   const raw=$("#c_val").value; if(raw===""){ toast("Escribe cuántos hay (aunque sea 0)."); return; }
   const n=Math.max(0,Math.floor(Number(raw)||0)), code=p.codigo, before=p.cantidad;
-  p.cantidad=n; S.rc.done[code]=n; delete S.rc.counts[code]; S.rc.cur=null; S.rc.val="";
+  p.cantidad=n; remember("qty",code,n); S.rc.done[code]=n; delete S.rc.counts[code]; S.rc.cur=null; S.rc.val="";
   toast(n===before?`${code}: ${n}, coincide.`:`${code}: ${n} (antes ${before}).`);
   viewRecount();
   RCQ=RCQ.then(()=>api("api_recount", S.adminToken, {[code]:n})).catch(err=>{
-    const q=S.products.get(code); if(q&&q.cantidad===n) q.cantidad=before; delete S.rc.done[code];
+    RECENT.qty.delete(code); const q=S.products.get(code); if(q&&q.cantidad===n) q.cantidad=before; delete S.rc.done[code];
     if(err&&err.code==="auth") adminError(err); else toast(`No se guardó ${code}. Vuelve a escanearlo.`);
     if(S.view==="admin"&&S.adminTab==="rec") viewRecount();
   });
@@ -1017,7 +1029,7 @@ async function saveRecount(){
   const b=$("#r_save"); if(b){ b.disabled=true; b.textContent="Guardando…"; }
   try{
     const r=await api("api_recount", S.adminToken, counts);
-    Object.keys(counts).forEach(c=>{ const p=S.products.get(c); if(p) p.cantidad=counts[c]; delete S.rc.counts[c]; });
+    Object.keys(counts).forEach(c=>{ const p=S.products.get(c); if(p){ p.cantidad=counts[c]; remember("qty",c,counts[c]); } delete S.rc.counts[c]; });
     toast(`Recuento guardado: ${r.fixed} corregido${r.fixed===1?"":"s"}, ${r.same} coincide${r.same===1?"":"n"}.`);
   }catch(err){ adminError(err); }
   S.busy=false;
@@ -1149,7 +1161,7 @@ async function move(code,delta){
   }
   finally{
     const n=(PEND.get(code)||1)-1; if(n) PEND.set(code,n); else PEND.delete(code);
-    const q=S.products.get(code); if(r&&q&&!PEND.has(code)) q.cantidad=r.next;
+    const q=S.products.get(code); if(r&&q&&!PEND.has(code)){ q.cantidad=r.next; remember("qty",code,r.next); }
     if(S.view==="ficha"&&S.code===code) render();
     if(r) refreshMoves();
   }
@@ -1267,9 +1279,13 @@ function fromHash(){ const c=normCode(location.hash.slice(1)); if(c) go("ficha",
 window.addEventListener("hashchange",fromHash);
 
 function applyData(r){
-  if(r.products){ const m=new Map(); r.products.forEach(x=>{ const old=S.products.get(x.codigo); m.set(x.codigo,{...x,cantidad:PEND.has(x.codigo)&&old?old.cantidad:(Number(x.cantidad)||0)}); }); S.products=m; S.loaded=true; }
+  if(r.products){ const m=new Map(); r.products.forEach(x=>{ const old=S.products.get(x.codigo), q=fresh("qty",x.codigo); m.set(x.codigo,{...x,cantidad:PEND.has(x.codigo)&&old?old.cantidad:q?q.val:(Number(x.cantidad)||0)}); }); S.products=m; S.loaded=true; }
   if(r.techs){ S.techs=r.techs; S.techsLoaded=true; }
-  if(r.loans) S.loans=r.loans;
+  if(r.loans){
+    const list=r.loans.filter(l=>!fresh("gone",l.id));
+    for(const [id] of RECENT.added){ const e=fresh("added",id); if(e&&!fresh("gone",id)&&!list.some(l=>l.id===id)) list.push(e.val); }
+    S.loans=list;
+  }
   if(r.clientes) S.clientes=r.clientes;
   if(r.proveedores) S.proveedores=r.proveedores;
   if(r.hasPassword!==undefined) S.hasPassword=r.hasPassword;
@@ -1277,7 +1293,10 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 async function poll(){
   try{
-    const r=await api("api_poll"); applyData(r); saveCache(r);
+    const seq=WSEQ;
+    const r=await api("api_poll");
+    if(seq!==WSEQ||WBUSY) return;
+    applyData(r); saveCache({...r,loans:S.loans});
     if(S.busy) return;
     if(S.view==="login"){ if($("#l_q")) drawLoginResults(); else render(); return; }
     if(S.view==="admin"){ if(S.adminOk&&S.adminTab==="ped"&&!typing()) drawLowList(); return; }
