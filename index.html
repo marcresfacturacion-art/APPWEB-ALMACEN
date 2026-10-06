@@ -19,7 +19,7 @@
 :root{
   --bg:#f4fbff; --surface:#def1fc; --surface-2:#c8e7fa; --fg:#0d2a3d; --muted:#45606f; --line:#a7d3ee;
   --accent:#1597dc; --accent-fg:#ffffff; --brand:#1597dc; --brand-fg:#ffffff; --danger:#c8372d; --ok:#2f8a4e;
-  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff;
+  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff; --cb-lavanda:#c3b1f0; --cb-granate:#8e1b45;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -302,14 +302,14 @@ const SHELVES = {
   cb_cajas:     {name:"Zona de cajas",    color:"var(--cb-cajas)",    room:"cb"},
   cb_tapiado:   {name:"Estante tapiado",  color:"var(--cb-dorado)",   room:"cb"},
   cb_blanca:    {name:"Blanca",           color:"var(--cb-blanco)",   room:"cb"},
-  cb_blanco:    {name:"Blanco",           color:"var(--cb-blanco)",   room:"cb"},
-  cb_almblanco: {name:"Almacén blanco",   color:"var(--cb-blanco)",   room:"cb"},
+  cb_blanco:    {name:"Blanco",           color:"var(--cb-lavanda)",   room:"cb"},
+  cb_almblanco: {name:"Almacén blanco",   color:"var(--cb-granate)",   room:"cb"},
   cb_pq:        {name:"PQ",               color:"var(--cb-menta)",    room:"cb"},
-  cb_e1:        {name:"Estante 1",        color:"var(--cb-amarillo)", room:"cb"},
-  cb_e2:        {name:"Estante 2",        color:"var(--cb-naranja)",  room:"cb"},
-  cb_e3:        {name:"Estante 3",        color:"var(--cb-rosa)",     room:"cb"},
-  cb_e4:        {name:"Estante 4",        color:"var(--cb-lima)",     room:"cb"},
-  cb_e5:        {name:"Estante 5",        color:"var(--cb-turquesa)", room:"cb"},
+  cb_e1:        {name:"Estante amarillo",        color:"var(--cb-amarillo)", room:"cb"},
+  cb_e2:        {name:"Estante naranja",        color:"var(--cb-naranja)",  room:"cb"},
+  cb_e3:        {name:"Estante rosa",        color:"var(--cb-rosa)",     room:"cb"},
+  cb_e4:        {name:"Estante lima",        color:"var(--cb-lima)",     room:"cb"},
+  cb_e5:        {name:"Estante turquesa",        color:"var(--cb-turquesa)", room:"cb"},
 };
 const ROOMS = {main:"Almacén principal", cb:"Cuarto blanco"};
 const roomOf = k => (SHELVES[k]&&SHELVES[k].room)||"main";
@@ -730,12 +730,12 @@ function cbSvg(sel){
     <rect x="125" y="237" width="83" height="21" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>${note(166,251,"MESA")}
     ${g("cb_bombas",r("cb_bombas",72,42,90,43,'stroke-dasharray="4 3"'),117,64,"BOMBAS")}
     ${g("cb_cajas",r("cb_cajas",204,66,47,62,'stroke-dasharray="4 3"'),227,97,"CAJAS")}
-    ${g("cb_e1",r("cb_e1",34,42,32,38),50,61,"1")}
-    ${g("cb_e2",r("cb_e2",34,106,31,58),50,135,"2")}
-    ${g("cb_e3",r("cb_e3",183,42,79,23),222,54,"3")}
+    ${g("cb_e1",r("cb_e1",34,42,32,38),50,61,"")}
+    ${g("cb_e2",r("cb_e2",34,106,31,58),50,135,"NARANJA",{rot:1,size:10})}
+    ${g("cb_e3",r("cb_e3",183,42,79,23),222,54,"ROSA",{size:11})}
     ${g("cb_tapiado",r("cb_tapiado",298,73,28,62)+'<path d="M302 78 l20 52 M322 78 l-20 52" stroke="var(--fg)" stroke-width="1.5" opacity=".45"/>',312,104,"TAPIADO",{rot:1,size:10})}
-    ${g("cb_e4",r("cb_e4",298,135,28,62),312,166,"4")}
-    ${g("cb_e5",r("cb_e5",298,197,28,35),312,215,"5")}
+    ${g("cb_e4",r("cb_e4",298,135,28,62),312,166,"LIMA",{rot:1,size:10})}
+    ${g("cb_e5",r("cb_e5",298,197,28,35),312,215,"")}
     ${g("cb_blanca",r("cb_blanca",33,180,66,16)+'<line x1="75" y1="180" x2="75" y2="196" stroke="var(--fg)" stroke-width="1"/>',66,189,"BLANCA",{size:9})}
     ${g("cb_blanco",r("cb_blanco",33,197,19,43),42.5,218,"BLANCO",{rot:1,size:9})}
     ${g("cb_almblanco",r("cb_almblanco",33,241,44,17),55,277,"ALMACÉN BLANCO",{size:9})}
