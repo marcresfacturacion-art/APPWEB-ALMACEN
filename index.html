@@ -140,6 +140,7 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 .linkbtn.danger{color:var(--danger);align-self:auto;padding:4px 0}
 .tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:var(--brand);border:2px solid var(--brand);border-radius:10px;overflow:hidden}
 .tabs button{border:0;background:var(--surface);min-height:46px;padding:0 2px;font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.tabs button:last-child:nth-child(odd){grid-column:1/-1}
 .tabs button[aria-selected="true"]{background:var(--brand);color:var(--brand-fg)}
 #adm{display:flex;flex-direction:column;gap:12px}
 .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -178,6 +179,15 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 .rcrow .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rcrow input{width:84px;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:18px;text-align:center;flex:none}
 .rcrow input.diff{border-color:var(--danger)}
+.rcok{color:var(--brand);font-weight:700}
+.cnt{background:var(--surface);border:2px solid var(--brand);border-radius:12px;padding:14px;display:grid;gap:12px}
+.cnt .ctop{display:flex;gap:12px;align-items:center}
+.cnt .ctop .thumb{width:64px;height:64px;flex:none}
+.cnt .pname{font-weight:700;font-size:18px}
+.cnt .stepper{display:grid;grid-template-columns:1fr 1fr 2fr 1fr 1fr;gap:6px;align-items:stretch}
+.cnt .stepper button{min-height:56px;border-radius:10px;border:2px solid var(--brand);background:var(--surface);font-size:18px;font-weight:700;cursor:pointer}
+.cnt .stepper input::-webkit-inner-spin-button,.cnt .stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.cnt .stepper input{-moz-appearance:textfield;min-height:56px;border-radius:10px;border:2px solid var(--brand);font-size:28px;font-weight:700;text-align:center;width:100%;min-width:0}
 .hwho{flex:none;display:flex;flex-direction:column;align-items:flex-end;font-size:13px;max-width:34%;min-width:0;text-align:right}
 .hwho b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .hwho span{color:var(--muted);font-variant-numeric:tabular-nums}
@@ -268,7 +278,7 @@ const TIPOS = {salida:"Sacado", entrada:"Ingresado", prestamo:"Préstamo", devol
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{}}, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{}}, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -296,13 +306,15 @@ function go(view, extra={}){
 
 /* ---------- Views ---------- */
 function render(){
+  if(!VIEWS[S.view]) S.view="buscar";
   $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", ficha:"Ficha", mapa:"Mapa del almacén", editar:S.editCode?"Editar producto":"Nuevo producto", qr:"Etiquetas QR", admin:"Restringido", prestamos:"Préstamos", destino:"¿Para qué es?"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", ficha:"Ficha", mapa:"Mapa del almacén", editar:S.editCode?"Editar producto":"Nuevo producto", admin:"Restringido", prestamos:"Préstamos", destino:"¿Para qué es?"};
   $("#title").textContent = titles[S.view];
-  ({login:viewLogin, buscar:viewSearch, ficha:viewFicha, mapa:viewMap, editar:viewEdit, qr:viewQR, admin:viewAdmin, prestamos:viewLoans, destino:viewDest})[S.view]();
+  VIEWS[S.view]();
 }
+const VIEWS={login:viewLogin, buscar:viewSearch, ficha:viewFicha, mapa:viewMap, editar:viewEdit, admin:viewAdmin, prestamos:viewLoans, destino:viewDest};
 
 const LOGIN_MIN=3;
 function techMatches(q){
@@ -358,7 +370,7 @@ function login(t){
   toast(`Hola, ${t.nombre}`);
 }
 function logout(msg){
-  S.tecnico=null; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{}};
+  S.tecnico=null; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{}};
   go("login"); if(msg) toast(msg);
 }
 
@@ -395,16 +407,14 @@ function viewSearch(){
     ${canRestricted()&&lowList().length?`<button class="alert" id="tolow">⚠ ${lowList().length} producto${lowList().length===1?"":"s"} por debajo del mínimo</button>`:""}
     <div class="links">
       <button class="btn" id="tomap">Mapa</button>
-      <button class="btn" id="toqr">Etiquetas QR</button>
       <button class="btn" id="toloans">Préstamos${S.loans.length?` · ${S.loans.length} fuera`:""}</button>
     </div>
     ${canRestricted()?`<button class="btn block" id="tohist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Acceso restringido</button>`:""}`;
   const qi=$("#q");
   qi.addEventListener("input",()=>{ S.q=qi.value; const pos=qi.selectionStart; viewSearch(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
   qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
-  $("#scan").onclick=openScanner;
+  $("#scan").onclick=()=>{ S.scanFor=null; openScanner(); };
   $("#tomap").onclick=()=>go("mapa",{mapSel:null});
-  $("#toqr").onclick=()=>go("qr");
   const th=$("#tohist"); if(th) th.onclick=()=>{ S.adminWant=null; go("admin"); };
   const tl=$("#tolow"); if(tl) tl.onclick=()=>{ S.adminWant="ped"; if(S.adminOk) S.adminTab="ped"; go("admin"); };
   $("#toloans").onclick=()=>go("prestamos");
@@ -733,10 +743,11 @@ function viewAdmin(){
       <button role="tab" aria-selected="${S.adminTab==="ped"}" data-tab="ped">Pedir${lowList().length?` (${lowList().length})`:""}</button>
       <button role="tab" aria-selected="${S.adminTab==="rec"}" data-tab="rec">Recuento</button>
       <button role="tab" aria-selected="${S.adminTab==="tec"}" data-tab="tec">Técnicos</button>
+      <button role="tab" aria-selected="${S.adminTab==="qr"}" data-tab="qr">Etiquetas QR</button>
     </div>
     <div id="adm"></div>`;
   app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="hist") loadHist(); viewAdmin(); });
-  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs})[S.adminTab]();
+  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs, qr:viewQR})[S.adminTab]();
 }
 
 function viewAdminLock(){
@@ -879,11 +890,14 @@ function recountItems(){
 }
 function viewRecount(){
   const opts=[["","Elige qué vas a contar…"],["all","Todo el almacén"],...Object.entries(SHELVES).map(([k,v])=>[k,v.name]),["prestamos","Préstamos"],["none","Sin ubicación"]];
-  const items=recountItems();
+  const items=recountItems(), done=Object.keys(S.rc.done).length;
   $("#adm").innerHTML = `
-    <p class="note">Cuenta lo que hay de verdad y escríbelo. Deja vacío lo que no cuentes. Al guardar, la app corrige solo lo que no coincide y lo apunta en el historial como «Recuento».</p>
+    ${S.rc.cur?countCard():`<button class="btn primary block" id="r_scan">📷 Contar escaneando</button>
+    <p class="note">Escanea la etiqueta, escribe cuántos hay y se guarda al momento. La cámara se vuelve a abrir sola para el siguiente.${done?` <b>Llevas ${done} contado${done===1?"":"s"}.</b>`:""}</p>`}
+    <p class="note">O por estantes: cuenta lo que hay de verdad y escríbelo. Deja vacío lo que no cuentes. Al guardar, la app corrige solo lo que no coincide y lo apunta en el historial como «Recuento».</p>
     <label class="field"><span class="label">Qué contar</span><select id="r_shelf">${opts.map(([k,v])=>`<option value="${k}" ${S.rc.shelf===k?"selected":""}>${v}</option>`).join("")}</select></label>
-    ${S.rc.shelf?`<div class="list">${items.length?items.map(p=>{ const v=S.rc.counts[p.codigo]; return `<div class="rcrow"><span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · en la app: ${p.cantidad}</div></span><input type="number" inputmode="numeric" min="0" step="1" data-rc="${esc(p.codigo)}" value="${v??""}" placeholder="—" class="${v!==undefined&&v!==p.cantidad?"diff":""}" aria-label="Contado de ${esc(p.nombre)}"></div>`; }).join(""):'<div class="empty">No hay productos aquí.</div>'}</div>
+    ${S.rc.shelf&&items.length?`<p class="note">Faltan por contar aquí: <b>${items.filter(p=>S.rc.done[p.codigo]===undefined).length}</b> de ${items.length}.</p>`:""}
+    ${S.rc.shelf?`<div class="list">${items.length?items.map(p=>{ const v=S.rc.counts[p.codigo]; return `<div class="rcrow"><span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · en la app: ${p.cantidad}${S.rc.done[p.codigo]!==undefined?' · <span class="rcok">✓ contado</span>':""}</div></span><input type="number" inputmode="numeric" min="0" step="1" data-rc="${esc(p.codigo)}" value="${v??""}" placeholder="—" class="${v!==undefined&&v!==p.cantidad?"diff":""}" aria-label="Contado de ${esc(p.nombre)}"></div>`; }).join(""):'<div class="empty">No hay productos aquí.</div>'}</div>
     <button class="btn primary block" id="r_save">Guardar recuento</button>`:""}`;
   $("#r_shelf").onchange=e=>{ S.rc.shelf=e.target.value; viewRecount(); };
   app.querySelectorAll("[data-rc]").forEach(i=>i.oninput=()=>{
@@ -892,6 +906,48 @@ function viewRecount(){
     const v=Math.max(0,Math.floor(Number(i.value)||0)); S.rc.counts[code]=v; i.classList.toggle("diff",!!p&&v!==p.cantidad);
   });
   const b=$("#r_save"); if(b) b.onclick=saveRecount;
+  const sc=$("#r_scan"); if(sc) sc.onclick=()=>countScan();
+  if(S.rc.cur) bindCountCard();
+}
+
+/* Scan-to-count: scan a label, type what is really there, save; the camera reopens for the next one. */
+function countScan(){ S.scanFor="count"; openScanner(); }
+function countCard(){
+  const p=S.products.get(S.rc.cur); if(!p) return "";
+  const img=imgFor(p), sh=locKey(p)==="none"?null:locOf(p), prev=S.rc.done[p.codigo];
+  return `<div class="cnt">
+    <div class="ctop"><span class="thumb">${img?`<img src="${img}" alt="">`:esc(initials(p.nombre))}</span>
+      <span><div class="pname">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)}${sh?` · ${esc(sh.name)}`:""} · en la app: <b>${p.cantidad}</b></div>${prev!==undefined?`<div class="code">Ya lo contaste: ${prev}</div>`:""}</span></div>
+    <label class="label" for="c_val">¿Cuántos hay de verdad?</label>
+    <div class="stepper"><button data-cs="-10">−10</button><button data-cs="-1">−1</button><input id="c_val" type="number" inputmode="numeric" min="0" step="1" value="${esc(S.rc.val)}" placeholder="?"><button data-cs="1">+1</button><button data-cs="10">+10</button></div>
+    <button class="btn primary block" id="c_next">Guardar y escanear el siguiente</button>
+    <div class="links"><button class="btn" id="c_save">Guardar y terminar</button><button class="btn" id="c_cancel">Cancelar</button></div>
+  </div>`;
+}
+function bindCountCard(){
+  const i=$("#c_val"), p=S.products.get(S.rc.cur);
+  i.oninput=()=>{ S.rc.val=i.value; };
+  app.querySelectorAll("[data-cs]").forEach(b=>b.onclick=()=>{ const base=i.value===""?p.cantidad:Math.floor(Number(i.value)||0); i.value=Math.max(0,base+Number(b.dataset.cs)); S.rc.val=i.value; });
+  i.onkeydown=e=>{ if(e.key==="Enter") saveCount(true); };
+  $("#c_next").onclick=()=>saveCount(true);
+  $("#c_save").onclick=()=>saveCount(false);
+  $("#c_cancel").onclick=()=>{ S.rc.cur=null; S.rc.val=""; viewRecount(); };
+  if(!("ontouchstart" in window)) i.focus();
+}
+let RCQ=Promise.resolve();
+function saveCount(next){
+  const p=S.products.get(S.rc.cur); if(!p) return;
+  const raw=$("#c_val").value; if(raw===""){ toast("Escribe cuántos hay (aunque sea 0)."); return; }
+  const n=Math.max(0,Math.floor(Number(raw)||0)), code=p.codigo, before=p.cantidad;
+  p.cantidad=n; S.rc.done[code]=n; delete S.rc.counts[code]; S.rc.cur=null; S.rc.val="";
+  toast(n===before?`${code}: ${n}, coincide.`:`${code}: ${n} (antes ${before}).`);
+  viewRecount();
+  RCQ=RCQ.then(()=>api("api_recount", S.adminToken, {[code]:n})).catch(err=>{
+    const q=S.products.get(code); if(q&&q.cantidad===n) q.cantidad=before; delete S.rc.done[code];
+    if(err&&err.code==="auth") adminError(err); else toast(`No se guardó ${code}. Vuelve a escanearlo.`);
+    if(S.view==="admin"&&S.adminTab==="rec") viewRecount();
+  });
+  if(next) countScan();
 }
 async function saveRecount(){
   const counts={}; recountItems().forEach(p=>{ if(S.rc.counts[p.codigo]!==undefined) counts[p.codigo]=S.rc.counts[p.codigo]; });
@@ -946,10 +1002,11 @@ function labelPng(title,code,text){
 }
 function wrapText(g,t,x,y,max,lh){ const words=String(t).split(" "); let line="",lines=[]; for(const w of words){ const tt=line?line+" "+w:w; if(g.measureText(tt).width>max&&line){lines.push(line);line=w}else line=tt;} lines.push(line); lines.slice(0,2).forEach((l,i)=>g.fillText(l,x,y+i*lh)); }
 
+/* QR labels: only inside Acceso restringido, so technicians can't print or see them. */
 function viewQR(){
-  const base = APP_URL;
+  const base = APP_URL, box=$("#adm"); if(!box||!S.adminOk) return;
   const list=[...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
-  app.innerHTML = `
+  box.innerHTML = `
     <p class="note">Imprime estas etiquetas y pégalas en cada producto. Al escanearlas con la cámara del móvil se abre directamente su ficha. El QR general abre el buscador; ponlo en la entrada del almacén.</p>
     ${base?"":'<p class="note" style="color:var(--danger)">Falta configurar la dirección de la app para generar los QR.</p>'}
     <div class="qrgrid" id="qg"></div>
@@ -1022,6 +1079,14 @@ function codeFromScan(text){
 
 function handleScanText(found){
   const code=codeFromScan(found);
+  if(S.scanFor==="count"){
+    S.scanFor=null;
+    if(S.view==="admin"&&S.adminTab==="rec"&&S.adminOk){
+      if(code&&S.products.has(code)){ S.rc.cur=code; S.rc.val=""; }
+      else toast(code?`No hay ningún producto con el código ${code}.`:"Ese es el QR general. Escanea la etiqueta de un producto.");
+      viewRecount(); return;
+    }
+  }
   if(!code){ go("buscar"); toast("QR general: busca el producto."); return; }
   if(S.products.has(code)) go("ficha",{code});
   else { S.q=code; go("buscar"); toast(`No hay ningún producto con el código ${code}.`); }
@@ -1068,7 +1133,7 @@ async function openScanner(){
   };
   SCAN.raf=requestAnimationFrame(tick);
 }
-$("#scanclose").onclick=closeScanner;
+$("#scanclose").onclick=()=>{ S.scanFor=null; closeScanner(); };
 $("#scanphoto").onclick=()=>{ closeScanner(); $("#qrfile").click(); };
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState!=="visible"&&SCAN.stream) closeScanner(); });
 
