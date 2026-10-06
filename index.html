@@ -302,8 +302,8 @@ const SHELVES = {
   cb_cajas:     {name:"Zona de cajas",    color:"var(--cb-cajas)",    room:"cb"},
   cb_tapiado:   {name:"Estante tapiado",  color:"var(--cb-dorado)",   room:"cb"},
   cb_blanca:    {name:"Blanca",           color:"var(--cb-blanco)",   room:"cb"},
-  cb_blanco:    {name:"Blanco",           color:"var(--cb-lavanda)",   room:"cb"},
-  cb_almblanco: {name:"Almacén blanco",   color:"var(--cb-granate)",   room:"cb"},
+  cb_blanco:    {name:"Blanco",           color:"var(--cb-blanco)",   room:"cb"},
+  cb_almblanco: {name:"Almacén blanco",   color:"var(--cb-blanco)",   room:"cb"},
   cb_pq:        {name:"PQ",               color:"var(--cb-menta)",    room:"cb"},
   cb_e1:        {name:"Estante amarillo",        color:"var(--cb-amarillo)", room:"cb"},
   cb_e2:        {name:"Estante naranja",        color:"var(--cb-naranja)",  room:"cb"},
@@ -1353,7 +1353,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-06.3";
+const APP_VERSION="2026-10-06.4";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
