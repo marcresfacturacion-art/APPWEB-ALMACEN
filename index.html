@@ -19,7 +19,7 @@
 :root{
   --bg:#f4fbff; --surface:#def1fc; --surface-2:#c8e7fa; --fg:#0d2a3d; --muted:#45606f; --line:#a7d3ee;
   --accent:#1597dc; --accent-fg:#ffffff; --brand:#1597dc; --brand-fg:#ffffff; --danger:#c8372d; --ok:#2f8a4e;
-  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a;
+  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -297,16 +297,19 @@ const SHELVES = {
   marron: {name:"Estante marrón", color:"var(--sh-marron)"},
   negro:  {name:"Estante negro",  color:"var(--sh-negro)"},
   /* Cuarto blanco: lo eléctrico y las bombas. Colores que no se repiten en el almacén principal. */
-  /* Según el dibujo de Xavi (2026-10-06). */
-  cb_armario2:  {name:"Armario Nº2",      color:"var(--cb-naranja)",  room:"cb"},
-  cb_armariopq: {name:"Armario pequeño",  color:"var(--cb-rosa)",     room:"cb"},
-  cb_cajas:     {name:"Zona de cajas",    color:"var(--cb-turquesa)", room:"cb"},
+  /* Según el segundo dibujo de Xavi (2026-10-06). */
   cb_bombas:    {name:"Zona de bombas",   color:"var(--cb-bombas)",   room:"cb"},
-  cb_armariopa: {name:"Armario de pared", color:"var(--cb-lima)",     room:"cb"},
-  cb_armario:   {name:"Armario",          color:"var(--cb-dorado)",   room:"cb"},
-  cb_est1:      {name:"Estante 1",        color:"var(--cb-amarillo)", room:"cb"},
-  cb_est2:      {name:"Estante 2",        color:"var(--cb-amarillo)", room:"cb"},
-  cb_est3:      {name:"Estante 3",        color:"var(--cb-amarillo)", room:"cb"},
+  cb_cajas:     {name:"Zona de cajas",    color:"var(--cb-cajas)",    room:"cb"},
+  cb_tapiado:   {name:"Estante tapiado",  color:"var(--cb-dorado)",   room:"cb"},
+  cb_blanca:    {name:"Blanca",           color:"var(--cb-blanco)",   room:"cb"},
+  cb_blanco:    {name:"Blanco",           color:"var(--cb-blanco)",   room:"cb"},
+  cb_almblanco: {name:"Almacén blanco",   color:"var(--cb-blanco)",   room:"cb"},
+  cb_pq:        {name:"PQ",               color:"var(--cb-menta)",    room:"cb"},
+  cb_e1:        {name:"Estante 1",        color:"var(--cb-amarillo)", room:"cb"},
+  cb_e2:        {name:"Estante 2",        color:"var(--cb-naranja)",  room:"cb"},
+  cb_e3:        {name:"Estante 3",        color:"var(--cb-rosa)",     room:"cb"},
+  cb_e4:        {name:"Estante 4",        color:"var(--cb-lima)",     room:"cb"},
+  cb_e5:        {name:"Estante 5",        color:"var(--cb-turquesa)", room:"cb"},
 };
 const ROOMS = {main:"Almacén principal", cb:"Cuarto blanco"};
 const roomOf = k => (SHELVES[k]&&SHELVES[k].room)||"main";
@@ -713,28 +716,30 @@ function shelfSvg(sel){
   </svg>`;
 }
 
-/* Cuarto blanco, tal como lo dibujó Xavi: puerta a la derecha, ventana de administración a la izquierda. */
+/* Cuarto blanco, tal como lo dibujó Xavi: puerta abajo a la derecha, junto a la mesa. */
 function cbSvg(sel){
-  const g=(key,inner,lx,ly,anchor="middle",label)=>`<g class="shelf ${sel===key?'on':''}" data-shelf="${key}" role="button" tabindex="0" aria-label="${SHELVES[key].name}">
-    ${inner}<text x="${lx}" y="${ly}" text-anchor="${anchor}" style="font-size:12px">${label||SHELVES[key].name.toUpperCase()}</text></g>`;
-  const r=(key,x,y,w,h,extra="")=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${SHELVES[key].color}" ${extra}/>`;
-  const note=(x,y,t,rot)=>`<text ${rot?`transform="translate(${x} ${y}) rotate(-90)"`:`x="${x}" y="${y}"`} text-anchor="middle" style="font-size:9px;fill:var(--muted);font-weight:600">${t}</text>`;
-  return `<svg viewBox="0 0 320 470" aria-label="Plano del Cuarto blanco">
-    <rect x="40" y="44" width="238" height="408" fill="var(--surface-2)" stroke="var(--fg)" stroke-width="2.5"/>
-    <line x1="40" y1="159" x2="40" y2="261" stroke="var(--muted)" stroke-width="5" stroke-dasharray="10 4"/>${note(30,210,"VENTANA ADMINISTRACIÓN",1)}
-    <line x1="278" y1="120" x2="278" y2="163" stroke="var(--surface-2)" stroke-width="5"/>
-    <path d="M308 141 h-18 m6 -6 l-6 6 l6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>${note(300,175,"PUERTA",1)}
-    <rect x="223" y="167" width="27" height="70" rx="3" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>${note(240,202,"MESA",1)}
-    ${g("cb_armario2",r("cb_armario2",104,50,63,28),136,95,"middle","Nº 2")}
-    ${g("cb_armariopq",r("cb_armariopq",168,50,45,28),198,95,"middle","PEQUEÑO")}
-    ${g("cb_cajas",r("cb_cajas",44,108,134,51),111,138)}
-    ${g("cb_bombas",r("cb_bombas",44,206,38,55,'stroke-dasharray="4 3"'),88,238,"start","BOMBAS")}
-    ${g("cb_armariopa",r("cb_armariopa",46,267,24,21),56,306,"middle","PARED")}
-    ${g("cb_armario",r("cb_armario",86,267,73,21),126,306)}
-    ${g("cb_est1",r("cb_est1",167,240,13,46),173.5,268,"middle","1")}
-    ${g("cb_est2",r("cb_est2",180,269,32,17),196,282,"middle","2")}
-    ${g("cb_est3",r("cb_est3",212,248,17,38),220.5,272,"middle","3")}
-    ${note(198,304,"3 ESTANTES")}
+  const g=(key,inner,lx,ly,label,o={})=>`<g class="shelf ${sel===key?'on':''}" data-shelf="${key}" role="button" tabindex="0" aria-label="${SHELVES[key].name}">
+    ${inner}<text ${o.rot?`transform="translate(${lx} ${ly}) rotate(-90)"`:`x="${lx}" y="${ly}"`} text-anchor="middle" dominant-baseline="middle" style="font-size:${o.size||12}px">${label}</text></g>`;
+  const r=(key,x,y,w,h,extra="")=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${SHELVES[key].color}" ${extra}/>`;
+  const note=(x,y,t)=>`<text x="${x}" y="${y}" text-anchor="middle" style="font-size:9px;fill:var(--muted);font-weight:600">${t}</text>`;
+  return `<svg viewBox="0 0 360 300" aria-label="Plano del Cuarto blanco">
+    <rect x="30" y="40" width="300" height="219" fill="var(--surface-2)" stroke="var(--fg)" stroke-width="2.5"/>
+    <line x1="240" y1="259" x2="278" y2="259" stroke="var(--surface-2)" stroke-width="5"/>
+    <path d="M259 290 v-20 m-6 6 l6 -6 l6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>
+    <text x="290" y="285" text-anchor="start" style="font-size:9px;fill:var(--muted);font-weight:600">PUERTA</text>
+    <rect x="125" y="237" width="83" height="21" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>${note(166,251,"MESA")}
+    ${g("cb_bombas",r("cb_bombas",72,42,90,43,'stroke-dasharray="4 3"'),117,64,"BOMBAS")}
+    ${g("cb_cajas",r("cb_cajas",204,66,47,62,'stroke-dasharray="4 3"'),227,97,"CAJAS")}
+    ${g("cb_e1",r("cb_e1",34,42,32,38),50,61,"1")}
+    ${g("cb_e2",r("cb_e2",34,106,31,58),50,135,"2")}
+    ${g("cb_e3",r("cb_e3",183,42,79,23),222,54,"3")}
+    ${g("cb_tapiado",r("cb_tapiado",298,73,28,62)+'<path d="M302 78 l20 52 M322 78 l-20 52" stroke="var(--fg)" stroke-width="1.5" opacity=".45"/>',312,104,"TAPIADO",{rot:1,size:10})}
+    ${g("cb_e4",r("cb_e4",298,135,28,62),312,166,"4")}
+    ${g("cb_e5",r("cb_e5",298,197,28,35),312,215,"5")}
+    ${g("cb_blanca",r("cb_blanca",33,180,66,16)+'<line x1="75" y1="180" x2="75" y2="196" stroke="var(--fg)" stroke-width="1"/>',66,189,"BLANCA",{size:9})}
+    ${g("cb_blanco",r("cb_blanco",33,197,19,43),42.5,218,"BLANCO",{rot:1,size:9})}
+    ${g("cb_almblanco",r("cb_almblanco",33,241,44,17),55,277,"ALMACÉN BLANCO",{size:9})}
+    ${g("cb_pq",r("cb_pq",78,241,35,17),95.5,250,"PQ",{size:10})}
   </svg>`;
 }
 function viewMap(){

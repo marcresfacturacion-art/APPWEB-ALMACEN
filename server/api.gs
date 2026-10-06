@@ -35,7 +35,7 @@ function doPost(e) {
 }
 
 /* Estantes del Cuarto blanco (lo eléctrico y las bombas), además de los del almacén principal. */
-var CB_SHELVES_ = ['cb_armario2', 'cb_armariopq', 'cb_cajas', 'cb_bombas', 'cb_armariopa', 'cb_armario', 'cb_est1', 'cb_est2', 'cb_est3'];
+var CB_SHELVES_ = ['cb_bombas', 'cb_cajas', 'cb_tapiado', 'cb_blanca', 'cb_blanco', 'cb_almblanco', 'cb_pq', 'cb_e1', 'cb_e2', 'cb_e3', 'cb_e4', 'cb_e5'];
 function addShelves_() {
   CB_SHELVES_.forEach(function (k) { if (SHELVES.indexOf(k) < 0) SHELVES.push(k); });
 }
