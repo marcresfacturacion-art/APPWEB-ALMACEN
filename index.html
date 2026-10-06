@@ -69,6 +69,11 @@ main{max-width:560px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-dire
 .qty.low{color:var(--danger)}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
 .dot{width:10px;height:10px;border-radius:2px;flex:none}
+.row.catrow .name{color:var(--muted)}
+.row.catrow .thumb{background:none;border:1px dashed var(--line);color:var(--muted)}
+.catnote{background:var(--surface-2);border-radius:8px;padding:10px 12px;font-weight:600;color:var(--muted)}
+.prices{display:flex;gap:18px;flex-wrap:wrap}
+.prices b{font-size:18px;color:var(--fg)}
 .pill{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:3px;background:var(--surface-2);color:var(--muted);margin-left:6px;vertical-align:2px}
 .empty{padding:24px 16px;text-align:center;color:var(--muted)}
 .photo{aspect-ratio:4/3;max-width:100%;width:100%;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;overflow:hidden;font-family:var(--f-display);font-size:64px;font-weight:700;color:var(--muted)}
@@ -255,7 +260,7 @@ const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
 if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
 /* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
 /* Every write is counted, so a refresh that was already on its way can't bring back what was just changed. */
-const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin"]);
+const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog"]);
 let WSEQ=0, WBUSY=0;
 function api(fn, ...args){
   if(READ_FNS.has(fn)) return apiRaw(fn, ...args);
@@ -328,7 +333,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -349,6 +354,7 @@ function go(view, extra={}){
   if (!S.tecnico && !OPEN_VIEWS.has(view)) { if(view==="ficha"&&extra.code) S.pending=extra.code; view="login"; extra={}; }
   if (S.tecnico && !S.destino && view!=="destino" && view!=="login") { if(view==="ficha"&&extra.code) S.pending=extra.code; view="destino"; extra={}; }
   if (!(view==="ficha" && extra.code===S.code)) S.sheet=null;
+  S.prefill=null;
   Object.assign(S, {view}, extra);
   if (view==="ficha") watchMoves(S.code);
   render(); window.scrollTo(0,0);
@@ -360,11 +366,11 @@ function render(){
   $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", admin:"Restringido", destino:"¿Para qué es?"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", admin:"Restringido", destino:"¿Para qué es?"};
   $("#title").textContent = titles[S.view];
   VIEWS[S.view]();
 }
-const VIEWS={login:viewLogin, buscar:viewSearch, ficha:viewFicha, mapa:viewMap, editar:viewEdit, admin:viewAdmin, destino:viewDest};
+const VIEWS={login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, admin:viewAdmin, destino:viewDest};
 
 const LOGIN_MIN=3;
 function techMatches(q){
@@ -420,6 +426,7 @@ function login(t){
   toast(`Hola, ${t.nombre}`);
 }
 function logout(msg){
+  if(S.cat&&S.cat.admin) S.cat={ver:S.cat.ver, items:S.cat.items.map(r=>r.slice(0,4)), admin:false};
   S.tecnico=null; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{},w:false};
   go("login"); if(msg) toast(msg);
 }
@@ -438,16 +445,21 @@ function productRow(p){
 function viewSearch(){
   const q = S.q.trim().toLowerCase();
   const all = [...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
-  const hits = q ? all.filter(p => (p.codigo+" "+p.nombre+" "+(p.descripcion||"")).toLowerCase().includes(q)) : all;
+  const words = qWords(S.q);
+  const hits = q ? all.filter(p => hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""), words)) : all;
+  const cat = q ? catHits(words) : null;
+  if(q) ensureCat();
   app.innerHTML = `
     ${S.destino?`<div class="destbar"><span>Para: <b>${esc(destLabel())}</b></span><button class="linkbtn" id="d_change">Cambiar</button></div>`:""}
     <button class="btn primary block" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR</button>
     ${S.canWrite?'<button class="btn block" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':''}
-    <div class="search"><input id="q" type="search" inputmode="search" placeholder="Buscar por código o nombre" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
+    <div class="search"><input id="q" type="search" inputmode="search" placeholder="Buscar en el almacén y el catálogo" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
     ${!S.loaded?'<div class="list"><div class="empty">Cargando inventario…</div></div>':
       !all.length?'<div class="list"><div class="empty">Aún no hay productos. Pulsa «Nuevo producto» para dar de alta el primero.</div></div>':
-      q?`<div class="label">${hits.length} resultado${hits.length===1?"":"s"}</div>
-        <div class="list">${hits.length?hits.map(productRow).join(""):`<div class="empty">Ningún producto coincide con «${esc(S.q)}».</div>`}</div>`:
+      q?(hits.length?`<div class="label">En el almacén · ${hits.length}</div><div class="list">${hits.map(productRow).join("")}</div>`
+          :cat&&cat.n?`<div class="label">En el almacén no hay nada con «${esc(S.q)}»</div>`
+          :`<div class="label">0 resultados</div><div class="list"><div class="empty">Ningún producto coincide con «${esc(S.q)}».</div></div>`)+`
+        ${catBlock(cat)}`:
       `<div class="label">Productos por estante · ${all.length}</div>
        <div class="groups">${[["@main"],...shelvesIn("main"),["@cb"],...shelvesIn("cb"),["@other"],["prestamos",LOAN_LOC],["none",NO_LOC]].map(([k,v],i,arr)=>{
          if(k[0]==="@"){ const next=arr.slice(i+1); const end=next.findIndex(([x])=>x[0]==="@"); const some=(end<0?next:next.slice(0,end)).some(([x])=>all.some(p=>locKey(p)===x)); return some&&k!=="@other"?`<div class="label roomlbl">${ROOMS[k.slice(1)]}</div>`:""; }
@@ -471,12 +483,16 @@ function viewSearch(){
   const tl=$("#tolow"); if(tl) tl.onclick=()=>{ S.adminWant="ped"; if(S.adminOk) S.adminTab="ped"; go("admin"); };
   const dc=$("#d_change"); if(dc) dc.onclick=changeDest;
   const tn=$("#tonew"); if(tn) tn.onclick=()=>go("editar",{editCode:null});
+  app.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>go("catitem",{catSku:b.dataset.cat}));
   app.querySelectorAll("details.group").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.openGroups.add(d.dataset.g):S.openGroups.delete(d.dataset.g); }));
 }
 
 function viewFicha(){
   const p = S.products.get(S.code);
-  if(!p){ app.innerHTML=`<div class="empty">${S.loaded?`No existe ningún producto con el código <b>${esc(S.code)}</b>.`:"Cargando…"}</div><button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); return; }
+  if(!p){
+    const ci=S.loaded&&catByCode(S.code);
+    if(ci){ go("catitem",{catSku:ci[0]}); return; }
+    app.innerHTML=`<div class="empty">${S.loaded?`No existe ningún producto con el código <b>${esc(S.code)}</b>.`:"Cargando…"}</div><button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); return; }
   const sh = locOf(p);
   const img = imgFor(p);
   const low = isLow(p);
@@ -509,6 +525,7 @@ function viewFicha(){
     <div><div class="code">${esc(p.codigo)}${p.prestamo?'<span class="pill">Préstamo</span>':''}</div><h2>${esc(p.nombre)}</h2></div>
     ${p.descripcion?`<p>${esc(p.descripcion)}</p>`:""}
     ${p.proveedor?`<p class="note" style="margin:0">Proveedor: <b>${esc(p.proveedor)}</b></p>`:""}
+    ${pricesHtml(catByCode(p.codigo))}${S.adminOk&&S.catVer&&!(S.cat&&S.cat.admin)?(ensureCat(),""):""}
     <div class="facts">
       <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&S.adminOk&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
       <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
@@ -763,6 +780,133 @@ function viewMap(){
   const tf=$("#toficha"); if(tf) tf.onclick=()=>go("ficha",{code:S.code});
 }
 
+/* ---------- Catálogo: todo lo que se vende o se usa, esté o no en el almacén ----------
+   Sale del Excel de productos de Holded, que Xavi carga en Acceso restringido → Catálogo.
+   Los técnicos lo ven sin precios; los precios solo llegan con la contraseña y no se guardan en el móvil. */
+const CAT_KEY="almacen_cat_v1", CAT_MAX=40;
+const qWords = q => fold(q).split(/\s+/).filter(Boolean);
+const hasWords = (txt, words) => { const t=fold(txt); return words.every(w=>t.includes(w)); };
+const catCode = sku => normCode(String(sku||"").replace(/^SKU_/i,""));
+function catLoad(){ try{ const c=JSON.parse(localStorage.getItem(CAT_KEY)||"null"); if(c&&Array.isArray(c.items)) S.cat={...c,admin:false}; }catch(e){} }
+function catSave(c){ try{ localStorage.setItem(CAT_KEY, JSON.stringify({ver:c.ver, items:c.items.map(r=>r.slice(0,4))})); }catch(e){} }
+function catIndex(){
+  if(!S.cat) return null;
+  if(!S.cat.byCode){ S.cat.byCode=new Map(); S.cat.items.forEach(r=>S.cat.byCode.set(catCode(r[0]),r)); S.cat.text=S.cat.items.map(r=>fold(catCode(r[0])+" "+r[1]+" "+r[2]+" "+r[3])); }
+  return S.cat;
+}
+function catByCode(code){ const c=catIndex(); return c?c.byCode.get(normCode(code))||null:null; }
+async function ensureCat(){
+  if(S.catLoading||S.catVer===""||Date.now()-(S.catFailAt||0)<30000) return;
+  const want=S.adminOk&&S.adminToken;
+  if(S.cat&&S.catVer!==null&&S.cat.ver===S.catVer&&(!want||S.cat.admin)) return;
+  if(S.cat&&S.catVer===null&&!want) return;
+  S.catLoading=true;
+  try{
+    const r=await api("api_catalog", want?S.adminToken:null);
+    S.cat={ver:r.ver, items:r.items||[], admin:!!r.admin}; S.catVer=r.ver; catSave(S.cat);
+  }catch(e){ S.catLoading=false; S.catFailAt=Date.now(); return; }
+  S.catLoading=false;
+  if(S.view==="buscar"&&S.q.trim()){ const qi=$("#q"), had=document.activeElement===qi, pos=qi&&qi.selectionStart; viewSearch(); if(had){ const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} } }
+  else if(S.view==="catitem"||(S.view==="admin"&&S.adminTab==="cat")||S.view==="ficha") render();
+}
+function catHits(words){
+  const c=catIndex(); if(!c) return null;
+  const out=[]; let n=0;
+  c.items.forEach((r,i)=>{ if(!words.every(w=>c.text[i].includes(w))) return; if(S.products.has(catCode(r[0]))) return; n++; if(out.length<CAT_MAX) out.push(r); });
+  out.sort((a,b)=>a[1].localeCompare(b[1],"es"));
+  return {n, items:out};
+}
+const material = s => String(s||"").replace(/#/g," ").replace(/\s+/g," ").trim().toLowerCase().replace(/^./,c=>c.toUpperCase());
+function catBlock(cat){
+  if(!cat) return S.catLoading||(S.catVer&&!S.cat)?`<div class="label">Catálogo</div><div class="list"><div class="empty">Buscando en el catálogo…</div></div>`:"";
+  if(!cat.n) return "";
+  return `<div class="label">En el catálogo, no están en el almacén · ${cat.n}</div>
+    <div class="list">${cat.items.map(r=>`<button class="row catrow" data-cat="${esc(r[0])}">
+      <span class="thumb">${esc(initials(r[1]))}</span>
+      <span class="txt"><div class="name">${esc(r[1])}</div><div class="code">${esc(catCode(r[0]))}</div>${r[3]?`<span class="chip">${esc(material(r[3]))}</span>`:""}</span>
+      <span class="pill">Catálogo</span></button>`).join("")}
+    ${cat.n>cat.items.length?`<div class="empty">Hay ${cat.n} en el catálogo. Escribe otra palabra para afinar.</div>`:""}</div>`;
+}
+const euro = n => Number(n||0).toLocaleString("es-ES",{style:"currency",currency:"EUR"});
+function pricesHtml(r){
+  if(!r||!S.adminOk||!S.cat||!S.cat.admin||r.length<6) return "";
+  return `<div class="prices"><span class="note">Precio de compra<br><b>${euro(r[4])}</b></span><span class="note">PVP sin IVA<br><b>${euro(r[5])}</b></span></div>`;
+}
+function viewCatItem(){
+  const c=catIndex(), r=c&&c.items.find(x=>x[0]===S.catSku);
+  if(!r){ app.innerHTML=`<div class="empty">${S.catLoading||!c?"Cargando el catálogo…":"Este producto ya no está en el catálogo."}</div><button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); ensureCat(); return; }
+  const code=catCode(r[0]), inStock=S.products.get(code);
+  if(S.adminOk&&!c.admin) ensureCat();
+  app.innerHTML=`<section class="ficha" style="display:flex;flex-direction:column;gap:14px">
+    <div class="photo">${esc(initials(r[1]))}</div>
+    <div><div class="code">${esc(code)}<span class="pill">Catálogo</span></div><h2>${esc(r[1])}</h2></div>
+    ${r[2]&&fold(r[2])!==fold(r[1])?`<p>${esc(r[2])}</p>`:""}
+    ${r[3]?`<p class="note" style="margin:0">Material: <b>${esc(material(r[3]))}</b></p>`:""}
+    ${pricesHtml(r)}
+    ${inStock?`<p class="catnote" style="margin:0">Ya está en el almacén.</p><button class="btn primary block" id="c_open">Ver en el almacén</button>`
+      :`<p class="catnote" style="margin:0">No está en el almacén. Lo trabajáis, pero ahora mismo no hay.</p>
+        ${S.canWrite?`<button class="btn primary block" id="c_add">Ponerlo en el almacén</button>`:""}`}
+  </section>`;
+  const o=$("#c_open"); if(o) o.onclick=()=>go("ficha",{code});
+  const a=$("#c_add"); if(a) a.onclick=()=>go("editar",{editCode:null, prefill:{codigo:code, nombre:r[1], descripcion:r[2]&&fold(r[2])!==fold(r[1])?r[2]:""}});
+}
+
+/* Excel de Holded → filas [sku, nombre, descripción, material, precio compra, PVP sin IVA]. */
+function loadScript(urls){
+  return urls.reduce((p,u)=>p.catch(()=>new Promise((res,rej)=>{ const sc=document.createElement("script"); sc.src=u; sc.onload=res; sc.onerror=()=>{ sc.remove(); rej(); }; document.head.appendChild(sc); })), Promise.reject());
+}
+async function readHolded(file){
+  if(!window.XLSX) await loadScript(["https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"]);
+  const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:""});
+  const key=v=>fold(String(v));
+  const hi=rows.findIndex(r=>r.some(v=>key(v)==="sku")&&r.some(v=>key(v)==="nombre"));
+  if(hi<0) throw new Error("cols");
+  const h=rows[hi].map(key), col=(...names)=>{ for(const n of names){ const i=h.indexOf(n); if(i>=0) return i; } return -1; };
+  const iS=col("sku"), iN=col("nombre"), iD=col("descripcion"), iT=col("tags","material"), iC=col("precio compra","coste"), iP=col("subtotal","pvp sin iva","precio","precio venta");
+  const num=v=>typeof v==="number"?v:Number(String(v).replace(/\./g,"").replace(",","."))||0;
+  const get=(r,i)=>i<0?"":String(r[i]??"").replace(/\s+/g," ").trim();
+  return rows.slice(hi+1).map(r=>[get(r,iS), get(r,iN), get(r,iD), get(r,iT), iC<0?0:num(r[iC]), iP<0?0:num(r[iP])]).filter(r=>r[0]&&r[1]);
+}
+function viewCatAdmin(){
+  const box=$("#adm"), c=S.cat, imp=S.catImp;
+  if(!c&&S.catVer!=="") ensureCat();
+  box.innerHTML=`<div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+    <p class="note" style="margin:0">${S.catVer===""?"Todavía no hay catálogo cargado.":c?`El catálogo tiene <b>${c.items.length.toLocaleString("es-ES")}</b> productos${Number(c.ver)?`, cargado el ${new Date(Number(c.ver)).toLocaleString("es-ES",{day:"numeric",month:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}`:""}.`:"Cargando el catálogo…"}</p>
+    <p class="note" style="margin:0">Exporta los productos desde Holded a Excel y cárgalo aquí. Sustituye el catálogo entero, así que sirve también para ponerlo al día. Los técnicos lo ven al buscar, sin precios; los precios solo los ves tú.</p>
+    ${imp?`<div class="stock"><span><b>${imp.rows.length.toLocaleString("es-ES")}</b> productos en «${esc(imp.name)}».</span>
+        <span class="note">Por ejemplo: ${imp.rows.slice(0,3).map(r=>esc(r[1])).join(", ")}.</span>
+        <div class="twobtn"><button class="btn" id="ci_no">Cancelar</button><button class="btn primary" id="ci_yes" ${S.busy?"disabled":""}>Cargar catálogo</button></div></div>`
+      :`<button class="btn primary block" id="ci_pick">Cargar Excel de Holded</button>`}
+  </div>`;
+  const pick=$("#ci_pick");
+  if(pick) pick.onclick=()=>{
+    const inp=document.createElement("input"); inp.type="file"; inp.accept=".xlsx,.xls,.csv";
+    inp.onchange=async()=>{ const file=inp.files[0]; if(!file) return;
+      pick.disabled=true; pick.textContent="Leyendo el Excel…";
+      try{ const rows=await readHolded(file); if(!rows.length) throw new Error("empty"); S.catImp={name:file.name, rows}; }
+      catch(e){ toast(e&&e.message==="cols"?"Ese Excel no tiene las columnas SKU y Nombre de Holded.":e&&e.message==="empty"?"El Excel no tiene productos.":"No se pudo leer el Excel. Revisa la conexión e inténtalo de nuevo."); }
+      viewCatAdmin(); };
+    inp.click();
+  };
+  const no=$("#ci_no"); if(no) no.onclick=()=>{ S.catImp=null; viewCatAdmin(); };
+  const yes=$("#ci_yes");
+  if(yes) yes.onclick=async()=>{
+    if(S.busy) return; S.busy=true; yes.disabled=true; yes.textContent="Cargando…";
+    try{
+      const r=await api("api_catalogImport", S.adminToken, imp.rows);
+      S.catImp=null; S.catVer=r.ver; S.cat=null; toast(`Catálogo cargado: ${r.n.toLocaleString("es-ES")} productos`);
+      S.busy=false; ensureCat();
+    }catch(err){
+      S.busy=false;
+      if(err&&err.msg==="función desconocida") toast("Falta pegar el api.gs nuevo en Apps Script para poder cargar el catálogo.");
+      else if(err&&err.code==="auth"){ S.adminOk=false; toast("Vuelve a poner la contraseña."); go("admin"); return; }
+      else handleWriteError(err);
+    }
+    viewCatAdmin();
+  };
+}
+
 function nextCode(){
   let n=0; for(const c of S.products.keys()){ const m=/^MAT-(\d+)$/.exec(c); if(m) n=Math.max(n,+m[1]); }
   return "MAT-"+String(n+1).padStart(3,"0");
@@ -772,13 +916,15 @@ function viewEdit(){
   const p = S.editCode ? S.products.get(S.editCode) : null;
   const img = imgFor(p);
   const baseCant = p ? p.cantidad : null;
+  const pre = !p && S.prefill ? S.prefill : null;
   app.innerHTML = `<form class="edit" id="f" novalidate>
+    ${pre?`<p class="catnote" style="margin:0">Del catálogo. Elige estante y cantidad y pulsa Guardar.</p>`:""}
     <div><span class="label">Foto</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:6px">
         <span class="thumb" id="e_thumb" style="width:84px;height:84px">${img?`<img src="${img}" alt="">`:"—"}</span>
         <button type="button" class="btn" id="e_photo">${img?"Cambiar foto":"Hacer foto"}</button>
       </div></div>
-    <label><span class="label">Nombre</span><input id="e_nombre" required value="${esc(p?.nombre||"")}" placeholder="Ej. Bomba Espa Multi 35 5" autocomplete="off"></label>
+    <label><span class="label">Nombre</span><input id="e_nombre" required value="${esc(p?.nombre||pre?.nombre||"")}" placeholder="Ej. Bomba Espa Multi 35 5" autocomplete="off"></label>
     <div class="twobtn">
       <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
       <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${shelvesIn(rk).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</optgroup>`).join("")}</select></label>
@@ -786,8 +932,8 @@ function viewEdit(){
     ${canRestricted()?`<label><span class="label">Stock mínimo (avisa si hay menos)</span><input id="e_min" type="number" inputmode="numeric" min="0" step="1" value="${Number(p?.minimo)||""}" placeholder="Sin mínimo"></label>`:""}
     <label><span class="label">Proveedor habitual (opcional)</span><input id="e_prov" list="provlist" autocomplete="off" value="${esc(p?.proveedor||"")}" placeholder="Escribe para buscar"><datalist id="provlist">${S.proveedores.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
     <label class="check"><input type="checkbox" id="e_prest" ${p?.prestamo?"checked":""}> <span>Herramienta o maquinaria de préstamo (se presta y se devuelve)</span></label>
-    <label><span class="label">Descripción (opcional)</span><textarea id="e_desc" rows="2" placeholder="Medidas, material, modelo…">${esc(p?.descripcion||"")}</textarea></label>
-    <label><span class="label">Código del QR ${p?"":"(se pone solo)"}</span><input id="e_codigo" required value="${esc(p?.codigo||nextCode())}" ${p?"readonly":""} style="font-family:var(--f-mono)"></label>
+    <label><span class="label">Descripción (opcional)</span><textarea id="e_desc" rows="2" placeholder="Medidas, material, modelo…">${esc(p?.descripcion||pre?.descripcion||"")}</textarea></label>
+    <label><span class="label">Código del QR ${p?"":pre?"(el del catálogo)":"(se pone solo)"}</span><input id="e_codigo" required value="${esc(p?.codigo||pre?.codigo||nextCode())}" ${p?"readonly":""} style="font-family:var(--f-mono)"></label>
     <button class="btn primary block" type="submit" id="e_save">Guardar</button>
     ${p?"":'<button class="btn block" type="submit" id="e_again" data-again="1">Guardar y añadir otro</button>'}
     ${p?`<button class="btn block" type="button" id="e_del" style="color:var(--danger)">Eliminar producto</button><div id="e_confirm" hidden class="stock"><span>¿Eliminar <b>${esc(p.nombre)}</b> del inventario? No se puede deshacer.</span><div class="twobtn"><button type="button" class="btn" id="e_no">Cancelar</button><button type="button" class="btn out" id="e_yes">Eliminar</button></div></div>`:""}
@@ -824,7 +970,7 @@ function viewEdit(){
       }
       toast(r.same?"No había cambios":"Guardado"); S.busy=false; go("ficha",{code:p.codigo});
     }catch(err){
-      if(err&&err.code==="exists"){ toast(`Ya existe un producto con el código ${codigo}.`); const c=$("#e_codigo"); if(c) c.value=nextCode(); }
+      if(err&&err.code==="exists"){ if(pre){ toast(`${codigo} ya está en el almacén.`); go("ficha",{code:codigo}); return; } toast(`Ya existe un producto con el código ${codigo}.`); const c=$("#e_codigo"); if(c) c.value=nextCode(); }
       else handleWriteError(err);
     }
     finally{ S.busy=false; const b=$("#e_save"); if(b) setBusy(false); }
@@ -849,10 +995,11 @@ function viewAdmin(){
       <button role="tab" aria-selected="${S.adminTab==="tec"}" data-tab="tec">Técnicos</button>
       <button role="tab" aria-selected="${S.adminTab==="pre"}" data-tab="pre">Préstamos${S.loans.length?` (${S.loans.length})`:""}</button>
       <button role="tab" aria-selected="${S.adminTab==="qr"}" data-tab="qr">Etiquetas QR</button>
+      <button role="tab" aria-selected="${S.adminTab==="cat"}" data-tab="cat">Catálogo</button>
     </div>
     <div id="adm"></div>`;
   app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="hist") loadHist(); viewAdmin(); });
-  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs, pre:viewLoans, qr:viewQR})[S.adminTab]();
+  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs, pre:viewLoans, qr:viewQR, cat:viewCatAdmin})[S.adminTab]();
 }
 
 function viewAdminLock(){
@@ -1132,7 +1279,7 @@ function labelPng(title,code,text){
   const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,W,W); g.imageSmoothingEnabled=false;
   const q=Math.round(W*.70); g.drawImage(qr,(W-q)/2,12,q,q); g.fillStyle="#111"; g.textAlign="center";
   g.font="bold 28px Arial, sans-serif"; wrapText(g,title,W/2,q+42,W-24,28);
-  g.font="bold 30px monospace"; g.fillText(code,W/2,W-14);
+  g.font=`bold ${Math.min(30,Math.floor((W-16)/(String(code).length*0.6)))}px monospace`; g.fillText(code,W/2,W-14);
   return new Promise(r=>c.toBlob(async b=>{ try{ r(await pngDpi(b,300)); }catch(e){ r(b); } },"image/png"));
 }
 /* Adds a pHYs chunk (pixels per metre) right after the PNG header. */
@@ -1150,7 +1297,7 @@ function printLabels(items,cm){
   if(!items.length){ toast("Marca al menos una etiqueta."); return; }
   let sheet=$("#printsheet"); if(!sheet){ sheet=document.createElement("div"); sheet.id="printsheet"; document.body.appendChild(sheet); }
   sheet.style.setProperty("--lbl",cm+"cm");
-  sheet.innerHTML=items.map(it=>`<div class="lbl"><img src="${qrCanvas(it.text).toDataURL("image/png")}" alt=""><b>${esc(it.title)}</b><span>${esc(it.code)}</span></div>`).join("");
+  sheet.innerHTML=items.map(it=>`<div class="lbl"><img src="${qrCanvas(it.text).toDataURL("image/png")}" alt=""><b>${esc(it.title)}</b><span${it.code.length>11?` style="font-size:calc(var(--lbl) * ${(0.99/it.code.length).toFixed(4)})"`:""}>${esc(it.code)}</span></div>`).join("");
   const clean=()=>{ window.removeEventListener("afterprint",clean); sheet.innerHTML=""; };
   window.addEventListener("afterprint",clean);
   setTimeout(()=>window.print(),300);
@@ -1349,11 +1496,12 @@ function applyData(r){
   if(r.clientes) S.clientes=r.clientes;
   if(r.proveedores) S.proveedores=r.proveedores;
   if(r.hasPassword!==undefined) S.hasPassword=r.hasPassword;
+  if(r.catVer!==undefined&&r.catVer!==S.catVer){ S.catVer=r.catVer; if(S.cat&&S.cat.ver!==S.catVer&&S.q.trim()) ensureCat(); }
 }
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-06.4";
+const APP_VERSION="2026-10-06.5";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
@@ -1385,6 +1533,7 @@ async function poll(){
 (async function boot(){
   render();
   if(BOOT.p) S.pending=normCode(BOOT.p);
+  catLoad();
   const cached=IN_GAS?null:loadCache();
   if(cached&&cached.products&&cached.techs){ applyData(cached); render(); }
   /* First visit on this phone: ask for the technicians on their own so the name search works while the rest loads. */

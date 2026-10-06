@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1 };
 
 function doPost(e) {
   var out;
@@ -22,7 +22,8 @@ function doPost(e) {
       api_saveProduct: api_saveProduct, api_deleteProduct: api_deleteProduct, api_toggleLoan: api_toggleLoan,
       api_addClient: api_addClient, api_uploadPhoto: api_uploadPhoto, api_adminSetup: adminSetup_,
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
-      api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech
+      api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
+      api_catalog: catalog_, api_catalogImport: catalogImport_
     };
     addShelves_();
     var fn = fns[req.fn];
@@ -47,14 +48,14 @@ function api_techs() {
 function fastPoll_() {
   return guard_(function () {
     var inv = cachedInv_();
-    return { products: inv.products, loans: inv.loans, techs: cachedTechs_() };
+    return { products: inv.products, loans: inv.loans, techs: cachedTechs_(), catVer: catVer_() };
   });
 }
 function fastBootstrap_() {
   return guard_(function () {
     var inv = cachedInv_(), cli = cachedCli_();
     return { products: inv.products, loans: inv.loans, techs: cachedTechs_(), clientes: cli.clientes, proveedores: cli.proveedores,
-      url: ScriptApp.getService().getUrl(), hasPassword: hasPassword_() };
+      url: ScriptApp.getService().getUrl(), hasPassword: hasPassword_(), catVer: catVer_() };
   });
 }
 
@@ -129,4 +130,62 @@ function dropCache_(clientes) {
   var c = CacheService.getScriptCache();
   c.put('ver', String(Date.now()) + Math.random(), 21600);
   c.removeAll(clientes ? ['tec_n', 'inv_n', 'cli_n'] : ['tec_n', 'inv_n']);
+}
+
+/* ---------- Catálogo ----------
+ * Todo lo que se vende o se usa (exportación de productos de Holded), esté o no en el almacén.
+ * Vive en la pestaña «Catalogo» de la hoja. Solo Xavi lo carga, y solo él ve los precios. */
+var CAT_SHEET_ = 'Catalogo';
+var CAT_HEAD_ = ['SKU', 'Nombre', 'Descripción', 'Material', 'Precio compra', 'PVP sin IVA'];
+function catVer_() {
+  var c = CacheService.getScriptCache(), v = c.get('catver');
+  if (v === null) { v = PropertiesService.getScriptProperties().getProperty('CAT_VER') || ''; c.put('catver', v, 21600); }
+  return v;
+}
+function catRows_() {
+  var v = cget_('cat');
+  if (v) return v;
+  var sh = sh_(CAT_SHEET_), n = sh ? sh.getLastRow() : 0;
+  v = n < 2 ? [] : sh.getRange(2, 1, n - 1, CAT_HEAD_.length).getValues().map(function (r) {
+    return [String(r[0]), String(r[1]), String(r[2]), String(r[3]), Number(r[4]) || 0, Number(r[5]) || 0];
+  }).filter(function (r) { return r[0] && r[1]; });
+  cput_('cat', v, 21600);
+  return v;
+}
+/** Con la contraseña devuelve también precio de compra y PVP; sin ella, solo nombre, descripción y material. */
+function catalog_(token) {
+  return guard_(function () {
+    var admin = false;
+    if (token) { try { admin_(token); admin = true; } catch (e) { /* sin precios */ } }
+    var rows = catRows_();
+    return { ver: catVer_(), admin: admin, items: admin ? rows : rows.map(function (r) { return r.slice(0, 4); }) };
+  });
+}
+/** Sustituye el catálogo entero por las filas del Excel de Holded: [sku, nombre, descripción, material, compra, pvp]. */
+function catalogImport_(token, rows) {
+  return guard_(function () {
+    admin_(token);
+    if (!Array.isArray(rows) || !rows.length) return { err: 'bad' };
+    var seen = {}, out = [];
+    rows.forEach(function (r) {
+      if (!Array.isArray(r)) return;
+      var sku = str_(r[0], 60).toUpperCase(), nombre = str_(r[1], 200);
+      if (!sku || !nombre || seen[sku]) return;
+      seen[sku] = 1;
+      out.push([cell_(sku), cell_(nombre), cell_(str_(r[2], 500)), cell_(str_(r[3], 100)), Number(r[4]) || 0, Number(r[5]) || 0]);
+    });
+    if (!out.length) return { err: 'bad' };
+    return locked_(function () {
+      var ss = ss_(), sh = ss.getSheetByName(CAT_SHEET_) || ss.insertSheet(CAT_SHEET_);
+      var n = sh.getLastRow();
+      if (n > 0) sh.getRange(1, 1, n, CAT_HEAD_.length).clearContent();
+      sh.getRange(1, 1, 1, CAT_HEAD_.length).setValues([CAT_HEAD_]).setFontWeight('bold');
+      sh.getRange(2, 1, out.length, CAT_HEAD_.length).setValues(out);
+      sh.setFrozenRows(1);
+      var ver = String(Date.now());
+      PropertiesService.getScriptProperties().setProperty('CAT_VER', ver);
+      var c = CacheService.getScriptCache(); c.put('catver', ver, 21600); c.remove('cat_n');
+      return { ok: true, n: out.length, ver: ver };
+    });
+  });
 }
