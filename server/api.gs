@@ -5,6 +5,9 @@
  *
  * Para que abra rápido, las listas se guardan un rato en la caché de Google y se rehacen tras cada cambio hecho desde la app.
  * Si se edita la hoja a mano, la app lo verá como mucho en 1 minuto (productos) o 2 minutos (técnicos).
+ *
+ * Contraseña fija de acceso restringido: si existe la propiedad ADMIN_PW (Configuración del proyecto →
+ * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
 var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1 };
@@ -17,8 +20,8 @@ function doPost(e) {
       api_bootstrap: fastBootstrap_, api_poll: fastPoll_, api_techs: api_techs,
       api_productMoves: api_productMoves, api_move: api_move, api_lend: api_lend, api_return: api_return,
       api_saveProduct: api_saveProduct, api_deleteProduct: api_deleteProduct, api_toggleLoan: api_toggleLoan,
-      api_addClient: api_addClient, api_uploadPhoto: api_uploadPhoto, api_adminSetup: api_adminSetup,
-      api_adminLogin: api_adminLogin, api_adminChangePassword: api_adminChangePassword, api_history: api_history,
+      api_addClient: api_addClient, api_uploadPhoto: api_uploadPhoto, api_adminSetup: adminSetup_,
+      api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech
     };
     var fn = fns[req.fn];
@@ -44,9 +47,30 @@ function fastBootstrap_() {
   return guard_(function () {
     var inv = cachedInv_(), cli = cachedCli_();
     return { products: inv.products, loans: inv.loans, techs: cachedTechs_(), clientes: cli.clientes, proveedores: cli.proveedores,
-      url: ScriptApp.getService().getUrl(), hasPassword: !!PropertiesService.getScriptProperties().getProperty('PW_HASH') };
+      url: ScriptApp.getService().getUrl(), hasPassword: hasPassword_() };
   });
 }
+
+/* ---------- Contraseña ---------- */
+function fixedPw_() { return PropertiesService.getScriptProperties().getProperty('ADMIN_PW'); }
+function hasPassword_() { const p = PropertiesService.getScriptProperties(); return !!(p.getProperty('ADMIN_PW') || p.getProperty('PW_HASH')); }
+/** Entra y devuelve ya el historial, para ahorrar una vuelta al servidor. Sin distinguir mayúsculas. */
+function adminLogin_(tecId, pw) {
+  return guard_(function () {
+    restricted_(tecId);
+    const fixed = fixedPw_();
+    if (fixed) {
+      if (String(pw || '').trim().toUpperCase() !== String(fixed).trim().toUpperCase()) { Utilities.sleep(300); return { err: 'wrong' }; }
+    } else {
+      const r = api_adminLogin(tecId, pw);
+      if (!r || r.err) return r;
+      return { ok: true, token: r.token, moves: lastRows_('Movimientos', 1000).reverse(), sheetUrl: ss_().getUrl() };
+    }
+    return { ok: true, token: token_(tecId), moves: lastRows_('Movimientos', 1000).reverse(), sheetUrl: ss_().getUrl() };
+  });
+}
+function adminSetup_(tecId, pw) { return fixedPw_() ? { err: 'exists' } : api_adminSetup(tecId, pw); }
+function adminChangePassword_(token, pw) { return fixedPw_() ? { err: 'fixed' } : api_adminChangePassword(token, pw); }
 
 function cachedTechs_() {
   var v = cget_('tec');

@@ -763,10 +763,11 @@ function viewAdminLock(){
     try{
       if(mode==="first"){ const r=await api("api_adminSetup", S.tecnico.id, pw); S.hasPassword=true; S.adminToken=r.token; unlockAdmin(); toast("Contraseña guardada"); }
       else if(mode==="change"){ await api("api_adminChangePassword", S.adminToken, pw); S.changePw=false; toast("Contraseña cambiada"); viewAdmin(); }
-      else { const r=await api("api_adminLogin", S.tecnico.id, pw); S.adminToken=r.token; unlockAdmin(); }
+      else { const r=await api("api_adminLogin", S.tecnico.id, pw); S.adminToken=r.token; if(r.moves){ S.hist=r.moves; S.sheetUrl=r.sheetUrl||""; } unlockAdmin(!!r.moves); }
     }catch(err){
       btn.disabled=false;
       if(err&&err.code==="wrong"){ toast("Contraseña incorrecta."); $("#pw1").value=""; $("#pw1").focus(); }
+      else if(err&&err.code==="fixed"){ S.changePw=false; toast("La contraseña es fija. Para cambiarla, cámbiala en Apps Script."); viewAdmin(); }
       else if(err&&err.code==="exists"){ S.hasPassword=true; toast("La contraseña ya estaba creada. Escríbela para entrar."); viewAdminLock(); }
       else if(err&&err.code==="auth"){ S.adminOk=false; S.adminToken=null; toast("Tu sesión de acceso restringido ha caducado. Vuelve a entrar."); S.changePw=false; viewAdminLock(); }
       else handleWriteError(err);
@@ -775,9 +776,9 @@ function viewAdminLock(){
   setTimeout(()=>{ const i=$("#pw1"); if(i) i.focus(); },50);
 }
 
-function unlockAdmin(){
+function unlockAdmin(haveHist){
   S.adminOk=true; S.adminTab=S.adminWant||"hist"; S.adminWant=null; S.lastActive=Date.now();
-  loadHist();
+  if(!haveHist) loadHist();
   viewAdmin();
 }
 async function loadHist(){
@@ -977,19 +978,27 @@ function handleWriteError(err){
   else toast("No se pudo guardar. Inténtalo de nuevo.");
 }
 
+/* Stock moves show at once; the server confirms in the background and the number is put back if it refuses. */
+const PEND=new Map();
 async function move(code,delta){
   const p=S.products.get(code); if(!p||S.busy||!S.tecnico) return;
-  S.busy=true; render();
-  try{
-    const r=await api("api_move", S.tecnico.id, code, delta, S.destino);
-    p.cantidad=r.next;
-    toast(delta<0?`Sacadas ${-delta} uds. Quedan ${r.next}.`:`Ingresadas ${delta} uds. Hay ${r.next}.`);
-    S.amount=1; refreshMoves();
-  }catch(err){
-    if(err&&err.code==="short") toast(`Solo quedan ${err.cur}. No puedes sacar ${-delta}.`);
+  if(p.cantidad+delta<0){ toast(`Solo quedan ${p.cantidad}. No puedes sacar ${-delta}.`); return; }
+  p.cantidad+=delta; PEND.set(code,(PEND.get(code)||0)+1);
+  toast(delta<0?`Sacadas ${-delta} uds. Quedan ${p.cantidad}.`:`Ingresadas ${delta} uds. Hay ${p.cantidad}.`);
+  S.amount=1; if(S.view==="ficha") render();
+  let r=null;
+  try{ r=await api("api_move", S.tecnico.id, code, delta, S.destino); }
+  catch(err){
+    const q=S.products.get(code); if(q) q.cantidad-=delta;
+    if(err&&err.code==="short") toast(`No se guardó: solo quedan ${err.cur}.`);
     else handleWriteError(err);
   }
-  finally{ S.busy=false; if(S.view==="ficha") render(); }
+  finally{
+    const n=(PEND.get(code)||1)-1; if(n) PEND.set(code,n); else PEND.delete(code);
+    const q=S.products.get(code); if(r&&q&&!PEND.has(code)) q.cantidad=r.next;
+    if(S.view==="ficha"&&S.code===code) render();
+    if(r) refreshMoves();
+  }
 }
 
 function watchMoves(code){
@@ -1095,7 +1104,7 @@ function fromHash(){ const c=normCode(location.hash.slice(1)); if(c) go("ficha",
 window.addEventListener("hashchange",fromHash);
 
 function applyData(r){
-  if(r.products){ const m=new Map(); r.products.forEach(x=>m.set(x.codigo,{...x,cantidad:Number(x.cantidad)||0})); S.products=m; S.loaded=true; }
+  if(r.products){ const m=new Map(); r.products.forEach(x=>{ const old=S.products.get(x.codigo); m.set(x.codigo,{...x,cantidad:PEND.has(x.codigo)&&old?old.cantidad:(Number(x.cantidad)||0)}); }); S.products=m; S.loaded=true; }
   if(r.techs){ S.techs=r.techs; S.techsLoaded=true; }
   if(r.loans) S.loans=r.loans;
   if(r.clientes) S.clientes=r.clientes;
