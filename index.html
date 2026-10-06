@@ -1351,6 +1351,22 @@ function applyData(r){
   if(r.hasPassword!==undefined) S.hasPassword=r.hasPassword;
 }
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
+/* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
+   so nobody stays on an old version because of the browser cache. */
+const APP_VERSION="2026-10-06.3";
+async function checkUpdate(){
+  try{
+    const url=location.origin+location.pathname;
+    const txt=await (await fetch(url+"?v="+Date.now(),{cache:"no-store"})).text();
+    const m=/const APP_VERSION="([^"]+)"/.exec(txt); if(!m||m[1]===APP_VERSION) return;
+    let tried=""; try{ tried=sessionStorage.getItem("almacen_upd")||""; }catch(e){}
+    if(tried===m[1]) return;
+    if(S.busy||PEND.size||WBUSY||typing()||S.view==="editar"||!$("#scanner").hidden) return;
+    try{ sessionStorage.setItem("almacen_upd",m[1]); }catch(e){}
+    await fetch(url,{cache:"reload"}).catch(()=>{});
+    location.reload();
+  }catch(e){}
+}
 async function poll(){
   try{
     const seq=WSEQ;
@@ -1391,6 +1407,7 @@ async function poll(){
   }
   if(!(S.view==="login"&&typing())) render(); else if($("#l_q")) drawLoginResults();
   setInterval(()=>{ if(document.visibilityState==="visible") poll(); }, 20000);
+  if(!IN_GAS){ setTimeout(checkUpdate,3000); setInterval(checkUpdate,120000); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkUpdate(); }); }
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") poll(); });
 })();
 </script>
