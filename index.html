@@ -45,6 +45,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;align-items:center}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
 .top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#e_nombre,#e_desc,#e_prov{text-transform:uppercase}
 .row.sel{outline:3px solid var(--accent,#1597dc)}
 #e_barbox .name,#b_web .name{white-space:normal;overflow:visible;text-overflow:clip}
 #e_barbox .list{min-width:0}
@@ -1159,11 +1160,12 @@ function viewEdit(){
   $("#f").onsubmit=async e=>{
     e.preventDefault();
     if(S.busy) return;
-    const codigo=normCode($("#e_codigo").value), nombre=$("#e_nombre").value.trim();
+    const UP=x=>String(x||"").trim().toLocaleUpperCase("es-ES");
+    const codigo=normCode($("#e_codigo").value), nombre=UP($("#e_nombre").value);
     if(!nombre){ toast("Escribe el nombre del producto."); $("#e_nombre").focus(); return; }
     if(!codigo){ toast("Falta el código del QR."); return; }
     const cantidad=Math.max(0,Math.floor(Number($("#e_cant").value)||0));
-    const fields={nombre,descripcion:$("#e_desc").value.trim(),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:$("#e_prov").value.trim()};
+    const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value)};
     if($("#e_min")) fields.minimo=Math.max(0,Math.floor(Number($("#e_min").value)||0));
     const again = !!(e.submitter && e.submitter.dataset.again);
     S.busy=true; setBusy(true);
@@ -1792,7 +1794,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.7";
+const APP_VERSION="2026-10-07.8";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

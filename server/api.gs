@@ -19,7 +19,7 @@ function doPost(e) {
     var fns = {
       api_bootstrap: fastBootstrap_, api_poll: fastPoll_, api_techs: api_techs,
       api_productMoves: productMoves_, api_move: api_move, api_lend: api_lend, api_return: api_return,
-      api_saveProduct: api_saveProduct, api_deleteProduct: api_deleteProduct, api_toggleLoan: api_toggleLoan,
+      api_saveProduct: saveProductUpper_, api_deleteProduct: api_deleteProduct, api_toggleLoan: api_toggleLoan,
       api_addClient: api_addClient, api_uploadPhoto: api_uploadPhoto, api_adminSetup: adminSetup_,
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
@@ -27,6 +27,7 @@ function doPost(e) {
       api_setBarcode: setBarcode_, api_barSearch: barSearch_
     };
     addShelves_();
+    mayusculas_();
     var fn = fns[req.fn];
     out = fn ? fn.apply(null, Array.isArray(req.args) ? req.args : []) : { err: 'bad', msg: 'función desconocida' };
     if (fn && !READS_[req.fn]) dropCache_(req.fn === 'api_addClient');
@@ -40,6 +41,36 @@ function doPost(e) {
 var CB_SHELVES_ = ['cb_bombas', 'cb_cajas', 'cb_tapiado', 'cb_blanca', 'cb_blanco', 'cb_almblanco', 'cb_pq', 'cb_e1', 'cb_e2', 'cb_e3', 'cb_e4', 'cb_e5'];
 function addShelves_() {
   CB_SHELVES_.forEach(function (k) { if (SHELVES.indexOf(k) < 0) SHELVES.push(k); });
+}
+
+/* Todo en MAYÚSCULAS (pedido de Xavi, 7-10-2026): nombre, descripción y proveedor de cada producto.
+ * Lo nuevo se guarda ya en mayúsculas; lo que había se pasa una sola vez, la primera vez que alguien usa la app. */
+function upper_(v) { return String(v == null ? '' : v).toLocaleUpperCase('es-ES'); }
+function saveProductUpper_(tecId, data, isNew) {
+  data = Object.assign({}, data || {});
+  ['nombre', 'descripcion', 'proveedor'].forEach(function (k) { if (data[k] != null) data[k] = upper_(data[k]); });
+  return api_saveProduct(tecId, data, isNew);
+}
+function mayusculas_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('MAYUS_V') === '1') return;
+  var l = LockService.getScriptLock();
+  if (!l.tryLock(20000)) return;
+  try {
+    if (props.getProperty('MAYUS_V') === '1') return;
+    var sh = sh_('Productos'), n = sh ? sh.getLastRow() : 0;
+    if (n >= 2) {
+      ['nombre', 'descripcion', 'proveedor'].forEach(function (k) {
+        var col = COLS.Productos.indexOf(k) + 1; if (col < 1) return;
+        var r = sh.getRange(2, col, n - 1, 1), v = r.getValues(), changed = false;
+        v.forEach(function (row) { if (typeof row[0] === 'string' && row[0] !== upper_(row[0])) { row[0] = upper_(row[0]); changed = true; } });
+        if (changed) r.setValues(v);
+      });
+      SpreadsheetApp.flush();
+    }
+    props.setProperty('MAYUS_V', '1');
+    dropCache_(false);
+  } finally { l.releaseLock(); }
 }
 
 /** Solo la lista de técnicos: es lo primero que necesita la pantalla de entrada. */
