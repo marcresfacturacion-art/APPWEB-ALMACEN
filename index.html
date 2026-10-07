@@ -1414,6 +1414,7 @@ function handleWriteError(err){
   else if(c==="network"||c==="offline") toast("Sin conexión. Revisa la cobertura e inténtalo de nuevo.");
   else if(c==="gone") toast("Este producto ya no existe.");
   else if(c==="too_large") toast("La foto es demasiado grande.");
+  else if(c==="server"||c==="bad") toast("Error del servidor"+(err.msg?": "+String(err.msg).slice(0,160):"")+". Mándale una captura a Claude.");
   else toast("No se pudo guardar. Inténtalo de nuevo.");
 }
 
@@ -1567,7 +1568,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.1";
+const APP_VERSION="2026-10-07.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
