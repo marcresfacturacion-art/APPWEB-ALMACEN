@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1 };
 
 function doPost(e) {
   var out;
@@ -24,7 +24,7 @@ function doPost(e) {
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
       api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_,
-      api_setBarcode: setBarcode_
+      api_setBarcode: setBarcode_, api_barSearch: barSearch_
     };
     addShelves_();
     var fn = fns[req.fn];
@@ -300,6 +300,56 @@ function setBarcode_(tecId, bar, code) {
     });
   });
 }
+/* Al dar de alta un producto nuevo: busca el código de barras en internet, sin IA.
+ * Mira la base de datos gratuita UPCitemdb y los resultados de Bing y DuckDuckGo, y devuelve los títulos encontrados
+ * para que el técnico toque el bueno. Lo encontrado se guarda 6 horas en la caché. */
+function barSearch_(tecId, bar) {
+  return guard_(function () {
+    tech_(tecId);
+    var k = String(bar || '').replace(/\s+/g, '');
+    if (!/^\d{6,14}$/.test(k)) return { err: 'bad' };
+    var cache = CacheService.getScriptCache(), hit = cache.get('bs_' + k);
+    if (hit) return JSON.parse(hit);
+    var web = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept-Language': 'es-ES,es;q=0.9' };
+    var reqs = [
+      { url: 'https://api.upcitemdb.com/prod/trial/lookup?upc=' + k, muteHttpExceptions: true, headers: { Accept: 'application/json' } },
+      { url: 'https://www.bing.com/search?q=' + k + '&setlang=es&cc=ES', muteHttpExceptions: true, headers: web },
+      { url: 'https://html.duckduckgo.com/html/?q=' + k + '&kl=es-es', muteHttpExceptions: true, headers: web }
+    ];
+    var res = UrlFetchApp.fetchAll(reqs), items = [], seen = {}, fails = [];
+    var add = function (title, url, src) {
+      title = text_(title); if (title.length < 4) return;
+      var key = title.toLowerCase().replace(/[^a-z0-9ñ]+/g, '');
+      if (!key || seen[key]) return;
+      seen[key] = 1; items.push({ title: title.slice(0, 200), url: String(url || '').slice(0, 300), src: src });
+    };
+    var parsers = [
+      function (t) { (JSON.parse(t).items || []).forEach(function (x) { add([x.brand, x.title].filter(Boolean).join(' ').replace(/^(\S+) \1 /i, '$1 '), (x.offers && x.offers[0] && x.offers[0].link) || '', 'UPCitemdb'); }); },
+      function (t) {
+        var re = /<li class="b_algo"[\s\S]*?<h2[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, m;
+        while ((m = re.exec(t))) add(m[2], m[1].replace(/&amp;/g, '&'), 'Bing');
+      },
+      function (t) {
+        var re = /<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, m;
+        while ((m = re.exec(t))) { var u = m[1], q = /[?&]uddg=([^&]+)/.exec(u); add(m[2], q ? decodeURIComponent(q[1]) : u, 'DuckDuckGo'); }
+      }
+    ];
+    res.forEach(function (r, i) {
+      var code = r.getResponseCode();
+      if (code !== 200) { fails.push(['UPCitemdb', 'Bing', 'DuckDuckGo'][i] + ' ' + code); return; }
+      try { parsers[i](r.getContentText()); } catch (e) { fails.push(['UPCitemdb', 'Bing', 'DuckDuckGo'][i] + ' ilegible'); }
+    });
+    var out = { ok: true, items: items.slice(0, 8), fails: fails };
+    if (items.length) cache.put('bs_' + k, JSON.stringify(out), 21600);
+    return out;
+  });
+}
+function text_(h) {
+  return String(h || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(+n); })
+    .replace(/\s+/g, ' ').trim();
+}
+
 /** Ejecútala una vez desde el editor: da el permiso y comprueba que la clave funciona. */
 function probarGemini() {
   var r = callGemini_([{ text: 'Responde solo: OK' }], false);

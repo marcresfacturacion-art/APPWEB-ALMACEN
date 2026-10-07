@@ -45,6 +45,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;align-items:center}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
 .top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.sel{outline:3px solid var(--accent,#1597dc)}
+#e_barbox .name{white-space:normal;overflow:visible;text-overflow:clip}
+#e_barbox .list{min-width:0}
 .top h1.long{font-size:15px;letter-spacing:.02em;white-space:normal;line-height:1.15}
 .top .tag{background:var(--brand-fg);color:var(--brand);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:2px 8px;border-radius:3px}
 .iconbtn{background:none;border:0;color:inherit;width:40px;height:40px;display:grid;place-items:center;border-radius:6px;cursor:pointer;flex:none}
@@ -160,6 +163,8 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 .field{display:flex;flex-direction:column;gap:4px}
 .check{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:10px;font-size:16px}
 .check input{width:24px;height:24px;flex:none;margin:0}
+form.edit .check input{width:24px;height:24px;min-height:0;padding:0;flex:none}
+form.edit .check span{flex:1;min-width:0}
 .field select,.field input,.filters select,.filters input,#t_name{min-height:52px;padding:10px 12px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:17px;width:100%;min-width:0}
 .linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-weight:600;cursor:pointer;padding:8px 0;align-self:center}
 .linkbtn.danger{color:var(--danger);align-self:auto;padding:4px 0}
@@ -262,7 +267,7 @@ const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
 if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
 /* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
 /* Every write is counted, so a refresh that was already on its way can't bring back what was just changed. */
-const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog"]);
+const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barSearch"]);
 let WSEQ=0, WBUSY=0;
 function api(fn, ...args){
   if(READ_FNS.has(fn)) return apiRaw(fn, ...args);
@@ -356,7 +361,7 @@ function go(view, extra={}){
   if (!S.tecnico && !OPEN_VIEWS.has(view)) { if(view==="ficha"&&extra.code) S.pending=extra.code; view="login"; extra={}; }
   if (S.tecnico && !S.destino && view!=="destino" && view!=="login") { if(view==="ficha"&&extra.code) S.pending=extra.code; view="destino"; extra={}; }
   if (!(view==="ficha" && extra.code===S.code)) S.sheet=null;
-  S.prefill=null;
+  S.prefill=null; S.newBar=null;
   Object.assign(S, {view}, extra);
   if (view==="ficha") watchMoves(S.code);
   render(); window.scrollTo(0,0);
@@ -1043,6 +1048,43 @@ function viewBar(){
   const nw=$("#b_new"); if(nw) nw.onclick=()=>go("editar",{editCode:null, prefill:{bar:raw, note:`Código de barras ${raw}. Escribe el nombre, elige estante y cantidad y pulsa Guardar.`}});
 }
 
+/* Nuevo producto → «Buscar por código de barras»: el servidor lo busca en internet (sin IA) y se toca el resultado bueno. */
+function nameFromTitle(t){
+  let n=String(t||"").replace(/^(amazon\.[a-z.]+|ebay|aliexpress)\s*:\s*/i,"");
+  const parts=n.split(/\s+[|–—]\s+|\s+-\s+/).map(x=>x.trim()).filter(Boolean);
+  if(parts.length>1&&parts[0].length>=8) n=parts[0];
+  n=n.replace(/\b(ean|ref\.?|c[oó]digo)\s*:?\s*\d{8,14}\b/ig,"").replace(/\b\d{12,14}\b/g,"").replace(/[\s,;:-]+$/,"").replace(/\s+/g," ").trim();
+  return n.toUpperCase().slice(0,120);
+}
+async function barSearch(raw){
+  const box=$("#e_barbox"); if(!box) return;
+  const known=prodByBar(raw);
+  if(known){ toast(`Ese código de barras ya es de ${known.nombre}.`); go("ficha",{code:known.codigo}); return; }
+  if(!$("#e_codigo")||$("#e_codigo").readOnly) return;
+  if(!(S.prefill&&S.prefill.bar)) S.newBar=raw;
+  const gq="https://www.google.com/search?q="+encodeURIComponent(raw);
+  box.hidden=false;
+  box.innerHTML=`<span class="label">Código de barras ${esc(raw)}</span><span class="note">Buscando en internet…</span>`;
+  let r=null, err=null;
+  try{ r=await api("api_barSearch", S.tecnico.id, raw); }catch(e){ err=e; }
+  if(S.view!=="editar"||$("#e_barbox")!==box) return;
+  const items=r&&r.items||[];
+  const msg=err?(oldServer(err)?"Para buscar en internet hay que pegar el api.gs nuevo en Apps Script.":/permis/i.test(err.msg||"")?"Falta el permiso de Google para salir a internet: en Apps Script ejecuta una vez probarGemini y acepta.":err.code==="network"?"Sin conexión.":"No se pudo buscar ("+(err.msg||err.code)+")."):"";
+  box.innerHTML=`<span class="label">Código de barras ${esc(raw)}</span>
+    ${err?`<span class="note">${esc(msg)} Escribe el nombre a mano.</span>`
+      :items.length?`<span class="note">Esto es lo que sale en internet. Toca el bueno para poner el nombre:</span>
+        <div class="list">${items.map((x,i)=>`<button type="button" class="row" data-bi="${i}"><span class="txt"><div class="name">${esc(x.title)}</div><div class="code">${esc(x.src)}${x.url?" · "+esc((/^https?:\/\/([^/]+)/.exec(x.url)||[])[1]||""):""}</div></span></button>`).join("")}</div>`
+      :`<span class="note">No sale nada en internet con este código. Escribe el nombre a mano.</span>`}
+    <span class="note">Se guardará con el producto, y la próxima vez que se escanee abrirá su ficha. · <a href="${esc(gq)}" target="_blank" rel="noopener">Ver en Google</a></span>`;
+  box.querySelectorAll("[data-bi]").forEach(b=>b.onclick=()=>{
+    const x=items[+b.dataset.bi], n=$("#e_nombre"), d=$("#e_desc");
+    n.value=nameFromTitle(x.title);
+    if(d&&!d.value.trim()&&fold(x.title)!==fold(n.value)) d.value=x.title;
+    box.querySelectorAll("[data-bi]").forEach(o=>o.classList.toggle("sel",o===b));
+    toast("Nombre puesto. Revísalo, elige estante y cantidad y pulsa Guardar.");
+  });
+}
+
 function nextCode(){
   let n=0; for(const c of S.products.keys()){ const m=/^MAT-(\d+)$/.exec(c); if(m) n=Math.max(n,+m[1]); }
   return "MAT-"+String(n+1).padStart(3,"0");
@@ -1058,8 +1100,12 @@ function viewEdit(){
     <div><span class="label">Foto</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:6px">
         <span class="thumb" id="e_thumb" style="width:84px;height:84px">${img?`<img src="${img}" alt="">`:"—"}</span>
-        <button type="button" class="btn" id="e_photo">${img?"Cambiar foto":"Hacer foto"}</button>
+        <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+          <button type="button" class="btn" id="e_photo">${img?"Cambiar foto":"Hacer foto"}</button>
+          ${p?"":`<button type="button" class="btn" id="e_bar">Buscar por código de barras</button>`}
+        </div>
       </div></div>
+    ${p?"":`<div class="stock" id="e_barbox" hidden></div>`}
     <label><span class="label">Nombre</span><input id="e_nombre" required value="${esc(p?.nombre||pre?.nombre||"")}" placeholder="Ej. Bomba Espa Multi 35 5" autocomplete="off"></label>
     <div class="twobtn">
       <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
@@ -1083,6 +1129,8 @@ function viewEdit(){
       catch(e){ toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Inténtalo de nuevo."); }
       ph.disabled=false; ph.textContent="Cambiar foto"; };
     inp.click(); };
+  const eb=$("#e_bar"); if(eb) eb.onclick=()=>{ S.scanFor="newbar"; openScanner(); };
+  if(pre&&pre.bar) barSearch(pre.bar);
   const setBusy=b=>{ $("#e_save").disabled=b; const a=$("#e_again"); if(a) a.disabled=b; };
   $("#f").onsubmit=async e=>{
     e.preventDefault();
@@ -1101,9 +1149,10 @@ function viewEdit(){
       S.products.set(r.product.codigo, r.product);
       if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce el Cuarto blanco: hay que pegar el api.gs nuevo en Apps Script."); go("ficha",{code:r.product.codigo}); return; }
       if(!p){
-        if(again&&!(pre&&pre.bar)){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
+        if(again&&!(pre&&pre.bar)&&!S.newBar){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
         S.busy=false;
-        if(pre&&pre.bar){ go("ficha",{code:r.product.codigo}); linkBar(pre.bar,r.product.codigo); return; }
+        const nb=pre&&pre.bar||S.newBar;
+        if(nb){ go("ficha",{code:r.product.codigo}); linkBar(nb,r.product.codigo); return; }
         toast("Guardado"); go("ficha",{code:r.product.codigo}); return;
       }
       toast(r.same?"No había cambios":"Guardado"); S.busy=false; go("ficha",{code:p.codigo});
@@ -1542,6 +1591,12 @@ function handleScanText(found, fmt){
   let code=codeFromScan(found);
   if(isBar&&!S.products.has(code)) code=byBar?byBar.codigo:"";
   if(S.scanFor==="bar") S.scanFor=null;
+  if(S.scanFor==="newbar"){
+    S.scanFor=null;
+    if(!isBar){ toast("Eso es un QR de la app. Escanea el código de barras que trae el producto."); return; }
+    if(S.view==="editar") barSearch(raw);
+    return;
+  }
   if(S.scanFor==="link"){
     S.scanFor=null;
     if(!isBar){ toast("Eso es un QR de la app. Escanea el código de barras que trae el producto de fábrica."); return; }
@@ -1601,7 +1656,7 @@ function closeScanner(){
 }
 async function openScanner(){
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||IN_GAS){ $("#qrfile").click(); return; }
-  $("#scanner").hidden=false; $("#scanmsg").textContent=S.scanFor==="link"||S.scanFor==="bar"?"Apunta al código de barras del producto":"Apunta al código QR";
+  $("#scanner").hidden=false; $("#scanmsg").textContent=S.scanFor==="link"||S.scanFor==="bar"||S.scanFor==="newbar"?"Apunta al código de barras del producto":"Apunta al código QR";
   try{
     SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
   }catch(e){
@@ -1712,7 +1767,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.4";
+const APP_VERSION="2026-10-07.5";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
