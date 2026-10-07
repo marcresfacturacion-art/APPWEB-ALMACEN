@@ -41,7 +41,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .scanframe{position:relative;width:min(70vw,300px);aspect-ratio:1;border:3px solid #fff;border-radius:16px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
 .scanmsg{position:relative;color:#fff;font-weight:600;margin:18px 16px 0;text-align:center;text-shadow:0 1px 3px #000}
 .scanbar{position:absolute;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:10px}
-.scanbar .btn{flex:1}
+.scanbar .btn{flex:1;min-width:0;padding-left:6px;padding-right:6px;font-size:14px}
+.scanwarn{position:absolute;left:16px;right:16px;top:42%;transform:translateY(-50%);background:#d32f2f;color:#fff;font-weight:800;font-size:24px;text-align:center;padding:16px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:2}
 a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;align-items:center}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
 .top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -251,6 +252,7 @@ form.edit .check span{flex:1;min-width:0}
 <div class="scanner" id="scanner" hidden role="dialog" aria-label="Escanear código QR o de barras">
   <video id="scanvideo" muted playsinline></video>
   <div class="scanframe" aria-hidden="true"></div>
+  <div class="scanwarn" id="scanwarn" hidden>¡No muevas el móvil!</div>
   <p class="scanmsg" id="scanmsg">Apunta al código QR</p>
   <div class="scanbar"><button class="btn" id="scanphoto">Hacer foto</button><button class="btn" id="scantype">Escribir número</button><button class="btn primary" id="scanclose">Cerrar</button></div>
 </div>
@@ -1650,6 +1652,21 @@ const SCAN={stream:null,raf:0,det:null,busy:false,zx:null,n:0,cand:null};
 /* A barcode only counts after the same number has been read several times over at least a second,
    and EAN/UPC numbers must pass their check digit: a quick misread never gets through. */
 const BAR_CONFIRM_MS=1000, BAR_CONFIRM_READS=3;
+/* Phone movement while scanning (accelerometer): shows «¡No muevas el móvil!» and restarts the confirmation. */
+const MOVE={at:0,last:null,on:false};
+function onMotion(e){
+  const a=e.acceleration, r=e.rotationRate; let moved=false;
+  if(a&&a.x!=null){ moved=Math.hypot(a.x||0,a.y||0,a.z||0)>1.5; }
+  else if(e.accelerationIncludingGravity){ const g=e.accelerationIncludingGravity, l=MOVE.last; if(l) moved=Math.hypot(g.x-l.x,g.y-l.y,g.z-l.z)>1.8; MOVE.last={x:g.x,y:g.y,z:g.z}; }
+  if(r&&Math.max(Math.abs(r.alpha||0),Math.abs(r.beta||0),Math.abs(r.gamma||0))>40) moved=true;
+  if(moved) MOVE.at=performance.now();
+}
+function watchMotion(on){
+  if(on===MOVE.on) return; MOVE.on=on; MOVE.at=0; MOVE.last=null;
+  if(on) window.addEventListener("devicemotion",onMotion); else window.removeEventListener("devicemotion",onMotion);
+  const w=$("#scanwarn"); if(w) w.hidden=true;
+}
+const moving=()=>MOVE.on&&["bar","newbar","link"].includes(S.scanFor)&&performance.now()-MOVE.at<700;
 function barCheckOk(t){
   t=String(t||"").trim();
   if(!/^\d+$/.test(t)||![8,12,13,14].includes(t.length)) return true;
@@ -1686,12 +1703,15 @@ async function makeDetector(){
   SCAN.det=false;
 }
 function closeScanner(){
+  watchMotion(false);
   cancelAnimationFrame(SCAN.raf); SCAN.raf=0;
   if(SCAN.stream){ SCAN.stream.getTracks().forEach(t=>t.stop()); SCAN.stream=null; }
   const v=$("#scanvideo"); if(v) v.srcObject=null;
   $("#scanner").hidden=true;
 }
 async function openScanner(){
+  /* iPhone asks permission for the motion sensor; it must be asked right on the tap. */
+  try{ if(window.DeviceMotionEvent&&typeof DeviceMotionEvent.requestPermission==="function") DeviceMotionEvent.requestPermission().then(r=>{ if(r==="granted"&&SCAN.stream) watchMotion(true); }).catch(()=>{}); }catch(e){}
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||IN_GAS){ $("#qrfile").click(); return; }
   SCAN.cand=null;
   $("#scanner").hidden=false; $("#scanmsg").textContent=S.scanFor==="link"||S.scanFor==="bar"||S.scanFor==="newbar"?"Apunta al código de barras del producto":"Apunta al código QR";
@@ -1701,6 +1721,7 @@ async function openScanner(){
     closeScanner(); toast("No se pudo abrir la cámara. Haz una foto del QR."); $("#qrfile").click(); return;
   }
   if($("#scanner").hidden){ closeScanner(); return; }
+  watchMotion(true);
   const v=$("#scanvideo"); v.srcObject=SCAN.stream; v.setAttribute("playsinline",""); try{ await v.play(); }catch(e){}
   await makeDetector();
   if(!(SCAN.det&&SCAN.detBars)) loadZx().then(()=>{ if(!SCAN.zx) SCAN.zx=zxReader(false); });
@@ -1710,6 +1731,8 @@ async function openScanner(){
   const tick=async t=>{
     if(!SCAN.stream) return;
     SCAN.raf=requestAnimationFrame(tick);
+    const mv=moving(), w=$("#scanwarn"); if(w&&w.hidden===mv) w.hidden=!mv;
+    if(mv){ SCAN.cand=null; return; }
     if(SCAN.busy||t-last<120||v.readyState<2) return;
     last=t; SCAN.busy=true;
     try{
@@ -1813,7 +1836,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.9";
+const APP_VERSION="2026-10-07.10";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
