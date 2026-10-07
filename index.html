@@ -1646,7 +1646,17 @@ function handleScanText(found, fmt){
 }
 
 /* Live scanner: camera preview, reads the QR on its own (BarcodeDetector when the phone has it, jsQR otherwise). */
-const SCAN={stream:null,raf:0,det:null,busy:false,zx:null,n:0};
+const SCAN={stream:null,raf:0,det:null,busy:false,zx:null,n:0,cand:null};
+/* A barcode only counts after the same number has been read several times over at least a second,
+   and EAN/UPC numbers must pass their check digit: a quick misread never gets through. */
+const BAR_CONFIRM_MS=1000, BAR_CONFIRM_READS=3;
+function barCheckOk(t){
+  t=String(t||"").trim();
+  if(!/^\d+$/.test(t)||![8,12,13,14].includes(t.length)) return true;
+  const d=t.split("").map(Number), chk=d.pop();
+  const sum=d.reverse().reduce((a,x,i)=>a+x*(i%2===0?3:1),0);
+  return (10-sum%10)%10===chk;
+}
 const BAR_FORMATS=["ean_13","ean_8","upc_a","upc_e","code_128","code_39","itf"];
 /* Phones without a built-in barcode reader (iPhone) use ZXing, loaded only when needed. */
 const ZX_URLS=["https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js","https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"];
@@ -1683,6 +1693,7 @@ function closeScanner(){
 }
 async function openScanner(){
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||IN_GAS){ $("#qrfile").click(); return; }
+  SCAN.cand=null;
   $("#scanner").hidden=false; $("#scanmsg").textContent=S.scanFor==="link"||S.scanFor==="bar"||S.scanFor==="newbar"?"Apunta al código de barras del producto":"Apunta al código QR";
   try{
     SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
@@ -1717,7 +1728,14 @@ async function openScanner(){
         g2.drawImage(v,0,0,c2.width,c2.height);
         const r=zxDecode(SCAN.zx,c2); if(r){ found=r.text; fmt=r.format; }
       }
-      if(found){ if(navigator.vibrate) navigator.vibrate(60); closeScanner(); handleScanText(found,fmt); }
+      if(found&&fmt!=="qr_code"){
+        const now=performance.now();
+        if(!barCheckOk(found)) found=null;
+        else if(!SCAN.cand||SCAN.cand.text!==found){ SCAN.cand={text:found,n:1,t0:now}; found=null; }
+        else { SCAN.cand.n++; if(SCAN.cand.n<BAR_CONFIRM_READS||now-SCAN.cand.t0<BAR_CONFIRM_MS) found=null; }
+        if(!found&&SCAN.cand) $("#scanmsg").textContent="Leyendo el código… no muevas el móvil";
+      }
+      if(found){ SCAN.cand=null; if(navigator.vibrate) navigator.vibrate(60); closeScanner(); handleScanText(found,fmt); }
     }catch(e){}
     finally{ SCAN.busy=false; }
   };
@@ -1761,6 +1779,7 @@ $("#qrfile").addEventListener("change",async e=>{
       }
     }
     URL.revokeObjectURL(img.src);
+    if(found&&fmt!=="qr_code"&&!barCheckOk(found)) found=null;
     if(!found){ S.scanFor=null; toast("No se ve ningún código. Acércate y haz la foto con buena luz."); return; }
     handleScanText(found,fmt);
   }catch(err){ toast("No se pudo leer la foto."); }
@@ -1794,7 +1813,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.8";
+const APP_VERSION="2026-10-07.9";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
