@@ -203,31 +203,37 @@ var PLATE_PROMPT_ = 'Es una foto de la placa de características de una máquina
   '"otros":"otros datos útiles de la placa en una línea","nombre":"nombre corto para el inventario en MAYÚSCULAS, tipo + marca + modelo, ej. BOMBA ESPA MULTI 35 5N",' +
   '"legible":true}. Pon "legible":false si la foto no deja leer la placa.';
 /* Claves de AI Studio («AIza…») van a generativelanguage; las de Vertex en modo exprés («AQ.…») a aiplatform.
- * Si una no acepta la clave se prueba la otra, así vale cualquiera de las dos. */
+ * Se prueban por orden; si Google está saturado (500/503) se reintenta y se pasa al modelo ligero.
+ * Si todo falla, el error dice qué contestó cada sitio, para poder arreglarlo. */
 function callGemini_(parts, json) {
   var p = PropertiesService.getScriptProperties(), key = String(p.getProperty('GEMINI_KEY') || '').trim();
   if (!key) return { err: 'nokey' };
   var model = p.getProperty('GEMINI_MODEL');
   var body = JSON.stringify({ contents: [{ role: 'user', parts: parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0 } : { temperature: 0 } });
-  var ends = [
-    'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model || 'gemini-flash-latest') + ':generateContent',
-    'https://aiplatform.googleapis.com/v1/publishers/google/models/' + encodeURIComponent(model || 'gemini-2.5-flash') + ':generateContent'
-  ];
-  if (/^AQ\./.test(key)) ends.reverse();
-  var last = { err: 'badkey' };
+  var GL = 'https://generativelanguage.googleapis.com/v1beta/models/', VX = 'https://aiplatform.googleapis.com/v1/publishers/google/models/';
+  var gl = [GL + (model || 'gemini-flash-latest'), GL + 'gemini-flash-lite-latest'];
+  var vx = [VX + (model || 'gemini-2.5-flash'), VX + 'gemini-2.5-flash-lite'];
+  var ends = (/^AQ\./.test(key) ? vx.concat(gl) : gl.concat(vx)).map(function (u) { return u + ':generateContent'; });
+  var errs = [], quota = false, keyBad = 0;
   for (var i = 0; i < ends.length; i++) {
-    var res = UrlFetchApp.fetch(ends[i], { method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key }, payload: body });
-    var code = res.getResponseCode(), txt = res.getContentText();
-    if (code === 200) {
-      var j = JSON.parse(txt), c = j.candidates && j.candidates[0] && j.candidates[0].content;
-      return { ok: true, text: ((c && c.parts) || []).map(function (x) { return x.text || ''; }).join('') };
+    for (var t = 0; t < 2; t++) {
+      var res = UrlFetchApp.fetch(ends[i], { method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key }, payload: body });
+      var code = res.getResponseCode(), txt = res.getContentText();
+      if (code === 200) {
+        var j = JSON.parse(txt), c = j.candidates && j.candidates[0] && j.candidates[0].content;
+        return { ok: true, text: ((c && c.parts) || []).map(function (x) { return x.text || ''; }).join('') };
+      }
+      if ((code === 500 || code === 503) && t === 0) { Utilities.sleep(1500); continue; }
+      var msg = ''; try { msg = JSON.parse(txt).error.message || ''; } catch (e) { msg = txt.slice(0, 120); }
+      errs.push(ends[i].replace(/^https:\/\/([^.]+)\..*\/models\/([^:]+).*$/, '$1 $2') + ' → ' + code + ' ' + String(msg).slice(0, 140));
+      if (code === 429) quota = true;
+      if (code === 400 || code === 401 || code === 403) { if (/API key|API_KEY|credential|unauth|permission|not valid/i.test(msg)) keyBad++; }
+      break;
     }
-    if (code === 429) return { err: 'quota' };
-    if (code === 404) { last = { err: 'model', msg: model || '' }; continue; }
-    if (code === 400 || code === 401 || code === 403) { last = /API key|API_KEY|credential|permission|unauth/i.test(txt) ? { err: 'badkey' } : { err: 'gemini', msg: 'HTTP ' + code }; continue; }
-    last = { err: 'gemini', msg: 'HTTP ' + code };
   }
-  return last;
+  if (quota) return { err: 'quota', msg: errs.join(' | ') };
+  if (keyBad === ends.length) return { err: 'badkey', msg: errs.join(' | ') };
+  return { err: 'gemini', msg: errs.join(' | ') };
 }
 function gemini_(base64) {
   var r = callGemini_([{ text: PLATE_PROMPT_ }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }], true);
@@ -247,7 +253,7 @@ function plate_(token, base64) {
 function probarGemini() {
   var r = callGemini_([{ text: 'Responde solo: OK' }], false);
   if (r.err === 'nokey') throw new Error('Falta la propiedad GEMINI_KEY en Configuración del proyecto → Propiedades de la secuencia de comandos.');
-  if (r.err === 'badkey') throw new Error('Google no acepta la clave. Crea una nueva en aistudio.google.com y ponla en GEMINI_KEY.');
+  if (r.err === 'badkey') throw new Error('Google no acepta la clave. Crea una nueva en aistudio.google.com y ponla en GEMINI_KEY. Detalle: ' + r.msg);
   if (r.err === 'quota') throw new Error('La clave funciona, pero hoy se ha pasado el uso gratuito.');
   if (r.err) throw new Error('Gemini no responde: ' + r.err + ' ' + (r.msg || ''));
   Logger.log('Clave de Gemini correcta. La foto de placa ya funciona.');
