@@ -787,7 +787,7 @@ function setBarcode_(tecId, bar, code) {
   });
 }
 /* Al dar de alta un producto nuevo: busca el código de barras en internet, sin IA.
- * Mira la base de datos gratuita UPCitemdb y los resultados de Bing y DuckDuckGo, y devuelve los títulos encontrados
+ * Mira los resultados de Google, Bing y DuckDuckGo y la base de datos gratuita UPCitemdb, y devuelve los títulos encontrados
  * para que el técnico toque el bueno. Lo encontrado se guarda 6 horas en la caché. */
 function barSearch_(tecId, bar) {
   return guard_(function () {
@@ -798,6 +798,7 @@ function barSearch_(tecId, bar) {
     if (hit) return JSON.parse(hit);
     var web = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept-Language': 'es-ES,es;q=0.9' };
     var reqs = [
+      { url: 'https://www.google.com/search?q=' + k + '&hl=es&gl=es&gbv=1&num=10', muteHttpExceptions: true, headers: web },
       { url: 'https://api.upcitemdb.com/prod/trial/lookup?upc=' + k, muteHttpExceptions: true, headers: { Accept: 'application/json' } },
       { url: 'https://www.bing.com/search?q=' + k + '&setlang=es&cc=ES', muteHttpExceptions: true, headers: web },
       { url: 'https://html.duckduckgo.com/html/?q=' + k + '&kl=es-es', muteHttpExceptions: true, headers: web }
@@ -809,7 +810,12 @@ function barSearch_(tecId, bar) {
       if (!key || seen[key]) return;
       seen[key] = 1; items.push({ title: title.slice(0, 200), url: String(url || '').slice(0, 300), src: src });
     };
+    var NAMES = ['Google', 'UPCitemdb', 'Bing', 'DuckDuckGo'];
     var parsers = [
+      function (t) {
+        var re = /<a href="\/url\?q=([^"&]+)[^"]*"[^>]*>(?:\s*<(?!\/a)[^>]*>)*\s*<h3[^>]*>([\s\S]*?)<\/h3>/g, m;
+        while ((m = re.exec(t))) add(m[2], decodeURIComponent(m[1]), 'Google');
+      },
       function (t) { (JSON.parse(t).items || []).forEach(function (x) { add([x.brand, x.title].filter(Boolean).join(' ').replace(/^(\S+) \1 /i, '$1 '), (x.offers && x.offers[0] && x.offers[0].link) || '', 'UPCitemdb'); }); },
       function (t) {
         var re = /<li class="b_algo"[\s\S]*?<h2[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, m;
@@ -822,8 +828,8 @@ function barSearch_(tecId, bar) {
     ];
     res.forEach(function (r, i) {
       var code = r.getResponseCode();
-      if (code !== 200) { fails.push(['UPCitemdb', 'Bing', 'DuckDuckGo'][i] + ' ' + code); return; }
-      try { parsers[i](r.getContentText()); } catch (e) { fails.push(['UPCitemdb', 'Bing', 'DuckDuckGo'][i] + ' ilegible'); }
+      if (code !== 200) { fails.push(NAMES[i] + ' ' + code); return; }
+      try { parsers[i](r.getContentText()); } catch (e) { fails.push(NAMES[i] + ' ilegible'); }
     });
     var out = { ok: true, items: items.slice(0, 8), fails: fails };
     if (items.length) cache.put('bs_' + k, JSON.stringify(out), 21600);

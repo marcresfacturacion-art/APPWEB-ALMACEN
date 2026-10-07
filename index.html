@@ -46,7 +46,7 @@ a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;ali
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
 .top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row.sel{outline:3px solid var(--accent,#1597dc)}
-#e_barbox .name{white-space:normal;overflow:visible;text-overflow:clip}
+#e_barbox .name,#b_web .name{white-space:normal;overflow:visible;text-overflow:clip}
 #e_barbox .list{min-width:0}
 .top h1.long{font-size:15px;letter-spacing:.02em;white-space:normal;line-height:1.15}
 .top .tag{background:var(--brand-fg);color:var(--brand);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:2px 8px;border-radius:3px}
@@ -994,7 +994,7 @@ const isBarText = t => /^\d{6,14}$/.test(String(t||"").trim());
 function barsOf(code){ const out=[]; for(const [k,c] of S.bars) if(c===code) out.push(k); return out; }
 function prodByBar(t){ const c=S.bars.get(barKey(t)); return c&&S.products.get(c)||null; }
 const oldServer = err => err&&err.code==="bad"&&/desconocida/.test(err.msg||"");
-function openBar(raw){ S.barPick=null; S.barQ=""; go("barra",{bar:String(raw||"").trim()}); }
+function openBar(raw){ S.barPick=null; S.barQ=""; S.barWeb=null; go("barra",{bar:String(raw||"").trim()}); }
 async function linkBar(raw, code){
   const p=S.products.get(code); if(!p||!S.tecnico) return false;
   try{
@@ -1033,19 +1033,43 @@ function viewBar(){
   app.innerHTML=`<section style="display:flex;flex-direction:column;gap:12px">
     <div><div class="label">Código de barras</div><h2 style="font-family:var(--f-mono);margin:4px 0 0">${esc(raw)}</h2></div>
     <p class="catnote" style="margin:0">Aún no está en ningún producto de la app.</p>
-    <a class="btn block" href="${esc(gq)}" target="_blank" rel="noopener">Buscarlo en Google</a>
-    ${S.canWrite?`<div class="label" style="margin-top:6px">¿De qué producto del almacén es?</div>
+    <div class="stock" id="b_web"><span class="label">Búsqueda en internet</span>${webHtml(S.barWeb)}
+      ${S.barWeb&&!S.barWeb.busy?`<span class="note"><button class="linkbtn" id="b_again" style="padding:0">Buscar otra vez</button> · <a href="${esc(gq)}" target="_blank" rel="noopener">Abrir en Google</a></span>`:""}</div>
+    ${S.canWrite?`<div class="label" style="margin-top:6px">Búsqueda en el almacén: ¿de qué producto es?</div>
     <div class="search"><input id="b_q" type="search" placeholder="Busca el producto por nombre" value="${esc(S.barQ||"")}" autocomplete="off" aria-label="Buscar el producto"></div>
     ${pick?`<div class="stock"><span>¿Guardar el código <b>${esc(raw)}</b> en <b>${esc(pick.nombre)}</b>?</span><div class="twobtn"><button class="btn" id="b_no">Cancelar</button><button class="btn primary" id="b_yes">Guardar</button></div></div>`:""}
     ${words.length?(hits.length?`<div class="list">${hits.map(p=>productRow(p).replace('data-open=','data-pick=')).join("")}</div>`:`<div class="list"><div class="empty">Ningún producto coincide.</div></div>`):""}
     <button class="btn block" id="b_new">No está: es un producto nuevo</button>`:`<p class="note">Tienes acceso de solo lectura.</p>`}
   </section>`;
+  if(!S.barWeb&&S.canWrite!==undefined) webSearch(raw);
+  const ag=$("#b_again"); if(ag) ag.onclick=()=>webSearch(raw,true);
+  app.querySelectorAll("#b_web [data-bi]").forEach(b=>b.onclick=()=>{ const x=S.barWeb.items[+b.dataset.bi]; const n=nameFromTitle(x.title);
+    go("editar",{editCode:null, prefill:{bar:raw, web:true, nombre:n, descripcion:fold(x.title)!==fold(n)?x.title:"", note:`Rellenado desde internet (código de barras ${raw}). Revísalo, elige estante y cantidad y pulsa Guardar.`}}); });
   const qi=$("#b_q");
   if(qi) qi.addEventListener("input",()=>{ S.barQ=qi.value; S.barPick=null; const pos=qi.selectionStart; viewBar(); const n=$("#b_q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
   app.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ S.barPick=b.dataset.pick; viewBar(); window.scrollTo(0,0); });
   const no=$("#b_no"); if(no) no.onclick=()=>{ S.barPick=null; viewBar(); };
   const yes=$("#b_yes"); if(yes) yes.onclick=async()=>{ yes.disabled=true; const code=S.barPick; if(await linkBar(raw,code)) go("ficha",{code}); else { yes.disabled=false; } };
   const nw=$("#b_new"); if(nw) nw.onclick=()=>go("editar",{editCode:null, prefill:{bar:raw, note:`Código de barras ${raw}. Escribe el nombre, elige estante y cantidad y pulsa Guardar.`}});
+}
+
+/* Búsqueda directa en internet desde la pantalla «Código de barras»: los resultados salen aquí mismo, sin salir de la app. */
+function webErr(err){ return oldServer(err)?"Para buscar en internet hay que pegar servidor.gs en Apps Script.":/permis/i.test(err.msg||"")?"Falta el permiso de Google para salir a internet: en Apps Script ejecuta una vez probarGemini y acepta.":err.code==="network"?"Sin conexión.":"No se pudo buscar ("+(err.msg||err.code)+")."; }
+function webHtml(w){
+  if(!w||w.busy) return `<span class="note">Buscando en internet…</span>`;
+  if(w.err) return `<span class="note">${esc(w.err)}</span>`;
+  if(!w.items.length) return `<span class="note">No sale nada en internet con este código.</span>`;
+  return `<span class="note">${S.canWrite?"Toca el bueno y se rellena el producto nuevo:":"Esto es lo que sale en internet:"}</span>
+    <div class="list">${w.items.map((x,i)=>`<button type="button" class="row" data-bi="${i}" ${S.canWrite?"":"disabled"}><span class="txt"><div class="name">${esc(x.title)}</div><div class="code">${esc(x.src)}${x.url?" · "+esc((/^https?:\/\/([^/]+)/.exec(x.url)||[])[1]||""):""}</div></span></button>`).join("")}</div>`;
+}
+async function webSearch(raw, again){
+  if(S.barWeb&&S.barWeb.busy) return;
+  S.barWeb={busy:true}; if(again&&S.view==="barra") viewBar();
+  let w;
+  try{ const r=await api("api_barSearch", S.tecnico.id, raw); w={items:r&&r.items||[]}; }catch(err){ w={items:[],err:webErr(err)}; }
+  if(S.bar!==raw) return;
+  S.barWeb=w;
+  if(S.view==="barra"&&!typing()) viewBar();
 }
 
 /* Nuevo producto → «Buscar por código de barras»: el servidor lo busca en internet (sin IA) y se toca el resultado bueno. */
@@ -1069,7 +1093,7 @@ async function barSearch(raw){
   try{ r=await api("api_barSearch", S.tecnico.id, raw); }catch(e){ err=e; }
   if(S.view!=="editar"||$("#e_barbox")!==box) return;
   const items=r&&r.items||[];
-  const msg=err?(oldServer(err)?"Para buscar en internet hay que pegar el api.gs nuevo en Apps Script.":/permis/i.test(err.msg||"")?"Falta el permiso de Google para salir a internet: en Apps Script ejecuta una vez probarGemini y acepta.":err.code==="network"?"Sin conexión.":"No se pudo buscar ("+(err.msg||err.code)+")."):"";
+  const msg=err?webErr(err):"";
   box.innerHTML=`<span class="label">Código de barras ${esc(raw)}</span>
     ${err?`<span class="note">${esc(msg)} Escribe el nombre a mano.</span>`
       :items.length?`<span class="note">Esto es lo que sale en internet. Toca el bueno para poner el nombre:</span>
@@ -1130,7 +1154,7 @@ function viewEdit(){
       ph.disabled=false; ph.textContent="Cambiar foto"; };
     inp.click(); };
   const eb=$("#e_bar"); if(eb) eb.onclick=()=>{ S.scanFor="newbar"; openScanner(); };
-  if(pre&&pre.bar) barSearch(pre.bar);
+  if(pre&&pre.bar&&!pre.web) barSearch(pre.bar);
   const setBusy=b=>{ $("#e_save").disabled=b; const a=$("#e_again"); if(a) a.disabled=b; };
   $("#f").onsubmit=async e=>{
     e.preventDefault();
@@ -1768,7 +1792,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.6";
+const APP_VERSION="2026-10-07.7";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
