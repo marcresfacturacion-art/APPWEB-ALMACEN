@@ -202,26 +202,37 @@ var PLATE_PROMPT_ = 'Es una foto de la placa de características de una máquina
   '"numero_serie":"","potencia":"con unidades (kW, CV)","tension":"V","intensidad":"A","frecuencia":"Hz","caudal":"con unidades","altura":"con unidades",' +
   '"otros":"otros datos útiles de la placa en una línea","nombre":"nombre corto para el inventario en MAYÚSCULAS, tipo + marca + modelo, ej. BOMBA ESPA MULTI 35 5N",' +
   '"legible":true}. Pon "legible":false si la foto no deja leer la placa.';
-function gemini_(base64) {
-  var p = PropertiesService.getScriptProperties(), key = p.getProperty('GEMINI_KEY');
+/* Claves de AI Studio («AIza…») van a generativelanguage; las de Vertex en modo exprés («AQ.…») a aiplatform.
+ * Si una no acepta la clave se prueba la otra, así vale cualquiera de las dos. */
+function callGemini_(parts, json) {
+  var p = PropertiesService.getScriptProperties(), key = String(p.getProperty('GEMINI_KEY') || '').trim();
   if (!key) return { err: 'nokey' };
-  var model = p.getProperty('GEMINI_MODEL') || 'gemini-flash-latest';
-  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
-    payload: JSON.stringify({
-      contents: [{ parts: [{ text: PLATE_PROMPT_ }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 }
-    })
-  });
-  var code = res.getResponseCode(), body = res.getContentText();
-  if (code === 400 && /API key|API_KEY/i.test(body)) return { err: 'badkey' };
-  if (code === 403) return { err: 'badkey' };
-  if (code === 404) return { err: 'model', msg: model };
-  if (code === 429) return { err: 'quota' };
-  if (code !== 200) return { err: 'gemini', msg: 'HTTP ' + code };
-  var j = JSON.parse(body), parts = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
-  var txt = (parts || []).map(function (x) { return x.text || ''; }).join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
-  try { return { ok: true, data: JSON.parse(txt) }; } catch (e) { return { err: 'gemini', msg: 'respuesta no válida' }; }
+  var model = p.getProperty('GEMINI_MODEL');
+  var body = JSON.stringify({ contents: [{ role: 'user', parts: parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0 } : { temperature: 0 } });
+  var ends = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model || 'gemini-flash-latest') + ':generateContent',
+    'https://aiplatform.googleapis.com/v1/publishers/google/models/' + encodeURIComponent(model || 'gemini-2.5-flash') + ':generateContent'
+  ];
+  if (/^AQ\./.test(key)) ends.reverse();
+  var last = { err: 'badkey' };
+  for (var i = 0; i < ends.length; i++) {
+    var res = UrlFetchApp.fetch(ends[i], { method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key }, payload: body });
+    var code = res.getResponseCode(), txt = res.getContentText();
+    if (code === 200) {
+      var j = JSON.parse(txt), c = j.candidates && j.candidates[0] && j.candidates[0].content;
+      return { ok: true, text: ((c && c.parts) || []).map(function (x) { return x.text || ''; }).join('') };
+    }
+    if (code === 429) return { err: 'quota' };
+    if (code === 404) { last = { err: 'model', msg: model || '' }; continue; }
+    if (code === 400 || code === 401 || code === 403) { last = /API key|API_KEY|credential|permission|unauth/i.test(txt) ? { err: 'badkey' } : { err: 'gemini', msg: 'HTTP ' + code }; continue; }
+    last = { err: 'gemini', msg: 'HTTP ' + code };
+  }
+  return last;
+}
+function gemini_(base64) {
+  var r = callGemini_([{ text: PLATE_PROMPT_ }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }], true);
+  if (!r.ok) return r;
+  try { return { ok: true, data: JSON.parse(r.text.replace(/^```(?:json)?\s*|\s*```$/g, '')) }; } catch (e) { return { err: 'gemini', msg: 'respuesta no válida' }; }
 }
 function plate_(token, base64) {
   return guard_(function () {
@@ -234,10 +245,10 @@ function plate_(token, base64) {
 }
 /** Ejecútala una vez desde el editor: da el permiso y comprueba que la clave funciona. */
 function probarGemini() {
-  var key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
-  if (!key) throw new Error('Falta la propiedad GEMINI_KEY en Configuración del proyecto → Propiedades de la secuencia de comandos.');
-  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { muteHttpExceptions: true, headers: { 'x-goog-api-key': key } });
-  if (res.getResponseCode() !== 200) throw new Error('Google no acepta la clave (HTTP ' + res.getResponseCode() + '). Revísala en aistudio.google.com.');
+  var r = callGemini_([{ text: 'Responde solo: OK' }], false);
+  if (r.err === 'nokey') throw new Error('Falta la propiedad GEMINI_KEY en Configuración del proyecto → Propiedades de la secuencia de comandos.');
+  if (r.err === 'badkey') throw new Error('Google no acepta la clave. Crea una nueva en aistudio.google.com y ponla en GEMINI_KEY.');
+  if (r.err === 'quota') throw new Error('La clave funciona, pero hoy se ha pasado el uso gratuito.');
+  if (r.err) throw new Error('Gemini no responde: ' + r.err + ' ' + (r.msg || ''));
   Logger.log('Clave de Gemini correcta. La foto de placa ya funciona.');
 }
-
