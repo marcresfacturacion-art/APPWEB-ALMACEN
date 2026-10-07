@@ -42,6 +42,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .scanmsg{position:relative;color:#fff;font-weight:600;margin:18px 16px 0;text-align:center;text-shadow:0 1px 3px #000}
 .scanbar{position:absolute;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:10px}
 .scanbar .btn{flex:1}
+a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;align-items:center}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
 .top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .tag{background:var(--brand-fg);color:var(--brand);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:2px 8px;border-radius:3px}
@@ -240,11 +241,11 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 <input type="file" id="qrfile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del código QR">
 <input type="file" id="photofile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del producto">
 <div class="toast" id="toast" hidden></div>
-<div class="scanner" id="scanner" hidden role="dialog" aria-label="Escanear código QR">
+<div class="scanner" id="scanner" hidden role="dialog" aria-label="Escanear código QR o de barras">
   <video id="scanvideo" muted playsinline></video>
   <div class="scanframe" aria-hidden="true"></div>
   <p class="scanmsg" id="scanmsg">Apunta al código QR</p>
-  <div class="scanbar"><button class="btn" id="scanphoto">Hacer foto</button><button class="btn primary" id="scanclose">Cerrar</button></div>
+  <div class="scanbar"><button class="btn" id="scanphoto">Hacer foto</button><button class="btn" id="scantype">Escribir número</button><button class="btn primary" id="scanclose">Cerrar</button></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -260,7 +261,7 @@ const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
 if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
 /* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
 /* Every write is counted, so a refresh that was already on its way can't bring back what was just changed. */
-const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog"]);
+const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barLookup"]);
 let WSEQ=0, WBUSY=0;
 function api(fn, ...args){
   if(READ_FNS.has(fn)) return apiRaw(fn, ...args);
@@ -286,7 +287,7 @@ function apiRaw(fn, ...args){
 }
 /* Last good copy of the inventory, so the app opens instantly and the server refresh lands a moment later. */
 const CACHE_KEY="almacen_cache_v1";
-function saveCache(r){ try{ const keep={}; ["products","techs","loans","clientes","proveedores","hasPassword"].forEach(k=>{ if(r[k]!==undefined) keep[k]=r[k]; }); const old=loadCache()||{}; localStorage.setItem(CACHE_KEY, JSON.stringify({...old,...keep,at:Date.now()})); }catch(e){} }
+function saveCache(r){ try{ const keep={}; ["products","techs","loans","barras","clientes","proveedores","hasPassword"].forEach(k=>{ if(r[k]!==undefined) keep[k]=r[k]; }); const old=loadCache()||{}; localStorage.setItem(CACHE_KEY, JSON.stringify({...old,...keep,at:Date.now()})); }catch(e){} }
 function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); }catch(e){ return null; } }
 function saveFile(filename, data){
   const blob = data instanceof Blob ? data : new Blob([data],{type:"text/csv;charset=utf-8"});
@@ -333,7 +334,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, bars:new Map(), bar:"", barPick:null, barLook:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -366,11 +367,11 @@ function render(){
   $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", admin:"Restringido", destino:"¿Para qué es?"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Sin asignar", admin:"Restringido", destino:"¿Para qué es?"};
   $("#title").textContent = titles[S.view];
   VIEWS[S.view]();
 }
-const VIEWS={login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, admin:viewAdmin, destino:viewDest};
+const VIEWS={login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest};
 
 const LOGIN_MIN=3;
 function techMatches(q){
@@ -446,18 +447,20 @@ function viewSearch(){
   const q = S.q.trim().toLowerCase();
   const all = [...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
   const words = qWords(S.q);
-  const hits = q ? all.filter(p => hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""), words)) : all;
+  const bk = isBarText(S.q) ? barKey(S.q) : null, byBar = bk ? S.bars.get(bk) : null;
+  const hits = q ? all.filter(p => p.codigo===byBar || hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||"")+" "+barsOf(p.codigo).join(" "), words)) : all;
   const cat = q ? catHits(words) : null;
   if(q) ensureCat();
   app.innerHTML = `
     ${S.destino?`<div class="destbar"><span>Para: <b>${esc(destLabel())}</b></span><button class="linkbtn" id="d_change">Cambiar</button></div>`:""}
-    <button class="btn primary block" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR</button>
+    <button class="btn primary block" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR o código de barras</button>
     ${S.canWrite?'<button class="btn block" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':''}
     <div class="search"><input id="q" type="search" inputmode="search" placeholder="Buscar en el almacén y el catálogo" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
     ${!S.loaded?'<div class="list"><div class="empty">Cargando inventario…</div></div>':
       !all.length?'<div class="list"><div class="empty">Aún no hay productos. Pulsa «Nuevo producto» para dar de alta el primero.</div></div>':
       q?(hits.length?`<div class="label">En el almacén · ${hits.length}</div><div class="list">${hits.map(productRow).join("")}</div>`
           :cat&&cat.n?`<div class="label">En el almacén no hay nada con «${esc(S.q)}»</div>`
+          :bk?`<div class="label">Código de barras</div><div class="list"><div class="empty">El código de barras ${esc(S.q.trim())} aún no está en ningún producto.</div></div><button class="btn block" id="tobar">¿De qué producto es?</button>`
           :`<div class="label">0 resultados</div><div class="list"><div class="empty">Ningún producto coincide con «${esc(S.q)}».</div></div>`)+`
         ${catBlock(cat)}`:
       `<div class="label">Productos por estante · ${all.length}</div>
@@ -475,7 +478,8 @@ function viewSearch(){
     ${canRestricted()?`<button class="btn block" id="tohist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Acceso restringido</button>`:""}`;
   const qi=$("#q");
   qi.addEventListener("input",()=>{ S.q=qi.value; const pos=qi.selectionStart; viewSearch(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
-  qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
+  qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value))||(isBarText(qi.value)&&prodByBar(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
+  const tb=$("#tobar"); if(tb) tb.onclick=()=>openBar(S.q.trim());
   $("#scan").onclick=()=>{ S.scanFor=null; openScanner(); };
   $("#tomap").onclick=()=>go("mapa",{mapSel:null});
   bindLoanButtons();
@@ -525,6 +529,7 @@ function viewFicha(){
     <div><div class="code">${esc(p.codigo)}${p.prestamo?'<span class="pill">Préstamo</span>':''}</div><h2>${esc(p.nombre)}</h2></div>
     ${p.descripcion?`<p>${esc(p.descripcion)}</p>`:""}
     ${p.proveedor?`<p class="note" style="margin:0">Proveedor: <b>${esc(p.proveedor)}</b></p>`:""}
+    ${barLine(p)}
     ${pricesHtml(catByCode(p.codigo))}${S.adminOk&&S.catVer&&!(S.cat&&S.cat.admin)?(ensureCat(),""):""}
     <div class="facts">
       <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&S.adminOk&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
@@ -537,6 +542,7 @@ function viewFicha(){
   </section>`;
   renderLog();
   bindLoanButtons();
+  bindBarLine(p);
   $("#loc").onclick=()=>go("mapa",{mapSel:locKey(p)});
   if(!S.canWrite) return;
   app.querySelectorAll("[data-dchange]").forEach(b=>b.onclick=changeDest);
@@ -972,6 +978,82 @@ function viewPlate(){
   if(S.catVer&&!S.cat) ensureCat();
 }
 
+/* ---------- Códigos de barras del fabricante ----------
+ * Cada producto puede tener uno o varios (pestaña «Barras» de la hoja). Al escanear uno se abre su ficha;
+ * si no está en la app, se asigna a un producto del almacén o se da de alta uno nuevo. */
+const barKey = s => { s=String(s??"").trim().toUpperCase().replace(/\s+/g,""); return /^\d+$/.test(s)?(s.replace(/^0+/,"")||"0"):s.replace(/[^A-Z0-9._\/+-]/g,""); };
+const isBarText = t => /^\d{6,14}$/.test(String(t||"").trim());
+function barsOf(code){ const out=[]; for(const [k,c] of S.bars) if(c===code) out.push(k); return out; }
+function prodByBar(t){ const c=S.bars.get(barKey(t)); return c&&S.products.get(c)||null; }
+const oldServer = err => err&&err.code==="bad"&&/desconocida/.test(err.msg||"");
+function openBar(raw){ S.barPick=null; S.barLook=null; S.barQ=""; go("barra",{bar:String(raw||"").trim()}); }
+async function linkBar(raw, code){
+  const p=S.products.get(code); if(!p||!S.tecnico) return false;
+  try{
+    const r=await api("api_setBarcode", S.tecnico.id, raw, code);
+    S.bars.set(r&&r.bar||barKey(raw), code);
+    toast(`Código de barras guardado en ${p.nombre}.`);
+    if(S.view==="ficha"&&S.code===code) render();
+    return true;
+  }catch(err){
+    if(err&&err.code==="taken"){ const o=S.products.get(err.codigo); toast(`Ese código de barras ya es de ${o?o.nombre:err.codigo}.`); }
+    else if(oldServer(err)) toast("Para guardar códigos de barras hay que pegar el api.gs nuevo en Apps Script.");
+    else handleWriteError(err);
+    return false;
+  }
+}
+async function unlinkBar(k, code){
+  try{ await api("api_setBarcode", S.tecnico.id, k, ""); if(S.bars.get(k)===code) S.bars.delete(k); toast("Código de barras quitado."); render(); }
+  catch(err){ handleWriteError(err); }
+}
+function barLine(p){
+  const bars=barsOf(p.codigo);
+  if(!bars.length) return S.canWrite?`<button class="linkbtn" id="addbar" style="align-self:flex-start;padding:0">+ Añadir el código de barras del fabricante</button>`:"";
+  return `<p class="note" style="margin:0">Código de barras: ${bars.map(k=>`<b style="font-family:var(--f-mono)">${esc(k)}</b>${S.adminOk?` <button class="linkbtn" data-unbar="${esc(k)}" aria-label="Quitar ${esc(k)}" style="padding:0 4px">quitar</button>`:""}`).join(", ")}${S.canWrite?` · <button class="linkbtn" id="addbar" style="padding:0">Añadir otro</button>`:""}</p>`;
+}
+function bindBarLine(p){
+  const a=$("#addbar"); if(a) a.onclick=()=>{ S.scanFor="link"; S.linkCode=p.codigo; openScanner(); };
+  app.querySelectorAll("[data-unbar]").forEach(b=>b.onclick=()=>unlinkBar(b.dataset.unbar,p.codigo));
+}
+function viewBar(){
+  const raw=S.bar, known=prodByBar(raw);
+  if(known){ go("ficha",{code:known.codigo}); return; }
+  const words=qWords(S.barQ||"");
+  const hits=words.length?[...S.products.values()].filter(p=>hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""),words)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,30):[];
+  const pick=S.barPick&&S.products.get(S.barPick), L=S.barLook;
+  const gq="https://www.google.com/search?q="+encodeURIComponent(raw);
+  app.innerHTML=`<section style="display:flex;flex-direction:column;gap:12px">
+    <div><div class="label">Código de barras</div><h2 style="font-family:var(--f-mono);margin:4px 0 0">${esc(raw)}</h2></div>
+    <p class="catnote" style="margin:0">Aún no está en ningún producto de la app.</p>
+    <a class="btn block" href="${esc(gq)}" target="_blank" rel="noopener">Buscarlo en Google</a>
+    ${S.adminOk&&isBarText(raw)?`<button class="btn block" id="b_ai" ${L&&L.busy?"disabled":""}>${L&&L.busy?"Gemini lo está buscando…":"Que Gemini lo busque y lo rellene"}</button>`:""}
+    ${L&&L.err?`<p class="catnote" style="margin:0">${L.err}</p>`:""}
+    ${L&&L.data?`<div class="stock"><span class="label">Lo que ha encontrado Gemini</span><b>${esc(L.data.nombre||"")}</b>${L.data.descripcion?`<span class="note">${esc(L.data.descripcion)}</span>`:""}
+      ${(L.webs||[]).length?`<span class="note">Fuentes: ${L.webs.map(w=>`<a href="${esc(w.uri)}" target="_blank" rel="noopener">${esc(w.title||"web")}</a>`).join(", ")}</span>`:""}
+      <span class="note">Compruébalo antes de guardar.</span>
+      ${S.canWrite?`<button class="btn primary block" id="b_ainew">Dar de alta con estos datos</button>`:""}</div>`:""}
+    ${S.canWrite?`<div class="label" style="margin-top:6px">¿De qué producto del almacén es?</div>
+    <div class="search"><input id="b_q" type="search" placeholder="Busca el producto por nombre" value="${esc(S.barQ||"")}" autocomplete="off" aria-label="Buscar el producto"></div>
+    ${pick?`<div class="stock"><span>¿Guardar el código <b>${esc(raw)}</b> en <b>${esc(pick.nombre)}</b>?</span><div class="twobtn"><button class="btn" id="b_no">Cancelar</button><button class="btn primary" id="b_yes">Guardar</button></div></div>`:""}
+    ${words.length?(hits.length?`<div class="list">${hits.map(p=>productRow(p).replace('data-open=','data-pick=')).join("")}</div>`:`<div class="list"><div class="empty">Ningún producto coincide.</div></div>`):""}
+    <button class="btn block" id="b_new">No está: es un producto nuevo</button>`:`<p class="note">Tienes acceso de solo lectura.</p>`}
+  </section>`;
+  const qi=$("#b_q");
+  if(qi) qi.addEventListener("input",()=>{ S.barQ=qi.value; S.barPick=null; const pos=qi.selectionStart; viewBar(); const n=$("#b_q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
+  app.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ S.barPick=b.dataset.pick; viewBar(); window.scrollTo(0,0); });
+  const no=$("#b_no"); if(no) no.onclick=()=>{ S.barPick=null; viewBar(); };
+  const yes=$("#b_yes"); if(yes) yes.onclick=async()=>{ yes.disabled=true; const code=S.barPick; if(await linkBar(raw,code)) go("ficha",{code}); else { yes.disabled=false; } };
+  const nw=$("#b_new"); if(nw) nw.onclick=()=>go("editar",{editCode:null, prefill:{bar:raw, note:`Código de barras ${raw}. Escribe el nombre, elige estante y cantidad y pulsa Guardar.`}});
+  const ai=$("#b_ai"); if(ai) ai.onclick=async()=>{
+    S.barLook={busy:true}; viewBar();
+    try{ const r=await api("api_barLookup", S.adminToken, raw);
+      S.barLook=r.data&&r.data.encontrado!==false&&r.data.nombre?{data:r.data,webs:r.webs||[]}:{err:"Gemini no ha encontrado ese código en Google. Búscalo tú con «Buscarlo en Google» o dalo de alta a mano."}; }
+    catch(err){ S.barLook={err:oldServer(err)?"Hay que pegar el api.gs nuevo en Apps Script.":PLATE_ERR[err&&err.code]||esc("No se pudo buscar: "+(err&&err.msg||err&&err.code||"error"))}; }
+    if(S.view==="barra"&&S.bar===raw) viewBar();
+  };
+  const an=$("#b_ainew"); if(an) an.onclick=()=>{ const d=S.barLook.data; go("editar",{editCode:null, prefill:{bar:raw, nombre:String(d.nombre||"").toUpperCase(), descripcion:[d.marca&&"Marca: "+d.marca,d.modelo&&"Modelo: "+d.modelo,d.descripcion].filter(Boolean).join(" · "), note:`Datos de Google para el código ${raw}. Revísalos, elige estante y cantidad y pulsa Guardar.`}}); };
+}
+
 function nextCode(){
   let n=0; for(const c of S.products.keys()){ const m=/^MAT-(\d+)$/.exec(c); if(m) n=Math.max(n,+m[1]); }
   return "MAT-"+String(n+1).padStart(3,"0");
@@ -1000,7 +1082,7 @@ function viewEdit(){
     <label><span class="label">Descripción (opcional)</span><textarea id="e_desc" rows="2" placeholder="Medidas, material, modelo…">${esc(p?.descripcion||pre?.descripcion||"")}</textarea></label>
     <label><span class="label">Código del QR ${p?"":pre&&pre.cat?"(el del catálogo)":"(se pone solo)"}</span><input id="e_codigo" required value="${esc(p?.codigo||pre?.codigo||nextCode())}" ${p?"readonly":""} style="font-family:var(--f-mono)"></label>
     <button class="btn primary block" type="submit" id="e_save">Guardar</button>
-    ${p?"":'<button class="btn block" type="submit" id="e_again" data-again="1">Guardar y añadir otro</button>'}
+    ${p||(pre&&pre.bar)?"":'<button class="btn block" type="submit" id="e_again" data-again="1">Guardar y añadir otro</button>'}
     ${p?`<button class="btn block" type="button" id="e_del" style="color:var(--danger)">Eliminar producto</button><div id="e_confirm" hidden class="stock"><span>¿Eliminar <b>${esc(p.nombre)}</b> del inventario? No se puede deshacer.</span><div class="twobtn"><button type="button" class="btn" id="e_no">Cancelar</button><button type="button" class="btn out" id="e_yes">Eliminar</button></div></div>`:""}
   </form>`;
   let fotoId = p?.foto || "";
@@ -1030,8 +1112,10 @@ function viewEdit(){
       S.products.set(r.product.codigo, r.product);
       if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce el Cuarto blanco: hay que pegar el api.gs nuevo en Apps Script."); go("ficha",{code:r.product.codigo}); return; }
       if(!p){
-        if(again){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
-        toast("Guardado"); S.busy=false; go("ficha",{code:r.product.codigo}); return;
+        if(again&&!(pre&&pre.bar)){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
+        S.busy=false;
+        if(pre&&pre.bar){ go("ficha",{code:r.product.codigo}); linkBar(pre.bar,r.product.codigo); return; }
+        toast("Guardado"); go("ficha",{code:r.product.codigo}); return;
       }
       toast(r.same?"No había cambios":"Guardado"); S.busy=false; go("ficha",{code:p.codigo});
     }catch(err){
@@ -1461,23 +1545,64 @@ function codeFromScan(text){
   return normCode(decodeURIComponent(t));
 }
 
-function handleScanText(found){
-  const code=codeFromScan(found);
+function handleScanText(found, fmt){
+  const raw=String(found||"").trim();
+  /* A manufacturer's barcode (EAN…), not one of our QR labels. */
+  const isBar=!/^https?:/i.test(raw)&&!raw.includes("#")&&(isBarText(raw)||(fmt&&fmt!=="qr_code"));
+  const byBar=isBar?prodByBar(raw):null;
+  let code=codeFromScan(found);
+  if(isBar&&!S.products.has(code)) code=byBar?byBar.codigo:"";
+  if(S.scanFor==="link"){
+    S.scanFor=null;
+    if(!isBar){ toast("Eso es un QR de la app. Escanea el código de barras que trae el producto de fábrica."); return; }
+    if(S.view==="ficha"&&S.code===S.linkCode) linkBar(raw,S.linkCode);
+    return;
+  }
   if(S.scanFor==="count"){
     S.scanFor=null;
     if(S.view==="admin"&&S.adminTab==="rec"&&S.adminOk){
-      if(code&&S.products.has(code)){ S.rc.cur=code; S.rc.val=""; S.rc.w=!!weights()[code]; }
+      if(isBar&&!code) toast(`El código de barras ${raw} no está en ningún producto.`);
+      else if(code&&S.products.has(code)){ S.rc.cur=code; S.rc.val=""; S.rc.w=!!weights()[code]; }
       else toast(code?`No hay ningún producto con el código ${code}.`:"Ese es el QR general. Escanea la etiqueta de un producto.");
       viewRecount(); return;
     }
   }
+  if(isBar&&!code){ openBar(raw); return; }
   if(!code){ go("buscar"); toast("QR general: busca el producto."); return; }
   if(S.products.has(code)) go("ficha",{code});
   else { S.q=code; go("buscar"); toast(`No hay ningún producto con el código ${code}.`); }
 }
 
 /* Live scanner: camera preview, reads the QR on its own (BarcodeDetector when the phone has it, jsQR otherwise). */
-const SCAN={stream:null,raf:0,det:null,busy:false};
+const SCAN={stream:null,raf:0,det:null,busy:false,zx:null,n:0};
+const BAR_FORMATS=["ean_13","ean_8","upc_a","upc_e","code_128","code_39","itf"];
+/* Phones without a built-in barcode reader (iPhone) use ZXing, loaded only when needed. */
+const ZX_URLS=["https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js","https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"];
+let zxLoading=null;
+function loadZx(){
+  if(window.ZXing) return Promise.resolve(window.ZXing);
+  return zxLoading||(zxLoading=loadScript(ZX_URLS).then(()=>window.ZXing).catch(()=>{ zxLoading=null; return null; }));
+}
+function zxReader(hard){
+  const Z=window.ZXing; if(!Z) return null;
+  const F=Z.BarcodeFormat, hints=new Map();
+  hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39,F.ITF]);
+  if(hard) hints.set(Z.DecodeHintType.TRY_HARDER,true);
+  const r=new Z.MultiFormatReader(); r.setHints(hints); return r;
+}
+function zxDecode(reader, canvas){
+  const Z=window.ZXing;
+  try{ const res=reader.decodeWithState(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(canvas)))); return res?{text:res.getText(),format:"barcode"}:null; }
+  catch(e){ return null; }
+  finally{ try{ reader.reset(); }catch(e){} }
+}
+async function makeDetector(){
+  if(SCAN.det!==null&&SCAN.det!==undefined) return;
+  try{
+    if("BarcodeDetector" in window){ const sup=await BarcodeDetector.getSupportedFormats(); const f=["qr_code",...BAR_FORMATS].filter(x=>sup.includes(x)); if(f.includes("qr_code")){ SCAN.det=new BarcodeDetector({formats:f}); SCAN.detBars=f.includes("ean_13"); return; } }
+  }catch(e){}
+  SCAN.det=false;
+}
 function closeScanner(){
   cancelAnimationFrame(SCAN.raf); SCAN.raf=0;
   if(SCAN.stream){ SCAN.stream.getTracks().forEach(t=>t.stop()); SCAN.stream=null; }
@@ -1486,7 +1611,7 @@ function closeScanner(){
 }
 async function openScanner(){
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||IN_GAS){ $("#qrfile").click(); return; }
-  $("#scanner").hidden=false; $("#scanmsg").textContent="Apunta al código QR";
+  $("#scanner").hidden=false; $("#scanmsg").textContent=S.scanFor==="link"?"Apunta al código de barras del producto":"Apunta al código QR o de barras";
   try{
     SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
   }catch(e){
@@ -1494,8 +1619,10 @@ async function openScanner(){
   }
   if($("#scanner").hidden){ closeScanner(); return; }
   const v=$("#scanvideo"); v.srcObject=SCAN.stream; v.setAttribute("playsinline",""); try{ await v.play(); }catch(e){}
-  try{ if(!SCAN.det&&"BarcodeDetector" in window&&(await BarcodeDetector.getSupportedFormats()).includes("qr_code")) SCAN.det=new BarcodeDetector({formats:["qr_code"]}); }catch(e){ SCAN.det=null; }
+  await makeDetector();
+  if(!(SCAN.det&&SCAN.detBars)) loadZx().then(()=>{ if(!SCAN.zx) SCAN.zx=zxReader(false); });
   const c=document.createElement("canvas"), g=c.getContext("2d",{willReadFrequently:true});
+  const c2=document.createElement("canvas"), g2=c2.getContext("2d",{willReadFrequently:true});
   let last=0;
   const tick=async t=>{
     if(!SCAN.stream) return;
@@ -1503,15 +1630,22 @@ async function openScanner(){
     if(SCAN.busy||t-last<120||v.readyState<2) return;
     last=t; SCAN.busy=true;
     try{
-      let found=null;
-      if(SCAN.det){ const r=await SCAN.det.detect(v); if(r&&r[0]) found=r[0].rawValue; }
+      let found=null, fmt="qr_code";
+      SCAN.n++;
+      if(SCAN.det){ const r=await SCAN.det.detect(v); if(r&&r[0]){ found=r[0].rawValue; fmt=r[0].format; } }
       else if(typeof jsQR!=="undefined"){
         const k=Math.min(1,640/Math.max(v.videoWidth,v.videoHeight)); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
         g.drawImage(v,0,0,c.width,c.height);
         const r=jsQR(g.getImageData(0,0,c.width,c.height).data,c.width,c.height,{inversionAttempts:"dontInvert"});
         if(r&&r.data) found=r.data;
       }
-      if(found){ if(navigator.vibrate) navigator.vibrate(60); closeScanner(); handleScanText(found); }
+      /* Barcodes need more detail than a QR: every other frame, a bigger picture goes to ZXing. */
+      if(!found&&SCAN.zx&&!(SCAN.det&&SCAN.detBars)&&SCAN.n%2===0){
+        const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)); c2.width=Math.round(v.videoWidth*k); c2.height=Math.round(v.videoHeight*k);
+        g2.drawImage(v,0,0,c2.width,c2.height);
+        const r=zxDecode(SCAN.zx,c2); if(r){ found=r.text; fmt=r.format; }
+      }
+      if(found){ if(navigator.vibrate) navigator.vibrate(60); closeScanner(); handleScanText(found,fmt); }
     }catch(e){}
     finally{ SCAN.busy=false; }
   };
@@ -1519,6 +1653,15 @@ async function openScanner(){
 }
 $("#scanclose").onclick=()=>{ S.scanFor=null; closeScanner(); };
 $("#scanphoto").onclick=()=>{ closeScanner(); $("#qrfile").click(); };
+/* Barcode too worn to read: type the number printed under the bars. */
+$("#scantype").onclick=()=>{
+  const v=prompt("Escribe el número que hay debajo de las barras");
+  closeScanner();
+  const t=String(v||"").replace(/\s+/g,"");
+  if(!t){ S.scanFor=null; return; }
+  if(!/^[0-9A-Za-z._\/+-]{4,40}$/.test(t)){ S.scanFor=null; toast("Ese número no parece un código de barras."); return; }
+  handleScanText(t,"manual");
+};
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState!=="visible"&&SCAN.stream) closeScanner(); });
 
 $("#qrfile").addEventListener("change",async e=>{
@@ -1527,17 +1670,27 @@ $("#qrfile").addEventListener("change",async e=>{
   toast("Leyendo código…");
   try{
     const img=new Image(); img.src=URL.createObjectURL(file); await img.decode();
-    let found=null;
-    for(const max of [1000,1600,700]){
+    let found=null, fmt="qr_code";
+    await makeDetector();
+    if(SCAN.det){ try{ const r=await SCAN.det.detect(img); if(r&&r[0]){ found=r[0].rawValue; fmt=r[0].format; } }catch(e){} }
+    for(const max of found?[]:[1000,1600,700]){
       const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas");
       c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
       const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(img,0,0,c.width,c.height);
       const r=jsQR(g.getImageData(0,0,c.width,c.height).data,c.width,c.height,{inversionAttempts:"attemptBoth"});
       if(r&&r.data){ found=r.data; break; }
     }
+    if(!found&&!(SCAN.det&&SCAN.detBars)&&await loadZx()){
+      const rd=zxReader(true);
+      for(const max of [1600,1000,2400]){
+        const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas");
+        c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext("2d",{willReadFrequently:true}).drawImage(img,0,0,c.width,c.height);
+        const r=zxDecode(rd,c); if(r){ found=r.text; fmt=r.format; break; }
+      }
+    }
     URL.revokeObjectURL(img.src);
-    if(!found){ toast("No se ve ningún QR. Acércate y haz la foto con buena luz."); return; }
-    handleScanText(found);
+    if(!found){ S.scanFor=null; toast("No se ve ningún código. Acércate y haz la foto con buena luz."); return; }
+    handleScanText(found,fmt);
   }catch(err){ toast("No se pudo leer la foto."); }
 });
 
@@ -1555,6 +1708,7 @@ window.addEventListener("hashchange",fromHash);
 function applyData(r){
   if(r.products){ const m=new Map(); r.products.forEach(x=>{ const old=S.products.get(x.codigo), q=fresh("qty",x.codigo); m.set(x.codigo,{...x,cantidad:PEND.has(x.codigo)&&old?old.cantidad:q?q.val:(Number(x.cantidad)||0)}); }); S.products=m; S.loaded=true; }
   if(r.techs){ S.techs=r.techs; S.techsLoaded=true; }
+  if(r.barras) S.bars=new Map(r.barras.map(([k,c])=>[barKey(k),String(c)]));
   if(r.loans){
     const list=r.loans.filter(l=>!fresh("gone",l.id));
     for(const [id] of RECENT.added){ const e=fresh("added",id); if(e&&!fresh("gone",id)&&!list.some(l=>l.id===id)) list.push(e.val); }
@@ -1568,7 +1722,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.2";
+const APP_VERSION="2026-10-07.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
