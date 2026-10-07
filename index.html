@@ -45,6 +45,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;align-items:center}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
 .top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top h1.long{font-size:15px;letter-spacing:.02em;white-space:normal;line-height:1.15}
 .top .tag{background:var(--brand-fg);color:var(--brand);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:2px 8px;border-radius:3px}
 .iconbtn{background:none;border:0;color:inherit;width:40px;height:40px;display:grid;place-items:center;border-radius:6px;cursor:pointer;flex:none}
 .iconbtn svg{width:24px;height:24px}
@@ -261,7 +262,7 @@ const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
 if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
 /* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
 /* Every write is counted, so a refresh that was already on its way can't bring back what was just changed. */
-const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barLookup"]);
+const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog"]);
 let WSEQ=0, WBUSY=0;
 function api(fn, ...args){
   if(READ_FNS.has(fn)) return apiRaw(fn, ...args);
@@ -334,7 +335,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, bars:new Map(), bar:"", barPick:null, barLook:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, bars:new Map(), bar:"", barPick:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -367,8 +368,8 @@ function render(){
   $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Sin asignar", admin:"Restringido", destino:"¿Para qué es?"};
-  $("#title").textContent = titles[S.view];
+  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", destino:"¿Para qué es?"};
+  $("#title").textContent = titles[S.view]; $("#title").classList.toggle("long", titles[S.view].length>12);
   VIEWS[S.view]();
 }
 const VIEWS={login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest};
@@ -453,7 +454,8 @@ function viewSearch(){
   if(q) ensureCat();
   app.innerHTML = `
     ${S.destino?`<div class="destbar"><span>Para: <b>${esc(destLabel())}</b></span><button class="linkbtn" id="d_change">Cambiar</button></div>`:""}
-    <button class="btn primary block" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR o código de barras</button>
+    <button class="btn primary block" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR</button>
+    <button class="btn block" id="scanbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14"/></svg>Código de barras</button>
     ${S.canWrite?'<button class="btn block" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':''}
     <div class="search"><input id="q" type="search" inputmode="search" placeholder="Buscar en el almacén y el catálogo" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
     ${!S.loaded?'<div class="list"><div class="empty">Cargando inventario…</div></div>':
@@ -481,6 +483,7 @@ function viewSearch(){
   qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value))||(isBarText(qi.value)&&prodByBar(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
   const tb=$("#tobar"); if(tb) tb.onclick=()=>openBar(S.q.trim());
   $("#scan").onclick=()=>{ S.scanFor=null; openScanner(); };
+  $("#scanbar").onclick=()=>{ S.scanFor="bar"; openScanner(); };
   $("#tomap").onclick=()=>go("mapa",{mapSel:null});
   bindLoanButtons();
   const th=$("#tohist"); if(th) th.onclick=()=>{ S.adminWant=null; go("admin"); };
@@ -913,7 +916,7 @@ function viewCatAdmin(){
   };
 }
 
-/* ---------- Foto de placa (solo Xavi): Gemini de Google AI Studio lee la placa de características ---------- */
+/* ---------- IA (solo Xavi): foto de placa. Gemini de Google AI Studio lee la placa de características ---------- */
 const PLATE_FIELDS=[["marca","Marca"],["modelo","Modelo"],["tipo","Tipo"],["referencia","Referencia"],["numero_serie","Nº de serie"],["potencia","Potencia"],["tension","Tensión"],["intensidad","Intensidad"],["frecuencia","Frecuencia"],["caudal","Caudal"],["altura","Altura"],["otros","Otros"]];
 function plateMatches(d){
   /* Whole pieces, so "MULTI 35 5N" finds "MULTI 35 5 N" but not "MULTI 35 4" or "MULTI 30 5". */
@@ -941,7 +944,7 @@ function viewPlate(){
   const box=$("#adm"), P=S.plate||{};
   const d=P.data, m=d&&d.legible!==false?plateMatches(d):null;
   box.innerHTML=`<div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
-    <p class="note" style="margin:0">Haz una foto a la placa de características de una bomba, motor o cuadro. Google AI Studio (Gemini) la lee y te rellena el producto. Solo lo ves tú.</p>
+    <p class="note" style="margin:0"><b>Foto de placa.</b> Haz una foto a la placa de características de una bomba, motor o cuadro y la IA (Gemini) la lee y te rellena el producto. Solo lo ves tú.</p>
     <button class="btn primary block" id="pl_shot" ${P.busy?"disabled":""}>${P.busy?"Leyendo la placa…":d||P.err?"Hacer otra foto":"Hacer foto de la placa"}</button>
     ${P.img?`<img src="${P.img}" alt="Foto de la placa" style="width:100%;max-height:260px;object-fit:contain;border-radius:8px;background:var(--surface-2)">`:""}
     ${P.err?`<p class="catnote" style="margin:0;font-weight:400">${PLATE_ERR[P.err]||"Google no ha podido leer la placa"+(P.msg?` (${esc(P.msg)})`:"")+". Inténtalo de nuevo."}</p>`:""}
@@ -980,13 +983,13 @@ function viewPlate(){
 
 /* ---------- Códigos de barras del fabricante ----------
  * Cada producto puede tener uno o varios (pestaña «Barras» de la hoja). Al escanear uno se abre su ficha;
- * si no está en la app, se asigna a un producto del almacén o se da de alta uno nuevo. */
+ * si no está en la app, se asigna a un producto del almacén o se da de alta uno nuevo. Sin IA. */
 const barKey = s => { s=String(s??"").trim().toUpperCase().replace(/\s+/g,""); return /^\d+$/.test(s)?(s.replace(/^0+/,"")||"0"):s.replace(/[^A-Z0-9._\/+-]/g,""); };
 const isBarText = t => /^\d{6,14}$/.test(String(t||"").trim());
 function barsOf(code){ const out=[]; for(const [k,c] of S.bars) if(c===code) out.push(k); return out; }
 function prodByBar(t){ const c=S.bars.get(barKey(t)); return c&&S.products.get(c)||null; }
 const oldServer = err => err&&err.code==="bad"&&/desconocida/.test(err.msg||"");
-function openBar(raw){ S.barPick=null; S.barLook=null; S.barQ=""; go("barra",{bar:String(raw||"").trim()}); }
+function openBar(raw){ S.barPick=null; S.barQ=""; go("barra",{bar:String(raw||"").trim()}); }
 async function linkBar(raw, code){
   const p=S.products.get(code); if(!p||!S.tecnico) return false;
   try{
@@ -1020,18 +1023,12 @@ function viewBar(){
   if(known){ go("ficha",{code:known.codigo}); return; }
   const words=qWords(S.barQ||"");
   const hits=words.length?[...S.products.values()].filter(p=>hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""),words)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,30):[];
-  const pick=S.barPick&&S.products.get(S.barPick), L=S.barLook;
+  const pick=S.barPick&&S.products.get(S.barPick);
   const gq="https://www.google.com/search?q="+encodeURIComponent(raw);
   app.innerHTML=`<section style="display:flex;flex-direction:column;gap:12px">
     <div><div class="label">Código de barras</div><h2 style="font-family:var(--f-mono);margin:4px 0 0">${esc(raw)}</h2></div>
     <p class="catnote" style="margin:0">Aún no está en ningún producto de la app.</p>
     <a class="btn block" href="${esc(gq)}" target="_blank" rel="noopener">Buscarlo en Google</a>
-    ${S.adminOk&&isBarText(raw)?`<button class="btn block" id="b_ai" ${L&&L.busy?"disabled":""}>${L&&L.busy?"Gemini lo está buscando…":"Que Gemini lo busque y lo rellene"}</button>`:""}
-    ${L&&L.err?`<p class="catnote" style="margin:0">${L.err}</p>`:""}
-    ${L&&L.data?`<div class="stock"><span class="label">Lo que ha encontrado Gemini</span><b>${esc(L.data.nombre||"")}</b>${L.data.descripcion?`<span class="note">${esc(L.data.descripcion)}</span>`:""}
-      ${(L.webs||[]).length?`<span class="note">Fuentes: ${L.webs.map(w=>`<a href="${esc(w.uri)}" target="_blank" rel="noopener">${esc(w.title||"web")}</a>`).join(", ")}</span>`:""}
-      <span class="note">Compruébalo antes de guardar.</span>
-      ${S.canWrite?`<button class="btn primary block" id="b_ainew">Dar de alta con estos datos</button>`:""}</div>`:""}
     ${S.canWrite?`<div class="label" style="margin-top:6px">¿De qué producto del almacén es?</div>
     <div class="search"><input id="b_q" type="search" placeholder="Busca el producto por nombre" value="${esc(S.barQ||"")}" autocomplete="off" aria-label="Buscar el producto"></div>
     ${pick?`<div class="stock"><span>¿Guardar el código <b>${esc(raw)}</b> en <b>${esc(pick.nombre)}</b>?</span><div class="twobtn"><button class="btn" id="b_no">Cancelar</button><button class="btn primary" id="b_yes">Guardar</button></div></div>`:""}
@@ -1044,14 +1041,6 @@ function viewBar(){
   const no=$("#b_no"); if(no) no.onclick=()=>{ S.barPick=null; viewBar(); };
   const yes=$("#b_yes"); if(yes) yes.onclick=async()=>{ yes.disabled=true; const code=S.barPick; if(await linkBar(raw,code)) go("ficha",{code}); else { yes.disabled=false; } };
   const nw=$("#b_new"); if(nw) nw.onclick=()=>go("editar",{editCode:null, prefill:{bar:raw, note:`Código de barras ${raw}. Escribe el nombre, elige estante y cantidad y pulsa Guardar.`}});
-  const ai=$("#b_ai"); if(ai) ai.onclick=async()=>{
-    S.barLook={busy:true}; viewBar();
-    try{ const r=await api("api_barLookup", S.adminToken, raw);
-      S.barLook=r.data&&r.data.encontrado!==false&&r.data.nombre?{data:r.data,webs:r.webs||[]}:{err:"Gemini no ha encontrado ese código en Google. Búscalo tú con «Buscarlo en Google» o dalo de alta a mano."}; }
-    catch(err){ S.barLook={err:oldServer(err)?"Hay que pegar el api.gs nuevo en Apps Script.":PLATE_ERR[err&&err.code]||esc("No se pudo buscar: "+(err&&err.msg||err&&err.code||"error"))}; }
-    if(S.view==="barra"&&S.bar===raw) viewBar();
-  };
-  const an=$("#b_ainew"); if(an) an.onclick=()=>{ const d=S.barLook.data; go("editar",{editCode:null, prefill:{bar:raw, nombre:String(d.nombre||"").toUpperCase(), descripcion:[d.marca&&"Marca: "+d.marca,d.modelo&&"Modelo: "+d.modelo,d.descripcion].filter(Boolean).join(" · "), note:`Datos de Google para el código ${raw}. Revísalos, elige estante y cantidad y pulsa Guardar.`}}); };
 }
 
 function nextCode(){
@@ -1145,7 +1134,7 @@ function viewAdmin(){
       <button role="tab" aria-selected="${S.adminTab==="pre"}" data-tab="pre">Préstamos${S.loans.length?` (${S.loans.length})`:""}</button>
       <button role="tab" aria-selected="${S.adminTab==="qr"}" data-tab="qr">Etiquetas QR</button>
       <button role="tab" aria-selected="${S.adminTab==="cat"}" data-tab="cat">Catálogo</button>
-      <button role="tab" aria-selected="${S.adminTab==="plate"}" data-tab="plate">Foto de placa</button>
+      <button role="tab" aria-selected="${S.adminTab==="plate"}" data-tab="plate">IA</button>
     </div>
     <div id="adm"></div>`;
   app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="hist") loadHist(); viewAdmin(); });
@@ -1552,6 +1541,7 @@ function handleScanText(found, fmt){
   const byBar=isBar?prodByBar(raw):null;
   let code=codeFromScan(found);
   if(isBar&&!S.products.has(code)) code=byBar?byBar.codigo:"";
+  if(S.scanFor==="bar") S.scanFor=null;
   if(S.scanFor==="link"){
     S.scanFor=null;
     if(!isBar){ toast("Eso es un QR de la app. Escanea el código de barras que trae el producto de fábrica."); return; }
@@ -1611,7 +1601,7 @@ function closeScanner(){
 }
 async function openScanner(){
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||IN_GAS){ $("#qrfile").click(); return; }
-  $("#scanner").hidden=false; $("#scanmsg").textContent=S.scanFor==="link"?"Apunta al código de barras del producto":"Apunta al código QR o de barras";
+  $("#scanner").hidden=false; $("#scanmsg").textContent=S.scanFor==="link"||S.scanFor==="bar"?"Apunta al código de barras del producto":"Apunta al código QR";
   try{
     SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
   }catch(e){
@@ -1722,7 +1712,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.3";
+const APP_VERSION="2026-10-07.4";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

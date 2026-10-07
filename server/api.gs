@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barLookup: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1 };
 
 function doPost(e) {
   var out;
@@ -24,7 +24,7 @@ function doPost(e) {
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
       api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_,
-      api_setBarcode: setBarcode_, api_barLookup: barLookup_
+      api_setBarcode: setBarcode_
     };
     addShelves_();
     var fn = fns[req.fn];
@@ -206,13 +206,11 @@ var PLATE_PROMPT_ = 'Es una foto de la placa de características de una máquina
 /* Claves de AI Studio («AIza…») van a generativelanguage; las de Vertex en modo exprés («AQ.…») a aiplatform.
  * Se prueban por orden; si Google está saturado (500/503) se reintenta y se pasa al modelo ligero.
  * Si todo falla, el error dice qué contestó cada sitio, para poder arreglarlo. */
-function callGemini_(parts, json, search) {
+function callGemini_(parts, json) {
   var p = PropertiesService.getScriptProperties(), key = String(p.getProperty('GEMINI_KEY') || '').trim();
   if (!key) return { err: 'nokey' };
   var model = p.getProperty('GEMINI_MODEL');
-  var req = { contents: [{ role: 'user', parts: parts }], generationConfig: json && !search ? { responseMimeType: 'application/json', temperature: 0 } : { temperature: 0 } };
-  if (search) req.tools = [{ google_search: {} }];
-  var body = JSON.stringify(req);
+  var body = JSON.stringify({ contents: [{ role: 'user', parts: parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0 } : { temperature: 0 } });
   var GL = 'https://generativelanguage.googleapis.com/v1beta/models/', VX = 'https://aiplatform.googleapis.com/v1/publishers/google/models/';
   var gl = [GL + (model || 'gemini-flash-latest'), GL + 'gemini-flash-lite-latest'];
   var vx = [VX + (model || 'gemini-2.5-flash'), VX + 'gemini-2.5-flash-lite'];
@@ -224,8 +222,7 @@ function callGemini_(parts, json, search) {
       var code = res.getResponseCode(), txt = res.getContentText();
       if (code === 200) {
         var j = JSON.parse(txt), c = j.candidates && j.candidates[0] && j.candidates[0].content;
-        var g = j.candidates && j.candidates[0] && j.candidates[0].groundingMetadata, webs = ((g && g.groundingChunks) || []).map(function (x) { return x.web; }).filter(Boolean);
-        return { ok: true, text: ((c && c.parts) || []).map(function (x) { return x.text || ''; }).join(''), webs: webs };
+        return { ok: true, text: ((c && c.parts) || []).map(function (x) { return x.text || ''; }).join('') };
       }
       if ((code === 500 || code === 503) && t === 0) { Utilities.sleep(1500); continue; }
       var msg = ''; try { msg = JSON.parse(txt).error.message || ''; } catch (e) { msg = txt.slice(0, 120); }
@@ -303,25 +300,6 @@ function setBarcode_(tecId, bar, code) {
     });
   });
 }
-/* Código de barras que no está en la app: Gemini lo busca en Google y propone nombre y descripción (solo Xavi). */
-var BAR_PROMPT_ = 'Busca en Google el producto con el código de barras (EAN/UPC) %s. Es material de fontanería, piscinas, bombas o electricidad. ' +
-  'Responde SOLO con este JSON en español, sin texto alrededor: {"encontrado":true,"nombre":"nombre corto para el inventario en MAYÚSCULAS, ej. MANOMETRO GLICERINA 63 MM 0-10 BAR",' +
-  '"marca":"","modelo":"","descripcion":"medidas, rosca, rango y otros datos útiles en una línea"}. ' +
-  'Si no encuentras ese código exacto, responde {"encontrado":false}. No inventes nada.';
-function barLookup_(token, bar) {
-  return guard_(function () {
-    admin_(token);
-    var k = String(bar || '').replace(/\s+/g, '');
-    if (!/^\d{6,14}$/.test(k)) return { err: 'bad' };
-    var r = callGemini_([{ text: BAR_PROMPT_.replace('%s', k) }], true, true);
-    if (!r.ok) return r;
-    var m = /\{[\s\S]*\}/.exec(r.text || '');
-    try {
-      return { ok: true, data: JSON.parse(m ? m[0] : ''), webs: (r.webs || []).slice(0, 3).map(function (w) { return { title: String(w.title || ''), uri: String(w.uri || '') }; }) };
-    } catch (e) { return { err: 'gemini', msg: 'respuesta no válida' }; }
-  });
-}
-
 /** Ejecútala una vez desde el editor: da el permiso y comprueba que la clave funciona. */
 function probarGemini() {
   var r = callGemini_([{ text: 'Responde solo: OK' }], false);
