@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1 };
 
 function doPost(e) {
   var out;
@@ -23,7 +23,7 @@ function doPost(e) {
       api_addClient: api_addClient, api_uploadPhoto: api_uploadPhoto, api_adminSetup: adminSetup_,
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
-      api_catalog: catalog_, api_catalogImport: catalogImport_
+      api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_
     };
     addShelves_();
     var fn = fns[req.fn];
@@ -189,3 +189,55 @@ function catalogImport_(token, rows) {
     });
   });
 }
+
+/* ---------- Foto de placa (solo Xavi) ----------
+ * Lee la placa de características de una máquina con Gemini (Google AI Studio).
+ * La clave se guarda SOLO aquí, en Configuración del proyecto → Propiedades de la secuencia de comandos:
+ *   GEMINI_KEY   = la clave de Google AI Studio (nunca en GitHub ni en el chat)
+ *   GEMINI_MODEL = opcional, por defecto gemini-flash-latest
+ * Para dar el permiso de «conectarse a un servicio externo», ejecuta una vez probarGemini desde el editor. */
+var PLATE_PROMPT_ = 'Es una foto de la placa de características de una máquina, bomba, motor o aparato eléctrico. ' +
+  'Lee SOLO lo que se ve escrito en la placa, sin inventar nada. Si un dato no aparece, déjalo vacío. ' +
+  'Responde en español con este JSON: {"marca":"","modelo":"","tipo":"bomba, motor, cuadro eléctrico...","referencia":"código o referencia del fabricante",' +
+  '"numero_serie":"","potencia":"con unidades (kW, CV)","tension":"V","intensidad":"A","frecuencia":"Hz","caudal":"con unidades","altura":"con unidades",' +
+  '"otros":"otros datos útiles de la placa en una línea","nombre":"nombre corto para el inventario en MAYÚSCULAS, tipo + marca + modelo, ej. BOMBA ESPA MULTI 35 5N",' +
+  '"legible":true}. Pon "legible":false si la foto no deja leer la placa.';
+function gemini_(base64) {
+  var p = PropertiesService.getScriptProperties(), key = p.getProperty('GEMINI_KEY');
+  if (!key) return { err: 'nokey' };
+  var model = p.getProperty('GEMINI_MODEL') || 'gemini-flash-latest';
+  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
+    payload: JSON.stringify({
+      contents: [{ parts: [{ text: PLATE_PROMPT_ }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 }
+    })
+  });
+  var code = res.getResponseCode(), body = res.getContentText();
+  if (code === 400 && /API key|API_KEY/i.test(body)) return { err: 'badkey' };
+  if (code === 403) return { err: 'badkey' };
+  if (code === 404) return { err: 'model', msg: model };
+  if (code === 429) return { err: 'quota' };
+  if (code !== 200) return { err: 'gemini', msg: 'HTTP ' + code };
+  var j = JSON.parse(body), parts = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
+  var txt = (parts || []).map(function (x) { return x.text || ''; }).join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
+  try { return { ok: true, data: JSON.parse(txt) }; } catch (e) { return { err: 'gemini', msg: 'respuesta no válida' }; }
+}
+function plate_(token, base64) {
+  return guard_(function () {
+    admin_(token);
+    base64 = String(base64 || '').replace(/^data:[^,]+,/, '');
+    if (!base64) return { err: 'bad' };
+    if (base64.length > 6 * 1024 * 1024) return { err: 'too_large' };
+    return gemini_(base64);
+  });
+}
+/** Ejecútala una vez desde el editor: da el permiso y comprueba que la clave funciona. */
+function probarGemini() {
+  var key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  if (!key) throw new Error('Falta la propiedad GEMINI_KEY en Configuración del proyecto → Propiedades de la secuencia de comandos.');
+  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { muteHttpExceptions: true, headers: { 'x-goog-api-key': key } });
+  if (res.getResponseCode() !== 200) throw new Error('Google no acepta la clave (HTTP ' + res.getResponseCode() + '). Revísala en aistudio.google.com.');
+  Logger.log('Clave de Gemini correcta. La foto de placa ya funciona.');
+}
+

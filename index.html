@@ -333,7 +333,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -807,7 +807,7 @@ async function ensureCat(){
   }catch(e){ S.catLoading=false; S.catFailAt=Date.now(); return; }
   S.catLoading=false;
   if(S.view==="buscar"&&S.q.trim()){ const qi=$("#q"), had=document.activeElement===qi, pos=qi&&qi.selectionStart; viewSearch(); if(had){ const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} } }
-  else if(S.view==="catitem"||(S.view==="admin"&&S.adminTab==="cat")||S.view==="ficha") render();
+  else if(S.view==="catitem"||(S.view==="admin"&&(S.adminTab==="cat"||S.adminTab==="plate"))||S.view==="ficha") render();
 }
 function catHits(words){
   const c=catIndex(); if(!c) return null;
@@ -848,7 +848,7 @@ function viewCatItem(){
         ${S.canWrite?`<button class="btn primary block" id="c_add">Ponerlo en el almacén</button>`:""}`}
   </section>`;
   const o=$("#c_open"); if(o) o.onclick=()=>go("ficha",{code});
-  const a=$("#c_add"); if(a) a.onclick=()=>go("editar",{editCode:null, prefill:{codigo:code, nombre:r[1], descripcion:r[2]&&fold(r[2])!==fold(r[1])?r[2]:""}});
+  const a=$("#c_add"); if(a) a.onclick=()=>go("editar",{editCode:null, prefill:{cat:true, codigo:code, nombre:r[1], descripcion:r[2]&&fold(r[2])!==fold(r[1])?r[2]:""}});
 }
 
 /* Excel de Holded → filas [sku, nombre, descripción, material, precio compra, PVP sin IVA]. */
@@ -907,6 +907,71 @@ function viewCatAdmin(){
   };
 }
 
+/* ---------- Foto de placa (solo Xavi): Gemini de Google AI Studio lee la placa de características ---------- */
+const PLATE_FIELDS=[["marca","Marca"],["modelo","Modelo"],["tipo","Tipo"],["referencia","Referencia"],["numero_serie","Nº de serie"],["potencia","Potencia"],["tension","Tensión"],["intensidad","Intensidad"],["frecuencia","Frecuencia"],["caudal","Caudal"],["altura","Altura"],["otros","Otros"]];
+function plateMatches(d){
+  /* Whole pieces, so "MULTI 35 5N" finds "MULTI 35 5 N" but not "MULTI 35 4" or "MULTI 30 5". */
+  const split=t=>fold(t).split(/[^a-z0-9]+|(?<=\d)(?=[a-z])|(?<=[a-z])(?=\d)/).filter(w=>w&&(w.length>1||/\d/.test(w)));
+  const fits=(txt,words)=>{ const toks=split(txt); return words.every(w=>toks.some(t=>/\d/.test(w)?t===w:t.startsWith(w))); };
+  const tries=[[d.marca,d.modelo],[d.modelo],[d.referencia]].map(t=>split(t.filter(Boolean).join(" "))).filter(w=>w.length);
+  const c=catIndex();
+  for(const words of tries){
+    const inv=[...S.products.values()].filter(p=>fits(p.codigo+" "+p.nombre+" "+(p.descripcion||""),words)).slice(0,5);
+    const cat=c?c.items.filter(r=>!S.products.has(catCode(r[0]))&&fits(r[1]+" "+r[2]+" "+catCode(r[0]),words)).slice(0,5):[];
+    if(inv.length||cat.length) return {inv, cat};
+  }
+  return {inv:[], cat:[]};
+}
+function plateDesc(d){ return PLATE_FIELDS.filter(([k])=>k!=="tipo"&&String(d[k]||"").trim()).map(([k,l])=>`${l}: ${String(d[k]).trim()}`).join(" · "); }
+const PLATE_ERR={
+  nokey:`Falta la clave de Google AI Studio. Una sola vez:<br>1. Entra en <b>aistudio.google.com</b> con tu cuenta de Google y pulsa «Get API key» → «Create API key». Cópiala.<br>2. En Apps Script: ⚙️ Configuración del proyecto → Propiedades de la secuencia de comandos → Añadir: nombre <b>GEMINI_KEY</b>, valor la clave. Guardar.<br>3. En el editor, elige la función <b>probarGemini</b> y pulsa Ejecutar; acepta el permiso.<br>La clave no la escribas nunca en el chat.`,
+  badkey:"Google no acepta la clave. Revisa GEMINI_KEY en las propiedades de Apps Script.",
+  quota:"Se ha pasado el uso gratuito de hoy de Google AI Studio. Prueba mañana o activa la facturación en AI Studio.",
+  model:"El modelo de Gemini configurado ya no existe. Borra la propiedad GEMINI_MODEL en Apps Script.",
+  old:"Falta pegar el api.gs nuevo en Apps Script y hacer Nueva versión.",
+  network:"Sin conexión. Revisa la cobertura e inténtalo de nuevo.",
+};
+function viewPlate(){
+  const box=$("#adm"), P=S.plate||{};
+  const d=P.data, m=d&&d.legible!==false?plateMatches(d):null;
+  box.innerHTML=`<div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+    <p class="note" style="margin:0">Haz una foto a la placa de características de una bomba, motor o cuadro. Google AI Studio (Gemini) la lee y te rellena el producto. Solo lo ves tú.</p>
+    <button class="btn primary block" id="pl_shot" ${P.busy?"disabled":""}>${P.busy?"Leyendo la placa…":d||P.err?"Hacer otra foto":"Hacer foto de la placa"}</button>
+    ${P.img?`<img src="${P.img}" alt="Foto de la placa" style="width:100%;max-height:260px;object-fit:contain;border-radius:8px;background:var(--surface-2)">`:""}
+    ${P.err?`<p class="catnote" style="margin:0;font-weight:400">${PLATE_ERR[P.err]||"Google no ha podido leer la placa"+(P.msg?` (${esc(P.msg)})`:"")+". Inténtalo de nuevo."}</p>`:""}
+    ${d&&d.legible===false?`<p class="catnote" style="margin:0">No se lee bien la placa. Haz otra foto más cerca, recta y con luz.</p>`:""}
+    ${d&&d.legible!==false?`
+      <div><div class="label" style="margin-bottom:6px">Lo que pone la placa</div>
+        <h2 style="margin:0 0 6px">${esc(d.nombre||[d.tipo,d.marca,d.modelo].filter(Boolean).join(" ")||"Sin nombre")}</h2>
+        <div class="list">${PLATE_FIELDS.filter(([k])=>String(d[k]||"").trim()).map(([k,l])=>`<div class="row" style="cursor:default"><span class="txt"><div class="code">${l}</div><div class="name" style="font-weight:600">${esc(d[k])}</div></span></div>`).join("")||'<div class="empty">No ha encontrado datos.</div>'}</div></div>
+      <p class="note" style="margin:0">Revísalo: la IA puede equivocarse con una letra o un número.</p>
+      ${m.inv.length?`<div><div class="label" style="margin-bottom:6px">Ya está en el almacén</div><div class="list">${m.inv.map(productRow).join("")}</div></div>`:""}
+      ${m.cat.length?`<div><div class="label" style="margin-bottom:6px">En el catálogo</div><div class="list">${m.cat.map(r=>`<button class="row catrow" data-cat="${esc(r[0])}"><span class="thumb">${esc(initials(r[1]))}</span><span class="txt"><div class="name">${esc(r[1])}</div><div class="code">${esc(catCode(r[0]))}</div></span><span class="pill">Catálogo</span></button>`).join("")}</div></div>`:""}
+      <button class="btn block" id="pl_new">Dar de alta con estos datos</button>`:""}
+  </div>`;
+  const shot=$("#pl_shot");
+  shot.onclick=()=>{ const inp=$("#photofile"); inp.value=""; inp.onchange=async()=>{
+    const file=inp.files[0]; if(!file) return;
+    S.plate={busy:true}; viewPlate();
+    try{
+      const blob=await shrink(file,1600), b64=await blobToBase64(blob);
+      S.plate.img="data:image/jpeg;base64,"+b64; viewPlate();
+      const r=await api("api_plate", S.adminToken, b64);
+      S.plate={img:S.plate.img, data:r.data||{}};
+    }catch(err){
+      const c=err&&err.code;
+      if(c==="auth"){ S.adminOk=false; S.plate=null; toast("Vuelve a poner la contraseña."); go("admin"); return; }
+      S.plate={img:S.plate&&S.plate.img, err:err&&err.msg==="función desconocida"?"old":c, msg:err&&err.msg};
+    }
+    if(S.view==="admin"&&S.adminTab==="plate") viewPlate();
+  }; inp.click(); };
+  box.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>go("ficha",{code:b.dataset.open}));
+  box.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>go("catitem",{catSku:b.dataset.cat}));
+  const nw=$("#pl_new");
+  if(nw) nw.onclick=()=>go("editar",{editCode:null, prefill:{nombre:String(d.nombre||[d.tipo,d.marca,d.modelo].filter(Boolean).join(" ")).toUpperCase(), descripcion:plateDesc(d), note:"Datos leídos de la placa. Revísalos, elige estante y cantidad y pulsa Guardar."}});
+  if(S.catVer&&!S.cat) ensureCat();
+}
+
 function nextCode(){
   let n=0; for(const c of S.products.keys()){ const m=/^MAT-(\d+)$/.exec(c); if(m) n=Math.max(n,+m[1]); }
   return "MAT-"+String(n+1).padStart(3,"0");
@@ -918,7 +983,7 @@ function viewEdit(){
   const baseCant = p ? p.cantidad : null;
   const pre = !p && S.prefill ? S.prefill : null;
   app.innerHTML = `<form class="edit" id="f" novalidate>
-    ${pre?`<p class="catnote" style="margin:0">Del catálogo. Elige estante y cantidad y pulsa Guardar.</p>`:""}
+    ${pre?`<p class="catnote" style="margin:0">${esc(pre.note||"Del catálogo. Elige estante y cantidad y pulsa Guardar.")}</p>`:""}
     <div><span class="label">Foto</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:6px">
         <span class="thumb" id="e_thumb" style="width:84px;height:84px">${img?`<img src="${img}" alt="">`:"—"}</span>
@@ -933,7 +998,7 @@ function viewEdit(){
     <label><span class="label">Proveedor habitual (opcional)</span><input id="e_prov" list="provlist" autocomplete="off" value="${esc(p?.proveedor||"")}" placeholder="Escribe para buscar"><datalist id="provlist">${S.proveedores.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
     <label class="check"><input type="checkbox" id="e_prest" ${p?.prestamo?"checked":""}> <span>Herramienta o maquinaria de préstamo (se presta y se devuelve)</span></label>
     <label><span class="label">Descripción (opcional)</span><textarea id="e_desc" rows="2" placeholder="Medidas, material, modelo…">${esc(p?.descripcion||pre?.descripcion||"")}</textarea></label>
-    <label><span class="label">Código del QR ${p?"":pre?"(el del catálogo)":"(se pone solo)"}</span><input id="e_codigo" required value="${esc(p?.codigo||pre?.codigo||nextCode())}" ${p?"readonly":""} style="font-family:var(--f-mono)"></label>
+    <label><span class="label">Código del QR ${p?"":pre&&pre.cat?"(el del catálogo)":"(se pone solo)"}</span><input id="e_codigo" required value="${esc(p?.codigo||pre?.codigo||nextCode())}" ${p?"readonly":""} style="font-family:var(--f-mono)"></label>
     <button class="btn primary block" type="submit" id="e_save">Guardar</button>
     ${p?"":'<button class="btn block" type="submit" id="e_again" data-again="1">Guardar y añadir otro</button>'}
     ${p?`<button class="btn block" type="button" id="e_del" style="color:var(--danger)">Eliminar producto</button><div id="e_confirm" hidden class="stock"><span>¿Eliminar <b>${esc(p.nombre)}</b> del inventario? No se puede deshacer.</span><div class="twobtn"><button type="button" class="btn" id="e_no">Cancelar</button><button type="button" class="btn out" id="e_yes">Eliminar</button></div></div>`:""}
@@ -970,7 +1035,7 @@ function viewEdit(){
       }
       toast(r.same?"No había cambios":"Guardado"); S.busy=false; go("ficha",{code:p.codigo});
     }catch(err){
-      if(err&&err.code==="exists"){ if(pre){ toast(`${codigo} ya está en el almacén.`); go("ficha",{code:codigo}); return; } toast(`Ya existe un producto con el código ${codigo}.`); const c=$("#e_codigo"); if(c) c.value=nextCode(); }
+      if(err&&err.code==="exists"){ if(pre&&pre.cat){ toast(`${codigo} ya está en el almacén.`); go("ficha",{code:codigo}); return; } toast(`Ya existe un producto con el código ${codigo}.`); const c=$("#e_codigo"); if(c) c.value=nextCode(); }
       else handleWriteError(err);
     }
     finally{ S.busy=false; const b=$("#e_save"); if(b) setBusy(false); }
@@ -996,10 +1061,11 @@ function viewAdmin(){
       <button role="tab" aria-selected="${S.adminTab==="pre"}" data-tab="pre">Préstamos${S.loans.length?` (${S.loans.length})`:""}</button>
       <button role="tab" aria-selected="${S.adminTab==="qr"}" data-tab="qr">Etiquetas QR</button>
       <button role="tab" aria-selected="${S.adminTab==="cat"}" data-tab="cat">Catálogo</button>
+      <button role="tab" aria-selected="${S.adminTab==="plate"}" data-tab="plate">Foto de placa</button>
     </div>
     <div id="adm"></div>`;
   app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="hist") loadHist(); viewAdmin(); });
-  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs, pre:viewLoans, qr:viewQR, cat:viewCatAdmin})[S.adminTab]();
+  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs, pre:viewLoans, qr:viewQR, cat:viewCatAdmin, plate:viewPlate})[S.adminTab]();
 }
 
 function viewAdminLock(){
@@ -1501,7 +1567,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-06.5";
+const APP_VERSION="2026-10-07.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
