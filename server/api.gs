@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1 };
 
 function doPost(e) {
   var out;
@@ -24,7 +24,7 @@ function doPost(e) {
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
       api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_,
-      api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_setBaldas: setBaldas_
+      api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_
     };
     addShelves_();
     mayusculas_();
@@ -280,11 +280,13 @@ var PLATE_PROMPT_ = 'Es una foto de la placa de características de una máquina
 /* Claves de AI Studio («AIza…») van a generativelanguage; las de Vertex en modo exprés («AQ.…») a aiplatform.
  * Se prueban por orden; si Google está saturado (500/503) se reintenta y se pasa al modelo ligero.
  * Si todo falla, el error dice qué contestó cada sitio, para poder arreglarlo. */
-function callGemini_(parts, json) {
+function callGemini_(parts, json, tools) {
   var p = PropertiesService.getScriptProperties(), key = String(p.getProperty('GEMINI_KEY') || '').trim();
   if (!key) return { err: 'nokey' };
   var model = p.getProperty('GEMINI_MODEL');
-  var body = JSON.stringify({ contents: [{ role: 'user', parts: parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0 } : { temperature: 0 } });
+  var req = { contents: [{ role: 'user', parts: parts }], generationConfig: json && !tools ? { responseMimeType: 'application/json', temperature: 0 } : { temperature: 0 } };
+  if (tools) req.tools = tools;   // con la búsqueda de Google no se puede pedir JSON directo
+  var body = JSON.stringify(req);
   var GL = 'https://generativelanguage.googleapis.com/v1beta/models/', VX = 'https://aiplatform.googleapis.com/v1/publishers/google/models/';
   var gl = [GL + (model || 'gemini-flash-latest'), GL + 'gemini-flash-lite-latest'];
   var vx = [VX + (model || 'gemini-2.5-flash'), VX + 'gemini-2.5-flash-lite'];
@@ -295,8 +297,9 @@ function callGemini_(parts, json) {
       var res = UrlFetchApp.fetch(ends[i], { method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key }, payload: body });
       var code = res.getResponseCode(), txt = res.getContentText();
       if (code === 200) {
-        var j = JSON.parse(txt), c = j.candidates && j.candidates[0] && j.candidates[0].content;
-        return { ok: true, text: ((c && c.parts) || []).map(function (x) { return x.text || ''; }).join('') };
+        var j = JSON.parse(txt), cand = (j.candidates && j.candidates[0]) || {}, c = cand.content;
+        var web = ((cand.groundingMetadata && cand.groundingMetadata.groundingChunks) || []).map(function (g) { return g.web; }).filter(Boolean);
+        return { ok: true, text: ((c && c.parts) || []).map(function (x) { return x.text || ''; }).join(''), sources: web };
       }
       if ((code === 500 || code === 503) && t === 0) { Utilities.sleep(1500); continue; }
       var msg = ''; try { msg = JSON.parse(txt).error.message || ''; } catch (e) { msg = txt.slice(0, 120); }
@@ -379,7 +382,7 @@ function setBarcode_(tecId, bar, code) {
  * para que el técnico toque el bueno. Lo encontrado se guarda 6 horas en la caché. */
 function barSearch_(tecId, bar) {
   return guard_(function () {
-    tech_(tecId);
+    if (!bool_(tech_(tecId).restringido)) throw new Error('auth');   // la búsqueda en internet es solo para Xavi
     var k = String(bar || '').replace(/\s+/g, '');
     if (!/^\d{6,14}$/.test(k)) return { err: 'bad' };
     var cache = CacheService.getScriptCache(), hit = cache.get('bs2_' + k);
@@ -438,7 +441,7 @@ function barSearch_(tecId, bar) {
     items.forEach(function (x) {
       var all = (x.title + ' ' + x.snippet + ' ' + x.url).replace(/[\s.\-]/g, '');
       x.ean = all.indexOf(k) >= 0 || (k.length === 13 && k[0] === '0' && all.indexOf(k.slice(1)) >= 0);
-      x.score = (x.ean ? 100 : 0) + oficio_(x.title + ' ' + x.snippet + ' ' + x.url) - (JUNK_RE_.test(x.url + ' ' + x.title) ? 60 : 0);
+      x.score = (x.ean ? 100 : 0) + (x.src === 'Google' ? 10 : 0) + oficio_(x.title + ' ' + x.snippet + ' ' + x.url) - (JUNK_RE_.test(x.url + ' ' + x.title) ? 60 : 0);
     });
     items.sort(function (a, b) { return b.score - a.score || a.n - b.n; });
     var out = { ok: true, items: items.slice(0, 10).map(function (x) { return { title: x.title, url: x.url, src: x.src, snippet: x.snippet, ean: x.ean }; }), fails: fails };
@@ -455,6 +458,32 @@ var OFICIO_ = ['bomba', 'electrobomba', 'grupo de presion', 'presostato', 'varia
   'grundfos', 'ebara', 'pedrollo', 'wilo', 'lowara', 'ksb', 'zenit', 'flygt', 'idrhaus', 'genebre', 'astralpool', 'fluidra', 'danfoss', 'schneider',
   'ferreteria', 'suministros', 'industrial', 'electricidad', 'climatizacion', 'calefaccion', 'pump', 'valve', 'pressure', 'gauge', 'water'];
 var JUNK_RE_ = /barcode-?generator|generador de codigo|numerolog|significado del numero|wikipedia|diccionario|dictionary|youtube\.com|facebook\.com|instagram\.com|pinterest\./i;
+/* Último paso de la búsqueda por código de barras, solo si Google no lo encuentra: la IA (Gemini) busca en Google el número
+ * y dice qué producto es. Solo Xavi. Usa la misma clave GEMINI_KEY que la foto de placa. */
+var BAR_IA_PROMPT_ = 'Busca en Google el código de barras {EAN} (EAN/UPC) y dime qué producto es exactamente: marca, modelo y tipo. ' +
+  'Contexto: la empresa instala y mantiene equipos electromecánicos para agua (bombas, válvulas, manómetros, tuberías, racores, cuadros eléctricos, depuración), ' +
+  'así que es probable que sea algo de eso, pero no lo des por hecho. Solo vale si encuentras una página que tenga exactamente ese número; si no la encuentras, no inventes. ' +
+  'Responde SOLO con JSON, sin texto alrededor: {"encontrado": true o false, "nombre": "marca, modelo y tipo, corto y en español", ' +
+  '"descripcion": "una frase con los datos técnicos que salgan (potencia, medida, presión, tensión…)", "fuente": "dirección de la página donde sale el número"}';
+function barIA_(tecId, bar) {
+  return guard_(function () {
+    if (!bool_(tech_(tecId).restringido)) throw new Error('auth');
+    var k = String(bar || '').replace(/\s+/g, '');
+    if (!/^\d{6,14}$/.test(k)) return { err: 'bad' };
+    var cache = CacheService.getScriptCache(), hit = cache.get('bi_' + k);
+    if (hit) return JSON.parse(hit);
+    var r = callGemini_([{ text: BAR_IA_PROMPT_.replace('{EAN}', k) }], false, [{ google_search: {} }]);
+    if (!r.ok) return r;
+    var d = null;
+    try { var m = /\{[\s\S]*\}/.exec(r.text); d = m && JSON.parse(m[0]); } catch (e) { d = null; }
+    if (!d) return { err: 'gemini', msg: 'respuesta no válida' };
+    var src = (r.sources || [])[0] || {};
+    var out = { ok: true, item: d.encontrado && d.nombre ? { title: String(d.nombre).slice(0, 160), snippet: String(d.descripcion || '').slice(0, 300),
+      url: String(d.fuente || src.uri || '').slice(0, 300), src: 'IA' } : null };
+    cache.put('bi_' + k, JSON.stringify(out), 21600);
+    return out;
+  });
+}
 function oficio_(s) {
   s = String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   var n = 0; OFICIO_.forEach(function (w) { if (s.indexOf(w) >= 0) n++; });
