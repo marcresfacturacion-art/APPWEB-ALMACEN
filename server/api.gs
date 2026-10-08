@@ -382,36 +382,51 @@ function barSearch_(tecId, bar) {
     tech_(tecId);
     var k = String(bar || '').replace(/\s+/g, '');
     if (!/^\d{6,14}$/.test(k)) return { err: 'bad' };
-    var cache = CacheService.getScriptCache(), hit = cache.get('bs_' + k);
+    var cache = CacheService.getScriptCache(), hit = cache.get('bs2_' + k);
     if (hit) return JSON.parse(hit);
     var web = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept-Language': 'es-ES,es;q=0.9' };
+    var q = encodeURIComponent('"' + k + '"');   // entre comillas: solo páginas con ese número exacto
     var reqs = [
-      { url: 'https://www.google.com/search?q=' + k + '&hl=es&gl=es&gbv=1&num=10', muteHttpExceptions: true, headers: web },
+      { url: 'https://www.google.com/search?q=' + q + '&hl=es&gl=es&gbv=1&num=20', muteHttpExceptions: true, headers: web },
       { url: 'https://api.upcitemdb.com/prod/trial/lookup?upc=' + k, muteHttpExceptions: true, headers: { Accept: 'application/json' } },
-      { url: 'https://www.bing.com/search?q=' + k + '&setlang=es&cc=ES', muteHttpExceptions: true, headers: web },
-      { url: 'https://html.duckduckgo.com/html/?q=' + k + '&kl=es-es', muteHttpExceptions: true, headers: web }
+      { url: 'https://www.bing.com/search?q=' + k + '&setlang=es&cc=ES&count=20', muteHttpExceptions: true, headers: web },
+      { url: 'https://html.duckduckgo.com/html/?q=' + q + '&kl=es-es', muteHttpExceptions: true, headers: web }
     ];
     var res = UrlFetchApp.fetchAll(reqs), items = [], seen = {}, fails = [];
-    var add = function (title, url, src) {
-      title = text_(title); if (title.length < 4) return;
+    var add = function (title, url, src, snippet) {
+      title = text_(title); snippet = text_(snippet || '').slice(0, 240); url = String(url || '').slice(0, 300);
+      if (title.length < 4) return;
       var key = title.toLowerCase().replace(/[^a-z0-9ñ]+/g, '');
       if (!key || seen[key]) return;
-      seen[key] = 1; items.push({ title: title.slice(0, 200), url: String(url || '').slice(0, 300), src: src });
+      seen[key] = 1;
+      items.push({ title: title.slice(0, 200), url: url, src: src, snippet: snippet, n: items.length });
     };
     var NAMES = ['Google', 'UPCitemdb', 'Bing', 'DuckDuckGo'];
     var parsers = [
       function (t) {
-        var re = /<a href="\/url\?q=([^"&]+)[^"]*"[^>]*>(?:\s*<(?!\/a)[^>]*>)*\s*<h3[^>]*>([\s\S]*?)<\/h3>/g, m;
-        while ((m = re.exec(t))) add(m[2], decodeURIComponent(m[1]), 'Google');
-      },
-      function (t) { (JSON.parse(t).items || []).forEach(function (x) { add([x.brand, x.title].filter(Boolean).join(' ').replace(/^(\S+) \1 /i, '$1 '), (x.offers && x.offers[0] && x.offers[0].link) || '', 'UPCitemdb'); }); },
-      function (t) {
-        var re = /<li class="b_algo"[\s\S]*?<h2[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, m;
-        while ((m = re.exec(t))) add(m[2], m[1].replace(/&amp;/g, '&'), 'Bing');
+        t.split(/<a href="\/url\?q=/).slice(1).forEach(function (p) {
+          var u = /^([^"&]+)/.exec(p), h = /<h3[^>]*>([\s\S]*?)<\/h3>/.exec(p);
+          if (u && h) add(h[1], decodeURIComponent(u[1]), 'Google', p.slice(h.index + h[0].length, h.index + h[0].length + 1500));
+        });
       },
       function (t) {
-        var re = /<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, m;
-        while ((m = re.exec(t))) { var u = m[1], q = /[?&]uddg=([^&]+)/.exec(u); add(m[2], q ? decodeURIComponent(q[1]) : u, 'DuckDuckGo'); }
+        (JSON.parse(t).items || []).forEach(function (x) {
+          add([x.brand, x.title].filter(Boolean).join(' ').replace(/^(\S+) \1 /i, '$1 '), (x.offers && x.offers[0] && x.offers[0].link) || '', 'UPCitemdb', (x.description || '') + ' ' + k);
+        });
+      },
+      function (t) {
+        t.split(/<li class="b_algo"/).slice(1).forEach(function (p) {
+          var m = /<h2[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/.exec(p); if (!m) return;
+          var sn = /<p[^>]*>([\s\S]*?)<\/p>/.exec(p.slice(m.index));
+          add(m[2], m[1].replace(/&amp;/g, '&'), 'Bing', sn ? sn[1] : '');
+        });
+      },
+      function (t) {
+        t.split(/class="result__a"/).slice(1).forEach(function (p) {
+          var m = /href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/.exec(p); if (!m) return;
+          var sn = /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/.exec(p), u = m[1].replace(/&amp;/g, '&'), d = /[?&]uddg=([^&]+)/.exec(u);
+          add(m[2], d ? decodeURIComponent(d[1]) : u, 'DuckDuckGo', sn ? sn[1] : '');
+        });
       }
     ];
     res.forEach(function (r, i) {
@@ -419,10 +434,31 @@ function barSearch_(tecId, bar) {
       if (code !== 200) { fails.push(NAMES[i] + ' ' + code); return; }
       try { parsers[i](r.getContentText()); } catch (e) { fails.push(NAMES[i] + ' ilegible'); }
     });
-    var out = { ok: true, items: items.slice(0, 8), fails: fails };
-    if (items.length) cache.put('bs_' + k, JSON.stringify(out), 21600);
+    /* Primero lo que lleva el código exacto; dentro de eso, lo que es de lo nuestro (agua, bombas, fontanería, electricidad). */
+    items.forEach(function (x) {
+      var all = (x.title + ' ' + x.snippet + ' ' + x.url).replace(/[\s.\-]/g, '');
+      x.ean = all.indexOf(k) >= 0 || (k.length === 13 && k[0] === '0' && all.indexOf(k.slice(1)) >= 0);
+      x.score = (x.ean ? 100 : 0) + oficio_(x.title + ' ' + x.snippet + ' ' + x.url) - (JUNK_RE_.test(x.url + ' ' + x.title) ? 60 : 0);
+    });
+    items.sort(function (a, b) { return b.score - a.score || a.n - b.n; });
+    var out = { ok: true, items: items.slice(0, 10).map(function (x) { return { title: x.title, url: x.url, src: x.src, snippet: x.snippet, ean: x.ean }; }), fails: fails };
+    if (items.length) cache.put('bs2_' + k, JSON.stringify(out), 21600);
     return out;
   });
+}
+/* Marcres: instalación y mantenimiento de equipos electromecánicos para agua (trasiego, agua potable, aguas residuales). */
+var OFICIO_ = ['bomba', 'electrobomba', 'grupo de presion', 'presostato', 'variador', 'motor', 'valvula', 'retencion', 'compuerta', 'mariposa',
+  'manometro', 'caudalimetro', 'contador de agua', 'racor', 'manguito', 'tuberia', 'pvc', 'polietileno', 'laton', 'brida', 'junta', 'filtro',
+  'descalcificador', 'clorador', 'dosificador', 'cloro', 'depuradora', 'residual', 'fecales', 'achique', 'sumergible', 'pozo', 'deposito', 'aljibe',
+  'calderin', 'vaso de expansion', 'boya', 'flotador', 'sonda', 'cuadro electrico', 'magnetotermico', 'diferencial', 'contactor', 'guardamotor',
+  'rele', 'condensador', 'impulsor', 'cierre mecanico', 'rodamiento', 'fontaneria', 'piscina', 'riego', 'agua', 'hidraulic', 'presion', 'rosca',
+  'grundfos', 'ebara', 'pedrollo', 'wilo', 'lowara', 'ksb', 'zenit', 'flygt', 'idrhaus', 'genebre', 'astralpool', 'fluidra', 'danfoss', 'schneider',
+  'ferreteria', 'suministros', 'industrial', 'electricidad', 'climatizacion', 'calefaccion', 'pump', 'valve', 'pressure', 'gauge', 'water'];
+var JUNK_RE_ = /barcode-?generator|generador de codigo|numerolog|significado del numero|wikipedia|diccionario|dictionary|youtube\.com|facebook\.com|instagram\.com|pinterest\./i;
+function oficio_(s) {
+  s = String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  var n = 0; OFICIO_.forEach(function (w) { if (s.indexOf(w) >= 0) n++; });
+  return Math.min(n, 8) * 5;
 }
 function text_(h) {
   return String(h || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')

@@ -50,6 +50,8 @@ a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;ali
 .rack{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .row.sel{outline:3px solid var(--accent,#1597dc)}
 #e_barbox .name,#b_web .name{white-space:normal;overflow:visible;text-overflow:clip}
+#e_barbox .snip,#b_web .snip{font-size:13px;color:var(--muted);margin-top:2px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.webrest .row{opacity:.75}
 #e_barbox .list{min-width:0}
 .top h1.long{font-size:15px;letter-spacing:.02em;white-space:normal;line-height:1.15}
 .top .tag{background:var(--brand-fg);color:var(--brand);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:2px 8px;border-radius:3px}
@@ -1130,7 +1132,14 @@ function webHtml(w){
   if(w.err) return `<span class="note">${esc(w.err)}</span>`;
   if(!w.items.length) return `<span class="note">No sale nada en internet con este código.</span>`;
   return `<span class="note">${S.canWrite?"Toca el bueno y se rellena el producto nuevo:":"Esto es lo que sale en internet:"}</span>
-    <div class="list">${w.items.map((x,i)=>`<button type="button" class="row" data-bi="${i}" ${S.canWrite?"":"disabled"}><span class="txt"><div class="name">${esc(x.title)}</div><div class="code">${esc(x.src)}${x.url?" · "+esc((/^https?:\/\/([^/]+)/.exec(x.url)||[])[1]||""):""}</div></span></button>`).join("")}</div>`;
+    ${webList(w.items,!S.canWrite)}`;
+}
+/* Primero los que llevan el código exacto (los buenos); los demás aparte, por si acaso. */
+function webList(items, off){
+  const row=(x,i)=>`<button type="button" class="row" data-bi="${i}" ${off?"disabled":""}><span class="txt"><div class="name">${esc(x.title)}</div>${x.snippet?`<div class="snip">${esc(x.snippet)}</div>`:""}<div class="code">${esc(x.src)}${x.url?" · "+esc((/^https?:\/\/([^/]+)/.exec(x.url)||[])[1]||""):""}</div></span></button>`;
+  const ok=[], rest=[]; items.forEach((x,i)=>(x.ean===false?rest:ok).push(row(x,i)));
+  return (ok.length?`${rest.length?`<span class="label">Coinciden con el código</span>`:""}<div class="list">${ok.join("")}</div>`:`<span class="note">Ninguna página tiene este código exacto.</span>`)
+    +(rest.length?`<span class="label">Otros resultados (puede que no sean)</span><div class="list webrest">${rest.join("")}</div>`:"");
 }
 async function webSearch(raw, again){
   if(S.barWeb&&S.barWeb.busy) return;
@@ -1167,7 +1176,7 @@ async function barSearch(raw){
   box.innerHTML=`<span class="label">Código de barras ${esc(raw)}</span>
     ${err?`<span class="note">${esc(msg)} Escribe el nombre a mano.</span>`
       :items.length?`<span class="note">Esto es lo que sale en internet. Toca el bueno para poner el nombre:</span>
-        <div class="list">${items.map((x,i)=>`<button type="button" class="row" data-bi="${i}"><span class="txt"><div class="name">${esc(x.title)}</div><div class="code">${esc(x.src)}${x.url?" · "+esc((/^https?:\/\/([^/]+)/.exec(x.url)||[])[1]||""):""}</div></span></button>`).join("")}</div>`
+        ${webList(items)}`
       :`<span class="note">No sale nada en internet con este código. Escribe el nombre a mano.</span>`}
     <span class="note">Se guardará con el producto, y la próxima vez que se escanee abrirá su ficha. · <a href="${esc(gq)}" target="_blank" rel="noopener">Ver en Google</a></span>`;
   box.querySelectorAll("[data-bi]").forEach(b=>b.onclick=()=>{
@@ -1915,7 +1924,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.3";
+const APP_VERSION="2026-10-08.4";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
