@@ -297,7 +297,7 @@ function apiRaw(fn, ...args){
 }
 /* Last good copy of the inventory, so the app opens instantly and the server refresh lands a moment later. */
 const CACHE_KEY="almacen_cache_v1";
-function saveCache(r){ try{ const keep={}; ["products","techs","loans","barras","niveles","clientes","proveedores","hasPassword"].forEach(k=>{ if(r[k]!==undefined) keep[k]=r[k]; }); const old=loadCache()||{}; localStorage.setItem(CACHE_KEY, JSON.stringify({...old,...keep,at:Date.now()})); }catch(e){} }
+function saveCache(r){ try{ const keep={}; ["products","techs","loans","barras","niveles","lados","baldas","clientes","proveedores","hasPassword"].forEach(k=>{ if(r[k]!==undefined) keep[k]=r[k]; }); const old=loadCache()||{}; localStorage.setItem(CACHE_KEY, JSON.stringify({...old,...keep,at:Date.now()})); }catch(e){} }
 function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); }catch(e){ return null; } }
 function saveFile(filename, data){
   const blob = data instanceof Blob ? data : new Blob([data],{type:"text/csv;charset=utf-8"});
@@ -344,7 +344,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, bars:new Map(), bar:"", barPick:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -449,7 +449,7 @@ function productRow(p){
     <span class="thumb">${img?`<img src="${img}" alt="">`:esc(initials(p.nombre))}</span>
     <span class="txt"><div class="name">${esc(p.nombre)}${p.ejemplo?'<span class="pill">Ejemplo</span>':''}</div>
       <div class="code">${esc(p.codigo)}</div>
-      ${sh?`<span class="chip"><span class="dot" style="background:${sh.color}"></span>${sh.name}${nivOf(p)?" · "+NIV[nivOf(p)]:""}</span>`:""}</span>
+      ${sh?`<span class="chip"><span class="dot" style="background:${sh.color}"></span>${sh.name}${nivLabel(p)?" · "+esc(nivLabel(p)):""}</span>`:""}</span>
     <span class="qty ${isLow(p)?'low':''}">${p.cantidad}</span></button>`;
 }
 
@@ -545,7 +545,7 @@ function viewFicha(){
     ${pricesHtml(catByCode(p.codigo))}${S.adminOk&&S.catVer&&!(S.cat&&S.cat.admin)?(ensureCat(),""):""}
     <div class="facts">
       <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&S.adminOk&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
-      <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">${nivOf(p)?"<b>"+NIV[nivOf(p)]+"</b> · ":""}${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
+      <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">${nivLabel(p)?"<b>"+esc(nivLabel(p))+"</b> · ":""}${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
     </div>
     ${rackBlock(p)}
     ${actions}
@@ -779,35 +779,61 @@ function cbSvg(sel){
   </svg>`;
 }
 /* ---------- Altura en el estante (arriba, en medio, abajo) con un dibujo en 3D del estante ---------- */
-const NIV={arriba:"Arriba",medio:"En medio",abajo:"Abajo"};
-const nivOf = p => p&&NIV[S.niv[p.codigo]]?S.niv[p.codigo]:"";
-function rack3d(color, nivel){
-  const X0=30, X1=150, DX=46, DY=-28, Y=[196,140,84,28];   // floor, two shelves, top
-  const idx={abajo:0,medio:1,arriba:2}[nivel];
+/* Each shelf has its own number of levels (3 unless Xavi sets another in the map). Level 1 is the bottom one. */
+const NIV_OLD={abajo:1,medio:2,arriba:3};
+const nBaldas = k => Math.min(8,Math.max(2,Number(S.baldas[k])||3));
+const LADOS={izq:"Izquierda",centro:"Centro",der:"Derecha"};
+const ladoOf = p => p&&LADOS[S.lados[p.codigo]]?S.lados[p.codigo]:"";
+function nivName(i,n){
+  if(i===1) return "Abajo"; if(i===n) return "Arriba";
+  if(n===3) return "En medio"; if(n===4) return i===2?"Medio bajo":"Medio alto";
+  return "Balda "+i;
+}
+function nivOf(p){
+  if(!p) return 0; const v=S.niv[p.codigo]; const i=NIV_OLD[v]||Number(v)||0;
+  return i>=1?Math.min(i,nBaldas(locKey(p))):0;
+}
+function nivLabel(p){ const i=nivOf(p), l=ladoOf(p); return [i?nivName(i,nBaldas(locKey(p))):"", l?LADOS[l]:""].filter(Boolean).join(", "); }
+function nivOptions(shelf, cur){
+  const n=nBaldas(shelf); let o=`<option value="">Sin indicar</option>`;
+  for(let i=n;i>=1;i--) o+=`<option value="${i}" ${cur===i?"selected":""}>${nivName(i,n)} (balda ${i} de ${n})</option>`;
+  return o;
+}
+function rack3d(color, level, n, lado){
+  n=n||3;
+  const X0=30, X1=150, DX=46, DY=-28, TOP=28, BOT=TOP+Math.max(168,n*42);
+  const Y=[...Array(n+1)].map((_,i)=>BOT-(BOT-TOP)*i/n);   // floor … top
+  const idx=level?level-1:-1;
   const plane=(y,fill,op)=>`<polygon points="${X0},${y} ${X1},${y} ${X1+DX},${y+DY} ${X0+DX},${y+DY}" style="fill:${fill};fill-opacity:${op};stroke:var(--fg);stroke-width:2;stroke-linejoin:round"/>`;
-  let g=`<line x1="${X0+DX}" y1="${Y[3]+DY}" x2="${X0+DX}" y2="${Y[0]+DY}" style="stroke:var(--muted);stroke-width:2"/><line x1="${X1+DX}" y1="${Y[3]+DY}" x2="${X1+DX}" y2="${Y[0]+DY}" style="stroke:var(--fg);stroke-width:3"/>`;
-  if(idx!==undefined){
-    const yb=Y[idx], yt=Y[idx+1];
-    g+=`<polygon points="${X0+DX},${yt+DY} ${X1+DX},${yt+DY} ${X1+DX},${yb+DY} ${X0+DX},${yb+DY}" style="fill:${color};fill-opacity:.35"/>`;
-  }
+  let g=`<line x1="${X0+DX}" y1="${TOP+DY}" x2="${X0+DX}" y2="${BOT+DY}" style="stroke:var(--muted);stroke-width:2"/><line x1="${X1+DX}" y1="${TOP+DY}" x2="${X1+DX}" y2="${BOT+DY}" style="stroke:var(--fg);stroke-width:3"/>`;
+  if(idx>=0){ const yb=Y[idx], yt=Y[idx+1]; g+=`<polygon points="${X0+DX},${yt+DY} ${X1+DX},${yt+DY} ${X1+DX},${yb+DY} ${X0+DX},${yb+DY}" style="fill:${color};fill-opacity:.35"/>`; }
   Y.forEach((y,i)=>{ g+=plane(y, i===idx?color:"var(--surface)", i===idx?1:.9); });
-  if(idx!==undefined){
-    /* a box sitting on the marked shelf */
-    const yb=Y[idx], cx=X0+DX/2+38, w=40, h=30, d=16, dy=-10;
+  if(idx>=0){
+    const yb=Y[idx], gap=(BOT-TOP)/n, h=Math.min(30,gap-18), w=34, d=14, dy=-9;
+    const cx={izq:X0+6,der:X1-w-2,centro:X0+DX/2+40}[lado]||X0+DX/2+38;
     g+=`<g style="stroke:var(--fg);stroke-width:2;stroke-linejoin:round">
       <polygon points="${cx},${yb-6} ${cx+w},${yb-6} ${cx+w},${yb-6-h} ${cx},${yb-6-h}" style="fill:#e8c48a"/>
       <polygon points="${cx},${yb-6-h} ${cx+w},${yb-6-h} ${cx+w+d},${yb-6-h+dy} ${cx+d},${yb-6-h+dy}" style="fill:#f3d9ad"/>
       <polygon points="${cx+w},${yb-6} ${cx+w+d},${yb-6+dy} ${cx+w+d},${yb-6-h+dy} ${cx+w},${yb-6-h}" style="fill:#c99d5c"/></g>`;
   }
-  g+=`<line x1="${X0}" y1="${Y[3]}" x2="${X0}" y2="${Y[0]}" style="stroke:var(--fg);stroke-width:3"/><line x1="${X1}" y1="${Y[3]}" x2="${X1}" y2="${Y[0]}" style="stroke:var(--fg);stroke-width:3"/>`;
-  ["Abajo","En medio","Arriba"].forEach((t,i)=>{ const y=(Y[i]+Y[i+1])/2+DY/2+5, on=i===idx;
-    g+=`<text x="${X1+DX+10}" y="${y}" style="font:${on?800:600} ${on?15:13}px var(--f-display),sans-serif;fill:${on?"var(--fg)":"var(--muted)"}">${on?"◀ ":""}${t}</text>`; });
-  return `<svg viewBox="0 0 300 210" width="100%" style="max-width:340px;display:block;margin:0 auto" role="img" aria-label="Estante en 3D${idx!==undefined?": "+["abajo","en medio","arriba"][idx]:""}">${g}</svg>`;
+  g+=`<line x1="${X0}" y1="${TOP}" x2="${X0}" y2="${BOT}" style="stroke:var(--fg);stroke-width:3"/><line x1="${X1}" y1="${TOP}" x2="${X1}" y2="${BOT}" style="stroke:var(--fg);stroke-width:3"/>`;
+  for(let i=0;i<n;i++){ const y=(Y[i]+Y[i+1])/2+DY/2+5, on=i===idx;
+    g+=`<text x="${X1+DX+10}" y="${y}" style="font:${on?800:600} ${on?15:13}px var(--f-display),sans-serif;fill:${on?"var(--fg)":"var(--muted)"}">${on?"◀ ":""}${nivName(i+1,n)}</text>`; }
+  if(idx>=0&&lado){ g+=`<text x="${X0+(X1-X0)/2}" y="${BOT+18}" text-anchor="middle" style="font:800 14px var(--f-display),sans-serif;fill:var(--fg)">${{izq:"◀ Izquierda",centro:"Centro",der:"Derecha ▶"}[lado]}</text>`; }
+  return `<svg viewBox="0 0 300 ${BOT+(lado?26:14)}" width="100%" style="max-width:340px;display:block;margin:0 auto" role="img" aria-label="Estante en 3D de ${n} baldas${idx>=0?": "+nivName(idx+1,n):""}${lado?", "+LADOS[lado]:""}">${g}</svg>`;
 }
 function rackBlock(p){
-  const n=nivOf(p); if(!n||locKey(p)==="none"||locKey(p)==="prestamos") return "";
-  const sh=locOf(p);
-  return `<div class="rack"><div class="label">Dónde está en el estante</div>${rack3d(sh.color,n)}<p class="note" style="margin:0;text-align:center">${esc(sh.name)} · <b>${NIV[n]}</b></p></div>`;
+  const i=nivOf(p), l=ladoOf(p); if(!(i||l)||locKey(p)==="none"||locKey(p)==="prestamos") return "";
+  const k=locKey(p), sh=locOf(p), n=nBaldas(k);
+  return `<div class="rack"><div class="label">Dónde está en el estante</div>${rack3d(sh.color,i,n,l)}<p class="note" style="margin:0;text-align:center">${esc(sh.name)} · <b>${esc(nivLabel(p))}</b>${i?` (balda ${i} de ${n})`:""}</p></div>`;
+}
+/* Map: drawing of the selected shelf, and for Xavi (with the password) how many levels it has. */
+function shelfRack(sel){
+  if(!SHELVES[sel]) return "";
+  const p=S.code&&S.products.get(S.code), n=nBaldas(sel), here=p&&locKey(p)===sel, lv=here?nivOf(p):0;
+  return `<div class="rack"><div class="label">${esc(SHELVES[sel].name)} · ${n} baldas</div>${rack3d(SHELVES[sel].color,lv,n,here&&lv?ladoOf(p):"")}
+    ${here&&nivLabel(p)?`<p class="note" style="margin:0;text-align:center">${esc(p.nombre)}: <b>${esc(nivLabel(p))}</b></p>`:""}
+    ${S.adminOk?`<div class="note" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Baldas de este estante: ${[2,3,4,5,6,7,8].map(k=>`<button class="btn" data-baldas="${k}" aria-pressed="${k===n}" style="min-width:44px;padding:6px 10px${k===n?";background:var(--brand);color:var(--brand-fg)":""}">${k}</button>`).join("")}</div>`:""}</div>`;
 }
 
 function viewMap(){
@@ -822,7 +848,7 @@ function viewMap(){
     ${sel?`<div class="label">${locName(sel)} · ${items.length} producto${items.length===1?"":"s"}</div>
       <div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">No hay productos en esta ubicación.</div>'}</div>`
       :'<p class="note">Toca un estante para ver qué hay en él.</p>'}
-    ${S.code&&S.products.get(S.code)&&locKey(S.products.get(S.code))===sel?rackBlock(S.products.get(S.code)):""}
+    ${shelfRack(sel)}
     ${S.code&&S.products.get(S.code)?`<button class="btn block" id="toficha">Volver a ${esc(S.products.get(S.code).nombre)}</button>`:""}`;
   app.querySelectorAll("[data-shelf]").forEach(el=>{
     const f=()=>{S.mapSel=el.dataset.shelf; viewMap();};
@@ -830,6 +856,12 @@ function viewMap(){
   });
   app.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ S.mapRoom=b.dataset.room; if(S.mapSel&&SHELVES[S.mapSel]&&roomOf(S.mapSel)!==S.mapRoom) S.mapSel=null; viewMap(); });
   const tf=$("#toficha"); if(tf) tf.onclick=()=>go("ficha",{code:S.code});
+  app.querySelectorAll("[data-baldas]").forEach(b=>b.onclick=async()=>{
+    const n=+b.dataset.baldas, k=S.mapSel, old=S.baldas[k];
+    S.baldas[k]=n; viewMap();
+    try{ const r=await api("api_setBaldas", S.adminToken, k, n); if(r&&r.baldas) S.baldas={...r.baldas}; toast(`${SHELVES[k].name}: ${n} baldas.`); }
+    catch(err){ if(old) S.baldas[k]=old; else delete S.baldas[k]; if(S.view==="mapa") viewMap(); if(oldServer(err)) toast("Hay que pegar servidor.gs en Apps Script."); else adminError(err); }
+  });
 }
 
 /* ---------- Catálogo: todo lo que se vende o se usa, esté o no en el almacén ----------
@@ -1173,7 +1205,10 @@ function viewEdit(){
       <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
       <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${shelvesIn(rk).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</optgroup>`).join("")}</select></label>
     </div>
-    <label><span class="label">Altura en el estante</span><select id="e_niv"><option value="">Sin indicar</option>${Object.entries(NIV).map(([k,v])=>`<option value="${k}" ${nivOf(p)===k?"selected":""}>${v}</option>`).join("")}</select></label>
+    <div class="twobtn">
+      <label><span class="label">Altura (balda)</span><select id="e_niv">${nivOptions(p?.ubicacion||"",nivOf(p))}</select></label>
+      <label><span class="label">Lado</span><select id="e_lado"><option value="">Sin indicar</option>${Object.entries(LADOS).map(([k,v])=>`<option value="${k}" ${ladoOf(p)===k?"selected":""}>${v}</option>`).join("")}</select></label>
+    </div>
     ${canRestricted()?`<label><span class="label">Stock mínimo (avisa si hay menos)</span><input id="e_min" type="number" inputmode="numeric" min="0" step="1" value="${Number(p?.minimo)||""}" placeholder="Sin mínimo"></label>`:""}
     <label><span class="label">Proveedor habitual (opcional)</span><input id="e_prov" list="provlist" autocomplete="off" value="${esc(p?.proveedor||"")}" placeholder="Escribe para buscar"><datalist id="provlist">${S.proveedores.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
     <label class="check"><input type="checkbox" id="e_prest" ${p?.prestamo?"checked":""}> <span>Herramienta o maquinaria de préstamo (se presta y se devuelve)</span></label>
@@ -1192,6 +1227,8 @@ function viewEdit(){
       catch(e){ toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Inténtalo de nuevo."); }
       ph.disabled=false; ph.textContent="Cambiar foto"; };
     inp.click(); };
+  const eu=$("#e_ubic"), en=$("#e_niv");
+  if(eu&&en) eu.addEventListener("change",()=>{ const cur=Number(en.value)||0; en.innerHTML=nivOptions(eu.value,Math.min(cur,nBaldas(eu.value))); });
   const eb=$("#e_bar"); if(eb) eb.onclick=()=>{ S.scanFor="newbar"; openScanner(); };
   if(pre&&pre.bar&&!pre.web) barSearch(pre.bar);
   const setBusy=b=>{ $("#e_save").disabled=b; const a=$("#e_again"); if(a) a.disabled=b; };
@@ -1203,7 +1240,7 @@ function viewEdit(){
     if(!nombre){ toast("Escribe el nombre del producto."); $("#e_nombre").focus(); return; }
     if(!codigo){ toast("Falta el código del QR."); return; }
     const cantidad=Math.max(0,Math.floor(Number($("#e_cant").value)||0));
-    const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value),nivel:$("#e_niv").value};
+    const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value),nivel:$("#e_niv").value,lado:$("#e_lado").value};
     if($("#e_min")) fields.minimo=Math.max(0,Math.floor(Number($("#e_min").value)||0));
     const again = !!(e.submitter && e.submitter.dataset.again);
     S.busy=true; setBusy(true);
@@ -1212,7 +1249,8 @@ function viewEdit(){
       const r=await api("api_saveProduct", S.tecnico.id, data, !p);
       S.products.set(r.product.codigo, r.product);
       if(r.product.nivel!==undefined){ if(r.product.nivel) S.niv[r.product.codigo]=r.product.nivel; else delete S.niv[r.product.codigo]; }
-      else if(fields.nivel) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
+      if(r.product.lado!==undefined){ if(r.product.lado) S.lados[r.product.codigo]=r.product.lado; else delete S.lados[r.product.codigo]; }
+      if(r.product.nivel===undefined&&(fields.nivel||fields.lado)) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
       if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce el Cuarto blanco: hay que pegar el api.gs nuevo en Apps Script."); go("ficha",{code:r.product.codigo}); return; }
       if(!p){
         if(again&&!(pre&&pre.bar)&&!S.newBar){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
@@ -1861,6 +1899,8 @@ function applyData(r){
   if(r.products){ const m=new Map(); r.products.forEach(x=>{ const old=S.products.get(x.codigo), q=fresh("qty",x.codigo); m.set(x.codigo,{...x,cantidad:PEND.has(x.codigo)&&old?old.cantidad:q?q.val:(Number(x.cantidad)||0)}); }); S.products=m; S.loaded=true; }
   if(r.techs){ S.techs=r.techs; S.techsLoaded=true; }
   if(r.niveles) S.niv={...r.niveles};
+  if(r.baldas) S.baldas={...r.baldas};
+  if(r.lados) S.lados={...r.lados};
   if(r.barras) S.bars=new Map(r.barras.map(([k,c])=>[barKey(k),String(c)]));
   if(r.loans){
     const list=r.loans.filter(l=>!fresh("gone",l.id));
@@ -1875,7 +1915,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.1";
+const APP_VERSION="2026-10-08.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

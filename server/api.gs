@@ -24,7 +24,7 @@ function doPost(e) {
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
       api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_,
-      api_setBarcode: setBarcode_, api_barSearch: barSearch_
+      api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_setBaldas: setBaldas_
     };
     addShelves_();
     mayusculas_();
@@ -50,34 +50,49 @@ function saveProductUpper_(tecId, data, isNew) {
   data = Object.assign({}, data || {});
   ['nombre', 'descripcion', 'proveedor'].forEach(function (k) { if (data[k] != null) data[k] = upper_(data[k]); });
   var r = api_saveProduct(tecId, data, isNew);
-  if (r && r.ok && r.product && data.nivel !== undefined) {
-    var nv = NIVELES_.indexOf(String(data.nivel)) >= 0 ? String(data.nivel) : '';
-    var before = nivMap_()[r.product.codigo] || '';
-    if (nv !== before) { locked_(function () { setNivel_(r.product.codigo, nv); }); r.same = false; }
-    r.product.nivel = nv;
+  if (r && r.ok && r.product && (data.nivel !== undefined || data.lado !== undefined)) {
+    var code = r.product.codigo, nv = normNivel_(data.nivel), ld = LADOS_.indexOf(String(data.lado || '')) >= 0 ? String(data.lado) : '';
+    var cur = nivRows_().filter(function (x) { return x[0] === code; })[0] || [];
+    if (nv !== (normNivel_(cur[1]) || '') || ld !== (cur[3] || '')) { locked_(function () { setNivel_(code, nv, ld); }); r.same = false; }
+    r.product.nivel = nv; r.product.lado = ld;
   }
   return r;
 }
 /* ---------- Altura en el estante: arriba, en medio o abajo ----------
  * Pestaña «Niveles» de la hoja: [código del producto, nivel]. La gestiona solo este archivo. */
-var NIV_SHEET_ = 'Niveles', NIVELES_ = ['arriba', 'medio', 'abajo'];
+/* La balda se guarda como número: 1 = la de abajo. Cada estante tiene sus baldas (3 si no se dice otra cosa). */
+var NIV_SHEET_ = 'Niveles', NIV_OLD_ = { abajo: '1', medio: '2', arriba: '3' }, LADOS_ = ['izq', 'centro', 'der'];
+function normNivel_(v) { v = String(v == null ? '' : v).trim().toLowerCase(); if (NIV_OLD_[v]) return NIV_OLD_[v]; return /^[1-9]$/.test(v) ? v : ''; }
+function baldas_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('BALDAS') || '{}') || {}; } catch (e) { return {}; } }
+/** Xavi dice cuántas baldas tiene un estante (de 2 a 8). */
+function setBaldas_(token, shelf, n) {
+  return guard_(function () {
+    admin_(token);
+    n = Math.floor(Number(n));
+    if (SHELVES.indexOf(shelf) < 0 || !(n >= 2 && n <= 8)) return { err: 'bad' };
+    var b = baldas_(); b[shelf] = n;
+    PropertiesService.getScriptProperties().setProperty('BALDAS', JSON.stringify(b));
+    return { ok: true, baldas: b };
+  });
+}
 function nivRows_() {
   var sh = sh_(NIV_SHEET_), n = sh ? sh.getLastRow() : 0;
-  return n < 2 ? [] : sh.getRange(2, 1, n - 1, 2).getValues().map(function (r, i) { return [String(r[0]).trim(), String(r[1]).trim().toLowerCase(), i + 2]; })
+  return n < 2 ? [] : sh.getRange(2, 1, n - 1, 3).getValues().map(function (r, i) { return [String(r[0]).trim(), String(r[1]).trim().toLowerCase(), i + 2, String(r[2] || '').trim().toLowerCase()]; })
     .filter(function (r) { return r[0]; });
 }
-function nivMap_() { var o = {}; nivRows_().forEach(function (r) { if (NIVELES_.indexOf(r[1]) >= 0) o[r[0]] = r[1]; }); return o; }
-function setNivel_(code, nivel) {
-  var ss = ss_(), sh = ss.getSheetByName(NIV_SHEET_);
+function nivMap_() { var o = {}; nivRows_().forEach(function (r) { var v = normNivel_(r[1]); if (v) o[r[0]] = v; }); return o; }
+function ladoMap_() { var o = {}; nivRows_().forEach(function (r) { if (LADOS_.indexOf(r[3]) >= 0) o[r[0]] = r[3]; }); return o; }
+function setNivel_(code, nivel, lado) {
+  var ss = ss_(), sh = ss.getSheetByName(NIV_SHEET_), any = nivel || lado;
   if (!sh) {
-    if (!nivel) return;
-    sh = ss.insertSheet(NIV_SHEET_);
-    sh.getRange(1, 1, 1, 2).setValues([['Producto', 'Altura']]).setFontWeight('bold'); sh.setFrozenRows(1);
+    if (!any) return;
+    sh = ss.insertSheet(NIV_SHEET_); sh.setFrozenRows(1);
   }
+  sh.getRange(1, 1, 1, 3).setValues([['Producto', 'Balda (1 = abajo)', 'Lado']]).setFontWeight('bold');
   var cur = nivRows_().filter(function (r) { return r[0] === code; })[0];
-  if (cur && nivel) sh.getRange(cur[2], 2, 1, 1).setValues([[nivel]]);
+  if (cur && any) sh.getRange(cur[2], 2, 1, 2).setValues([[nivel, lado]]);
   else if (cur) sh.deleteRow(cur[2]);
-  else if (nivel) sh.getRange(sh.getLastRow() + 1, 1, 1, 2).setValues([[code, nivel]]);
+  else if (any) sh.getRange(sh.getLastRow() + 1, 1, 1, 3).setValues([[code, nivel, lado]]);
 }
 function mayusculas_() {
   var props = PropertiesService.getScriptProperties();
@@ -108,13 +123,13 @@ function api_techs() {
 function fastPoll_() {
   return guard_(function () {
     var inv = cachedInv_();
-    return { products: inv.products, loans: inv.loans, barras: inv.barras || [], niveles: inv.niveles || {}, techs: cachedTechs_(), catVer: catVer_() };
+    return { products: inv.products, loans: inv.loans, barras: inv.barras || [], niveles: inv.niveles || {}, lados: inv.lados || {}, baldas: baldas_(), techs: cachedTechs_(), catVer: catVer_() };
   });
 }
 function fastBootstrap_() {
   return guard_(function () {
     var inv = cachedInv_(), cli = cachedCli_();
-    return { products: inv.products, loans: inv.loans, barras: inv.barras || [], niveles: inv.niveles || {}, techs: cachedTechs_(), clientes: cli.clientes, proveedores: cli.proveedores,
+    return { products: inv.products, loans: inv.loans, barras: inv.barras || [], niveles: inv.niveles || {}, lados: inv.lados || {}, baldas: baldas_(), techs: cachedTechs_(), clientes: cli.clientes, proveedores: cli.proveedores,
       url: ScriptApp.getService().getUrl(), hasPassword: hasPassword_(), catVer: catVer_() };
   });
 }
@@ -154,7 +169,7 @@ function cachedTechs_() {
 }
 function cachedInv_() {
   var v = cget_('inv');
-  if (!v) { var v0 = cver_(); v = { products: rows_('Productos').map(prodOut_), loans: loansOut_(), barras: barRows_().map(function (r) { return [r[0], r[1]]; }), niveles: nivMap_() }; if (cver_() === v0) cput_('inv', v, TTL_INV_); }
+  if (!v) { var v0 = cver_(); v = { products: rows_('Productos').map(prodOut_), loans: loansOut_(), barras: barRows_().map(function (r) { return [r[0], r[1]]; }), niveles: nivMap_(), lados: ladoMap_() }; if (cver_() === v0) cput_('inv', v, TTL_INV_); }
   return v;
 }
 function cachedCli_() {
