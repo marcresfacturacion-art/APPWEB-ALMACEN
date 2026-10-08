@@ -47,6 +47,7 @@ a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;ali
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
 .top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #e_nombre,#e_desc,#e_prov{text-transform:uppercase}
+.rack{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .row.sel{outline:3px solid var(--accent,#1597dc)}
 #e_barbox .name,#b_web .name{white-space:normal;overflow:visible;text-overflow:clip}
 #e_barbox .list{min-width:0}
@@ -296,7 +297,7 @@ function apiRaw(fn, ...args){
 }
 /* Last good copy of the inventory, so the app opens instantly and the server refresh lands a moment later. */
 const CACHE_KEY="almacen_cache_v1";
-function saveCache(r){ try{ const keep={}; ["products","techs","loans","barras","clientes","proveedores","hasPassword"].forEach(k=>{ if(r[k]!==undefined) keep[k]=r[k]; }); const old=loadCache()||{}; localStorage.setItem(CACHE_KEY, JSON.stringify({...old,...keep,at:Date.now()})); }catch(e){} }
+function saveCache(r){ try{ const keep={}; ["products","techs","loans","barras","niveles","clientes","proveedores","hasPassword"].forEach(k=>{ if(r[k]!==undefined) keep[k]=r[k]; }); const old=loadCache()||{}; localStorage.setItem(CACHE_KEY, JSON.stringify({...old,...keep,at:Date.now()})); }catch(e){} }
 function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); }catch(e){ return null; } }
 function saveFile(filename, data){
   const blob = data instanceof Blob ? data : new Blob([data],{type:"text/csv;charset=utf-8"});
@@ -343,7 +344,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, bars:new Map(), bar:"", barPick:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, bars:new Map(), bar:"", barPick:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -448,7 +449,7 @@ function productRow(p){
     <span class="thumb">${img?`<img src="${img}" alt="">`:esc(initials(p.nombre))}</span>
     <span class="txt"><div class="name">${esc(p.nombre)}${p.ejemplo?'<span class="pill">Ejemplo</span>':''}</div>
       <div class="code">${esc(p.codigo)}</div>
-      ${sh?`<span class="chip"><span class="dot" style="background:${sh.color}"></span>${sh.name}</span>`:""}</span>
+      ${sh?`<span class="chip"><span class="dot" style="background:${sh.color}"></span>${sh.name}${nivOf(p)?" · "+NIV[nivOf(p)]:""}</span>`:""}</span>
     <span class="qty ${isLow(p)?'low':''}">${p.cantidad}</span></button>`;
 }
 
@@ -544,8 +545,9 @@ function viewFicha(){
     ${pricesHtml(catByCode(p.codigo))}${S.adminOk&&S.catVer&&!(S.cat&&S.cat.admin)?(ensureCat(),""):""}
     <div class="facts">
       <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&S.adminOk&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
-      <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
+      <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">${nivOf(p)?"<b>"+NIV[nivOf(p)]+"</b> · ":""}${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
     </div>
+    ${rackBlock(p)}
     ${actions}
     ${p.prestamo&&S.adminOk&&loans.length?`<div><div class="label" style="margin-bottom:6px">Quién la tiene</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
     ${S.adminOk?`<div><div class="label" style="margin-bottom:6px">Últimos movimientos</div><div class="log" id="log"></div></div>`:""}
@@ -776,6 +778,38 @@ function cbSvg(sel){
     ${g("cb_pq",r("cb_pq",78,241,35,17),95.5,250,"PQ",{size:10})}
   </svg>`;
 }
+/* ---------- Altura en el estante (arriba, en medio, abajo) con un dibujo en 3D del estante ---------- */
+const NIV={arriba:"Arriba",medio:"En medio",abajo:"Abajo"};
+const nivOf = p => p&&NIV[S.niv[p.codigo]]?S.niv[p.codigo]:"";
+function rack3d(color, nivel){
+  const X0=30, X1=150, DX=46, DY=-28, Y=[196,140,84,28];   // floor, two shelves, top
+  const idx={abajo:0,medio:1,arriba:2}[nivel];
+  const plane=(y,fill,op)=>`<polygon points="${X0},${y} ${X1},${y} ${X1+DX},${y+DY} ${X0+DX},${y+DY}" style="fill:${fill};fill-opacity:${op};stroke:var(--fg);stroke-width:2;stroke-linejoin:round"/>`;
+  let g=`<line x1="${X0+DX}" y1="${Y[3]+DY}" x2="${X0+DX}" y2="${Y[0]+DY}" style="stroke:var(--muted);stroke-width:2"/><line x1="${X1+DX}" y1="${Y[3]+DY}" x2="${X1+DX}" y2="${Y[0]+DY}" style="stroke:var(--fg);stroke-width:3"/>`;
+  if(idx!==undefined){
+    const yb=Y[idx], yt=Y[idx+1];
+    g+=`<polygon points="${X0+DX},${yt+DY} ${X1+DX},${yt+DY} ${X1+DX},${yb+DY} ${X0+DX},${yb+DY}" style="fill:${color};fill-opacity:.35"/>`;
+  }
+  Y.forEach((y,i)=>{ g+=plane(y, i===idx?color:"var(--surface)", i===idx?1:.9); });
+  if(idx!==undefined){
+    /* a box sitting on the marked shelf */
+    const yb=Y[idx], cx=X0+DX/2+38, w=40, h=30, d=16, dy=-10;
+    g+=`<g style="stroke:var(--fg);stroke-width:2;stroke-linejoin:round">
+      <polygon points="${cx},${yb-6} ${cx+w},${yb-6} ${cx+w},${yb-6-h} ${cx},${yb-6-h}" style="fill:#e8c48a"/>
+      <polygon points="${cx},${yb-6-h} ${cx+w},${yb-6-h} ${cx+w+d},${yb-6-h+dy} ${cx+d},${yb-6-h+dy}" style="fill:#f3d9ad"/>
+      <polygon points="${cx+w},${yb-6} ${cx+w+d},${yb-6+dy} ${cx+w+d},${yb-6-h+dy} ${cx+w},${yb-6-h}" style="fill:#c99d5c"/></g>`;
+  }
+  g+=`<line x1="${X0}" y1="${Y[3]}" x2="${X0}" y2="${Y[0]}" style="stroke:var(--fg);stroke-width:3"/><line x1="${X1}" y1="${Y[3]}" x2="${X1}" y2="${Y[0]}" style="stroke:var(--fg);stroke-width:3"/>`;
+  ["Abajo","En medio","Arriba"].forEach((t,i)=>{ const y=(Y[i]+Y[i+1])/2+DY/2+5, on=i===idx;
+    g+=`<text x="${X1+DX+10}" y="${y}" style="font:${on?800:600} ${on?15:13}px var(--f-display),sans-serif;fill:${on?"var(--fg)":"var(--muted)"}">${on?"◀ ":""}${t}</text>`; });
+  return `<svg viewBox="0 0 300 210" width="100%" style="max-width:340px;display:block;margin:0 auto" role="img" aria-label="Estante en 3D${idx!==undefined?": "+["abajo","en medio","arriba"][idx]:""}">${g}</svg>`;
+}
+function rackBlock(p){
+  const n=nivOf(p); if(!n||locKey(p)==="none"||locKey(p)==="prestamos") return "";
+  const sh=locOf(p);
+  return `<div class="rack"><div class="label">Dónde está en el estante</div>${rack3d(sh.color,n)}<p class="note" style="margin:0;text-align:center">${esc(sh.name)} · <b>${NIV[n]}</b></p></div>`;
+}
+
 function viewMap(){
   const sel=S.mapSel;
   if(sel&&SHELVES[sel]) S.mapRoom=roomOf(sel);
@@ -788,6 +822,7 @@ function viewMap(){
     ${sel?`<div class="label">${locName(sel)} · ${items.length} producto${items.length===1?"":"s"}</div>
       <div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">No hay productos en esta ubicación.</div>'}</div>`
       :'<p class="note">Toca un estante para ver qué hay en él.</p>'}
+    ${S.code&&S.products.get(S.code)&&locKey(S.products.get(S.code))===sel?rackBlock(S.products.get(S.code)):""}
     ${S.code&&S.products.get(S.code)?`<button class="btn block" id="toficha">Volver a ${esc(S.products.get(S.code).nombre)}</button>`:""}`;
   app.querySelectorAll("[data-shelf]").forEach(el=>{
     const f=()=>{S.mapSel=el.dataset.shelf; viewMap();};
@@ -1138,6 +1173,7 @@ function viewEdit(){
       <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
       <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${shelvesIn(rk).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</optgroup>`).join("")}</select></label>
     </div>
+    <label><span class="label">Altura en el estante</span><select id="e_niv"><option value="">Sin indicar</option>${Object.entries(NIV).map(([k,v])=>`<option value="${k}" ${nivOf(p)===k?"selected":""}>${v}</option>`).join("")}</select></label>
     ${canRestricted()?`<label><span class="label">Stock mínimo (avisa si hay menos)</span><input id="e_min" type="number" inputmode="numeric" min="0" step="1" value="${Number(p?.minimo)||""}" placeholder="Sin mínimo"></label>`:""}
     <label><span class="label">Proveedor habitual (opcional)</span><input id="e_prov" list="provlist" autocomplete="off" value="${esc(p?.proveedor||"")}" placeholder="Escribe para buscar"><datalist id="provlist">${S.proveedores.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
     <label class="check"><input type="checkbox" id="e_prest" ${p?.prestamo?"checked":""}> <span>Herramienta o maquinaria de préstamo (se presta y se devuelve)</span></label>
@@ -1167,7 +1203,7 @@ function viewEdit(){
     if(!nombre){ toast("Escribe el nombre del producto."); $("#e_nombre").focus(); return; }
     if(!codigo){ toast("Falta el código del QR."); return; }
     const cantidad=Math.max(0,Math.floor(Number($("#e_cant").value)||0));
-    const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value)};
+    const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value),nivel:$("#e_niv").value};
     if($("#e_min")) fields.minimo=Math.max(0,Math.floor(Number($("#e_min").value)||0));
     const again = !!(e.submitter && e.submitter.dataset.again);
     S.busy=true; setBusy(true);
@@ -1175,6 +1211,8 @@ function viewEdit(){
       const data={codigo,...fields,cantidad};
       const r=await api("api_saveProduct", S.tecnico.id, data, !p);
       S.products.set(r.product.codigo, r.product);
+      if(r.product.nivel!==undefined){ if(r.product.nivel) S.niv[r.product.codigo]=r.product.nivel; else delete S.niv[r.product.codigo]; }
+      else if(fields.nivel) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
       if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce el Cuarto blanco: hay que pegar el api.gs nuevo en Apps Script."); go("ficha",{code:r.product.codigo}); return; }
       if(!p){
         if(again&&!(pre&&pre.bar)&&!S.newBar){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
@@ -1822,6 +1860,7 @@ window.addEventListener("hashchange",fromHash);
 function applyData(r){
   if(r.products){ const m=new Map(); r.products.forEach(x=>{ const old=S.products.get(x.codigo), q=fresh("qty",x.codigo); m.set(x.codigo,{...x,cantidad:PEND.has(x.codigo)&&old?old.cantidad:q?q.val:(Number(x.cantidad)||0)}); }); S.products=m; S.loaded=true; }
   if(r.techs){ S.techs=r.techs; S.techsLoaded=true; }
+  if(r.niveles) S.niv={...r.niveles};
   if(r.barras) S.bars=new Map(r.barras.map(([k,c])=>[barKey(k),String(c)]));
   if(r.loans){
     const list=r.loans.filter(l=>!fresh("gone",l.id));
@@ -1836,7 +1875,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-07.10";
+const APP_VERSION="2026-10-08.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
