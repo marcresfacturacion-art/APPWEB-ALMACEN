@@ -7,6 +7,8 @@
 <meta name="description" content="Inventario del almacén de Marcres y Rivagua: escanear, sacar y meter material.">
 <meta name="theme-color" content="#1597dc">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="logo-marcres.png">
+<link rel="preload" as="image" href="logo-rivagua.png">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -133,6 +135,19 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 .qrcard .pick{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
 .qrcard .pick input{width:20px;height:20px}
 .qrprint{display:grid;gap:8px}
+/* Pantalla de carga: el logo de Marcres aparece, gira y se va; entra el de Rivagua igual; y otra vez, hasta que carga. */
+.loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px 16px;min-height:42vh;color:var(--muted);text-align:center}
+.loader.small{min-height:0;padding:14px 8px;gap:8px}
+.lspin{position:relative;width:96px;height:96px;perspective:600px}
+.loader.small .lspin{width:56px;height:56px}
+.lspin img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;animation:logoSpin 3.2s ease-in-out infinite both}
+.lspin img+img{animation-delay:1.6s}
+.loader p{margin:0;font-weight:600}
+@keyframes logoSpin{0%{opacity:0;transform:scale(.6) rotateY(0)}8%{opacity:1;transform:scale(1) rotateY(0)}38%{opacity:1;transform:scale(1) rotateY(360deg)}50%{opacity:0;transform:scale(.6) rotateY(360deg)}100%{opacity:0;transform:scale(.6) rotateY(360deg)}}
+@media (prefers-reduced-motion:reduce){.lspin img{animation-duration:6s}}
+.seg .logo-emp{padding:8px;min-height:84px;display:flex;align-items:center;justify-content:center}
+.seg .logo-emp img{height:64px;width:64px;object-fit:contain}
+.seg .logo-emp[aria-pressed="true"]{outline:3px solid var(--brand);outline-offset:-3px}
 #printsheet{display:none}
 @media print{
   @page{size:A4;margin:8mm}
@@ -258,7 +273,7 @@ form.edit .check span{flex:1;min-width:0}
 </header>
 
 <main id="app">
-  <div class="empty">Cargando…</div>
+  <div class="loader" role="status"><div class="lspin" aria-hidden="true"><img src="logo-marcres.png" alt=""><img src="logo-rivagua.png" alt=""></div><p>Cargando…</p></div>
 </main>
 
 <input type="file" id="qrfile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del código QR">
@@ -354,6 +369,7 @@ const locOf = p => p.prestamo ? LOAN_LOC : (SHELVES[p.ubicacion] || NO_LOC);
 const locKey = p => p.prestamo ? "prestamos" : (SHELVES[p.ubicacion] ? p.ubicacion : "none");
 const locName = k => k==="prestamos" ? LOAN_LOC.name : k==="none" ? NO_LOC.name : SHELVES[k].name;
 const isLow = p => Number(p.minimo)>0 && p.cantidad < Number(p.minimo);
+function loaderHtml(text, small){ return `<div class="loader${small?" small":""}" role="status"><div class="lspin" aria-hidden="true"><img src="logo-marcres.png" alt=""><img src="logo-rivagua.png" alt=""></div><p>${esc(text)}</p></div>`; }
 /* Los avisos de stock solo los ve Xavi. */
 const showLow = p => canRestricted() && isLow(p);
 const IDLE_MS = 15*60*1000;
@@ -416,7 +432,7 @@ function viewLogin(){
     <div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
     <h2>¿Quién eres?</h2>
     <p class="note">Escribe tu nombre o apellido y tócalo para entrar. Cada producto que saques o ingreses quedará registrado a tu nombre.</p>
-    ${!S.techsLoaded?'<div class="empty">Cargando técnicos…</div>':
+    ${!S.techsLoaded?loaderHtml("Cargando técnicos…"):
       !any?'<div class="empty">Todavía no hay técnicos en la lista. Se añaden desde «Acceso restringido».</div>':
       `<label class="field"><span class="label">Tu nombre</span><input id="l_q" type="search" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Empieza a escribir…" value="${esc(S.loginQ||"")}"></label>
        <div id="l_res"></div>`}
@@ -485,7 +501,7 @@ function viewSearch(){
     <button class="btn block" id="scanbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14"/></svg>Código de barras</button>
     ${S.canWrite?'<button class="btn block" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':''}
     <div class="search"><input id="q" type="search" inputmode="search" placeholder="Buscar en el almacén y el catálogo" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
-    ${!S.loaded?'<div class="list"><div class="empty">Cargando inventario…</div></div>':
+    ${!S.loaded?loaderHtml("Cargando inventario…"):
       !all.length?'<div class="list"><div class="empty">Aún no hay productos. Pulsa «Nuevo producto» para dar de alta el primero.</div></div>':
       q?(hits.length?`<div class="label">En el almacén · ${hits.length}</div><div class="list">${hits.map(productRow).join("")}</div>`
           :cat&&cat.n?`<div class="label">En el almacén no hay nada con «${esc(S.q)}»</div>`
@@ -532,7 +548,7 @@ function viewFicha(){
   if(!p){
     const ci=S.loaded&&catByCode(S.code);
     if(ci){ go("catitem",{catSku:ci[0]}); return; }
-    app.innerHTML=`<div class="empty">${S.loaded?`No existe ningún producto con el código <b>${esc(S.code)}</b>.`:"Cargando…"}</div><button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); return; }
+    app.innerHTML=S.loaded?`<div class="empty">No existe ningún producto con el código <b>${esc(S.code)}</b>.</div><button class="btn block" id="b2">Ir al buscador</button>`:loaderHtml("Cargando…")+`<button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); return; }
   const sh = locOf(p);
   const img = imgFor(p);
   const low = showLow(p);
@@ -661,7 +677,7 @@ function updateDestOk(){ const b=$("#d_ok"); if(!b) return; const typed=($("#pk_
 
 /* Empresa + comunidad picker used by the destination step. */
 function pickerHtml(label){
-  return `<div><span class="label">Empresa</span><div class="seg" style="margin-top:4px">${EMPRESAS.map(e=>`<button type="button" class="btn" data-emp="${e}" aria-pressed="${S.empresa===e}">${e}</button>`).join("")}</div></div>
+  return `<div><span class="label">Empresa</span><div class="seg" style="margin-top:4px">${EMPRESAS.map(e=>`<button type="button" class="btn logo-emp" data-emp="${e}" aria-pressed="${S.empresa===e}" aria-label="${e}" title="${e}"><img src="logo-${fold(e)}.png" alt="${e}"></button>`).join("")}</div></div>
     <label class="field"><span class="label">${label}</span><input id="pk_com" autocomplete="off" placeholder="Escribe para buscar" value="${esc(S.comunidad)}"></label>
     <div id="pk_sug"></div>`;
 }
@@ -942,7 +958,7 @@ function pricesHtml(r){
 }
 function viewCatItem(){
   const c=catIndex(), r=c&&c.items.find(x=>x[0]===S.catSku);
-  if(!r){ app.innerHTML=`<div class="empty">${S.catLoading||!c?"Cargando el catálogo…":"Este producto ya no está en el catálogo."}</div><button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); ensureCat(); return; }
+  if(!r){ app.innerHTML=`${S.catLoading||!c?loaderHtml("Cargando el catálogo…"):`<div class="empty">Este producto ya no está en el catálogo.</div>`}<button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); ensureCat(); return; }
   const code=catCode(r[0]), inStock=S.products.get(code);
   if(S.adminOk&&!c.admin) ensureCat();
   app.innerHTML=`<section class="ficha" style="display:flex;flex-direction:column;gap:14px">
@@ -1153,13 +1169,13 @@ function iaErr(err){ const c=err&&err.code; return c==="nokey"?"La IA no tiene c
 const hostOf=u=>(/^https?:\/\/([^/]+)/.exec(u||"")||[])[1]||"";
 function webRedraw(){ if(S.view==="barra"){ if(!typing()) viewBar(); } else if(S.view==="editar") drawEditWeb(); }
 function webBlock(w, label){
-  if(!w||w.busy) return `<span class="note">Buscando en Google…</span>`;
+  if(!w||w.busy) return loaderHtml("Buscando en internet…",true);
   if(w.net) return `<span class="note">${esc(w.err)}</span>${navigator.onLine!==false?`<a class="btn block" href="arreglar.html">Arreglar el servidor</a>`:""}`;
   let h=w.err?`<span class="note">${esc(w.err)}</span>`:!w.items.length?`<span class="note">No sale nada en internet con este código.</span>`:webList(w.items,false);
   const ia=w.ia, has=w.items.length>0;
   let i="";
   if(!ia) i=`<button type="button" class="linkbtn" data-askia style="padding:0;align-self:flex-start">${has?"¿No es ninguno? Preguntar a la IA":"Preguntar a la IA"}</button>`;
-  else if(ia.busy) i=`<span class="note">La IA lo está buscando…</span>`;
+  else if(ia.busy) i=loaderHtml("La IA lo está buscando…",true);
   else if(ia.item) i=`<div class="best"><span class="label">Según la IA</span><div class="name">${esc(ia.item.title)}</div>${ia.item.snippet?`<div class="snip">${esc(ia.item.snippet)}</div>`:""}${ia.item.url?`<div class="code">IA · ${esc(hostOf(ia.item.url))}</div>`:""}<button type="button" class="btn primary block" data-ia="1">${esc(label)}</button></div>`;
   else if(ia.none) i=`<span class="note">La IA tampoco lo encuentra. Escribe el nombre a mano.</span>`;
   else i=`<span class="note">IA: ${esc(ia.err)}</span>`;
@@ -1984,7 +2000,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.10";
+const APP_VERSION="2026-10-08.11";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
