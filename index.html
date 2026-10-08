@@ -284,6 +284,8 @@ function api(fn, ...args){
 const RECENT={gone:new Map(), added:new Map(), qty:new Map()}, RECENT_MS=120000;
 function remember(kind,key,val){ RECENT[kind].set(key,{val,t:Date.now()}); }
 function fresh(kind,key){ const e=RECENT[kind].get(key); if(!e) return null; if(Date.now()-e.t>RECENT_MS){ RECENT[kind].delete(key); return null; } return e; }
+/* Sin cobertura de verdad, o el servidor de Google no contesta (por ejemplo, si a Código.gs le falta código). */
+function netMsg(){ return navigator.onLine===false?"Sin conexión. Revisa la cobertura e inténtalo de nuevo.":"El servidor de Google no responde. Si acabas de cambiar Apps Script, pega servidor.gs entero en Código.gs y haz Nueva versión."; }
 function apiRaw(fn, ...args){
   if(IN_GAS) return new Promise((res,rej)=>{
     google.script.run
@@ -1015,7 +1017,7 @@ const PLATE_ERR={
   quota:"Se ha pasado el uso gratuito de hoy de Google AI Studio. Prueba mañana o activa la facturación en AI Studio.",
   model:"El modelo de Gemini configurado ya no existe. Borra la propiedad GEMINI_MODEL en Apps Script.",
   old:"Falta pegar el api.gs nuevo en Apps Script y hacer Nueva versión.",
-  network:"Sin conexión. Revisa la cobertura e inténtalo de nuevo.",
+  get network(){ return netMsg(); },
 };
 function viewPlate(){
   const box=$("#adm"), P=S.plate||{};
@@ -1126,7 +1128,7 @@ function viewBar(){
 }
 
 /* Búsqueda directa en internet desde la pantalla «Código de barras»: los resultados salen aquí mismo, sin salir de la app. */
-function webErr(err){ return oldServer(err)?"Para buscar en internet hay que pegar servidor.gs en Apps Script.":/permis/i.test(err.msg||"")?"Falta el permiso de Google para salir a internet: en Apps Script ejecuta una vez probarGemini y acepta.":err.code==="network"?"Sin conexión.":"No se pudo buscar ("+(err.msg||err.code)+")."; }
+function webErr(err){ return oldServer(err)?"Para buscar en internet hay que pegar servidor.gs en Apps Script.":/permis/i.test(err.msg||"")?"Falta el permiso de Google para salir a internet: en Apps Script ejecuta una vez probarGemini y acepta.":err.code==="network"?netMsg():"No se pudo buscar ("+(err.msg||err.code)+")."; }
 function webHtml(w){
   if(!w||w.busy) return `<span class="note">Buscando en internet…</span>`;
   if(w.err) return `<span class="note">${esc(w.err)}</span>`;
@@ -1646,7 +1648,7 @@ function handleWriteError(err){
   const c=err&&err.code;
   if(c==="busy") toast("Otra persona está cambiando el inventario ahora mismo. Inténtalo en unos segundos.");
   else if(c==="tecnico"){ logout("Tu nombre ya no está en la lista de técnicos. Habla con Xavi."); }
-  else if(c==="network"||c==="offline") toast("Sin conexión. Revisa la cobertura e inténtalo de nuevo.");
+  else if(c==="network"||c==="offline") toast(netMsg());
   else if(c==="gone") toast("Este producto ya no existe.");
   else if(c==="too_large") toast("La foto es demasiado grande.");
   else if(c==="server"&&/is not defined/.test(err.msg||"")) toast("Al servidor de Google le falta una parte ("+String(err.msg).slice(0,60)+"). Hay que pegar servidor.gs en Código.gs y hacer Nueva versión.");
@@ -1924,7 +1926,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.4";
+const APP_VERSION="2026-10-08.5";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
@@ -1975,7 +1977,7 @@ async function poll(){
         : '<div class="empty">No se pudo cargar el inventario. Revisa la conexión y recarga la página.</div>';
       return;
     }
-    toast("Sin conexión: se muestran los últimos datos guardados.");
+    toast(navigator.onLine===false?"Sin conexión: se muestran los últimos datos guardados.":"El servidor de Google no responde: se muestran los últimos datos guardados.");
   }
   if(!(S.view==="login"&&typing())) render(); else if($("#l_q")) drawLoginResults();
   setInterval(()=>{ if(document.visibilityState==="visible") poll(); }, 20000);
