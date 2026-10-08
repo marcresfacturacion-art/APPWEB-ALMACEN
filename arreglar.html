@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arreglar servidor</title>
+<meta name="theme-color" content="#1597dc">
+<link rel="icon" href="icon-192.png" type="image/png">
+<style>
+/* Página de un solo uso: copiar servidor.gs con un toque y pegarlo en Apps Script. */
+:root{ --bg:#f4fbff; --surface:#def1fc; --fg:#0d2a3d; --muted:#45606f; --line:#a7d3ee; --brand:#1597dc; --ok:#137a3a; --bad:#b3261e; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0b1a24; --surface:#12293a; --fg:#e4f3fd; --muted:#9bb9cc; --line:#28495f; --ok:#6fd08c; --bad:#ff8a80; } }
+:root[data-theme="dark"]{ --bg:#0b1a24; --surface:#12293a; --fg:#e4f3fd; --muted:#9bb9cc; --line:#28495f; --ok:#6fd08c; --bad:#ff8a80; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:var(--brand);color:#fff;padding:14px 16px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+main{max-width:560px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.btn{display:block;width:100%;text-align:center;padding:16px;border-radius:12px;border:0;background:var(--brand);color:#fff;font:700 18px system-ui,sans-serif;text-decoration:none;cursor:pointer}
+.btn.alt{background:transparent;color:var(--fg);border:2px solid var(--brand)}
+.note{color:var(--muted);font-size:14px}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
+code{font-family:ui-monospace,Menlo,monospace;font-size:14px;word-break:break-word}
+textarea{position:fixed;left:-9999px;top:0}
+</style>
+</head>
+<body>
+<header>Arreglar el servidor de la app</header>
+<main>
+  <p class="note" style="margin:0">Haz esto si la app dice «El servidor de Google no responde». Mejor desde el ordenador, con la cuenta marcresfacturacion@gmail.com.</p>
+  <ol>
+    <li><div class="card">
+      <button class="btn" id="copy" disabled>Cargando…</button>
+      <p class="note" id="info" style="margin:8px 0 0"></p>
+    </div></li>
+    <li><div class="card">
+      <a class="btn alt" href="https://script.google.com/d/1S0IhqR3Ox4JfG9_zYLYZBfljB5uUet6gqp1XM4W8z3ieglUB1M8hr1E3/edit" target="_blank" rel="noopener">Abrir Apps Script</a>
+      <p class="note" style="margin:8px 0 0">Abre <b>Código.gs</b>, borra todo lo que tiene (selecciona todo y suprime) y pega. Si hay otros archivos como api.gs o reinicio, elimínalos. Pulsa guardar 💾.</p>
+    </div></li>
+    <li><div class="card">
+      <p style="margin:0">Implementar → <b>Gestionar implementaciones</b> → ✏️ → Versión: <b>Nueva versión</b> → <b>Implementar</b>.</p>
+      <p class="note" style="margin:8px 0 0">La dirección de la implementación debe acabar en <code>…RobZnWmB/exec</code>.</p>
+    </div></li>
+    <li><div class="card">
+      <a class="btn alt" href="./">Volver a la app</a>
+    </div></li>
+  </ol>
+  <textarea id="ta" aria-hidden="true"></textarea>
+</main>
+<script>
+let code="";
+const btn=document.getElementById("copy"), info=document.getElementById("info");
+fetch("server/servidor.gs?v="+Date.now(),{cache:"no-store"}).then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.text(); }).then(t=>{
+  code=t; btn.disabled=false; btn.textContent="Copiar el servidor";
+  info.textContent=t.split("\n").length+" líneas. La primera dice «TODO EL SERVIDOR EN UN SOLO ARCHIVO».";
+}).catch(e=>{ btn.textContent="No se pudo cargar"; info.innerHTML='<span class="bad">No se pudo cargar el servidor ('+e.message+'). Recarga la página.</span>'; });
+btn.onclick=async()=>{
+  let ok=false;
+  try{ await navigator.clipboard.writeText(code); ok=true; }catch(e){}
+  if(!ok){ const ta=document.getElementById("ta"); ta.value=code; ta.select(); try{ ok=document.execCommand("copy"); }catch(e){} }
+  info.innerHTML=ok?'<span class="ok">Copiado ✓</span> Ahora ve al paso 2 y pégalo.':'<span class="bad">El móvil no dejó copiar.</span> Prueba desde el ordenador.';
+  if(ok) btn.textContent="Copiado ✓";
+};
+</script>
+</body>
+</html>
