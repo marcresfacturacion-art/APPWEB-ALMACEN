@@ -135,6 +135,15 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 .qrcard .pick{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
 .qrcard .pick input{width:20px;height:20px}
 .qrprint{display:grid;gap:8px}
+.qrsort{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sortwrap{position:relative;margin-left:auto}
+.btn.sortbtn{min-height:44px;font-size:16px;letter-spacing:0;text-transform:none;padding:0 14px}
+.sortmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:240px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.sortmenu[hidden]{display:none}
+.sortmenu button{display:flex;justify-content:space-between;gap:10px;width:100%;background:none;border:0;color:var(--fg);padding:11px 10px;border-radius:8px;font:inherit;text-align:left;cursor:pointer}
+.sortmenu button.sel{background:var(--accent);color:var(--accent-fg)}
+.sortmenu small{opacity:.75}
+.qrprice{color:var(--ok,#137a3a);font-weight:700;font-size:14px}
 /* Pantalla de carga: el logo de Marcres aparece, gira y se va; entra el de Rivagua igual; y otra vez, hasta que carga. */
 .loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px 16px;min-height:42vh;color:var(--muted);text-align:center}
 .loader.small{min-height:0;padding:14px 8px;gap:8px}
@@ -1664,12 +1673,26 @@ function printLabels(items,cm){
 function wrapText(g,t,x,y,max,lh){ const words=String(t).split(" "); let line="",lines=[]; for(const w of words){ const tt=line?line+" "+w:w; if(g.measureText(tt).width>max&&line){lines.push(line);line=w}else line=tt;} lines.push(line); lines.slice(0,2).forEach((l,i)=>g.fillText(l,x,y+i*lh)); }
 
 /* QR labels: only inside Acceso restringido, so technicians can't print or see them. */
+/* Orden de las etiquetas: se aplica sobre lo filtrado (búsqueda y «Sin código de barras»); tocar la misma opción le da la vuelta. */
+const QR_SORT={
+  alta:{t:"Orden de alta", d:["más nuevos primero","más antiguos primero"], f:alta=>(a,b)=>alta.get(b.codigo)-alta.get(a.codigo)},
+  num:{t:"Nº de material", d:["MAT-001 → MAT-999","MAT-999 → MAT-001"], f:()=>(a,b)=>a.codigo.localeCompare(b.codigo,"es",{numeric:true})},
+  abc:{t:"Alfabeto", d:["A → Z","Z → A"], f:()=>(a,b)=>a.nombre.localeCompare(b.nombre,"es")},
+  pre:{t:"Precio", d:["más caro primero","más barato primero"]}
+};
+function qrSortGet(){ if(!S.qrSort){ try{ const v=JSON.parse(localStorage.getItem("almacen_qrsort")||"null"); if(v&&QR_SORT[v.k]) S.qrSort={k:v.k,inv:!!v.inv}; }catch(e){} } return S.qrSort||{k:"num",inv:false}; }
+document.addEventListener("click",()=>{ const m=$("#q_sm"); if(m&&!m.hidden){ m.hidden=true; const b=$("#q_sort"); if(b) b.setAttribute("aria-expanded","false"); } });
+function qrSortSet(v){ S.qrSort=v; try{ localStorage.setItem("almacen_qrsort",JSON.stringify(v)); }catch(e){} }
 function viewQR(){
   const base = APP_URL, box=$("#adm"); if(!box||!S.adminOk) return;
   const all=[...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
   const noBar=all.filter(p=>!barsOf(p.codigo).length), only=S.qrNoBar===true;
   const words=qWords(S.qrQ||"");
-  const list=(only?noBar:all).filter(p=>!words.length||hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""),words));
+  const alta=new Map([...S.products.keys()].map((c,i)=>[c,i]));
+  let list=(only?noBar:all).filter(p=>!words.length||hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""),words));
+  const so=qrSortGet(), price=p=>{ const r=catByCode(p.codigo); return r&&S.cat.admin&&r.length>=6&&r[5]!==""&&!isNaN(Number(r[5]))?Number(r[5]):null; };
+  if(so.k==="pre"){ if(!(S.cat&&S.cat.admin)) ensureCat(); const w=list.filter(p=>price(p)!==null).sort((a,b)=>price(b)-price(a)); if(so.inv) w.reverse(); list=w.concat(list.filter(p=>price(p)===null)); }
+  else { list.sort(QR_SORT[so.k].f(alta)); if(so.inv) list.reverse(); }
   box.innerHTML = `
     <div class="links" role="group" aria-label="Qué etiquetas ver"><button class="btn${only?"":" primary"}" id="q_f_all">Todos (${all.length})</button><button class="btn${only?" primary":""}" id="q_f_nobar">Sin código de barras (${noBar.length})</button></div>
     <div class="search"><input id="q_q" type="search" placeholder="Buscar producto por nombre o código" value="${esc(S.qrQ||"")}" autocomplete="off" aria-label="Buscar etiqueta"></div>
@@ -1683,21 +1706,25 @@ function viewQR(){
       <div class="links"><button class="btn" id="q_all">Marcar todas</button><button class="btn" id="q_none">Ninguna</button></div>
       <p class="note">Al imprimir, elige papel A4 y escala <b>100 %</b> (o «Tamaño real»), sin «Ajustar a la página», para que salgan del tamaño exacto. Salen 4 por fila con una línea para recortar.</p>
     </div>
+    <div class="qrsort"><span class="note">${list.length} etiqueta${list.length===1?"":"s"}</span><div class="sortwrap"><button class="btn primary sortbtn" id="q_sort" aria-haspopup="true" aria-expanded="false" aria-label="Ordenar: ${QR_SORT[so.k].t}, ${QR_SORT[so.k].d[so.inv?1:0]}">↕ ${QR_SORT[so.k].t} · ${QR_SORT[so.k].d[so.inv?1:0]}</button>
+      <div class="sortmenu" id="q_sm" hidden>${Object.keys(QR_SORT).map(k=>`<button data-sort="${k}" class="${k===so.k?"sel":""}"><span>${QR_SORT[k].t}</span><small>${QR_SORT[k].d[k===so.k&&so.inv?1:0]}</small></button>`).join("")}</div></div></div>
+    ${so.k==="pre"?`<p class="note">Solo tienen precio los productos que están en el catálogo de Holded con el mismo código; los demás salen al final.</p>`:""}
     <div class="qrgrid" id="qg"></div>
     <p class="note">«Descargar etiqueta» guarda una sola etiqueta de 4 × 4 cm. Si no funciona en tu móvil, mantén pulsado el QR para guardarlo.</p>`;
   if(!base || typeof QRCode==="undefined") return;
   const qg=$("#qg"), items=[];
-  const add=(title,code,text,file)=>{
+  const add=(title,code,text,file,p)=>{
     const card=document.createElement("div"); card.className="qrcard";
     const it={title,code,text}; items.push(it);
     card.insertAdjacentHTML("beforeend",`<label class="pick"><input type="checkbox" data-pick="${items.length-1}" ${S.qrSkip.has(code)?"":"checked"}>Imprimir</label>`);
     card.appendChild(qrCanvas(text));
-    card.insertAdjacentHTML("beforeend",`<b>${esc(title)}</b><span class="code">${esc(code)}</span>`);
+    const pv=p&&so.k==="pre"?price(p):undefined;
+    card.insertAdjacentHTML("beforeend",`<b>${esc(title)}</b><span class="code">${esc(code)}</span>${pv===undefined?"":pv===null?'<span class="note">sin precio</span>':`<span class="qrprice">${euro(pv)}</span>`}`);
     const b=document.createElement("button"); b.textContent="Descargar etiqueta"; b.onclick=async()=>{ try{ const blob=await labelPng(title,code,text); saveFile(file,blob); }catch(e){ toast("No se pudo descargar la etiqueta."); } }; card.appendChild(b);
     qg.appendChild(card);
   };
   if(!only&&!words.length) add("QR general · Buscador","ALMACÉN",base,"qr-general.png");
-  list.forEach(p=>add(p.nombre,p.codigo,base+"?p="+encodeURIComponent(p.codigo),"qr-"+p.codigo+".png"));
+  list.forEach(p=>add(p.nombre,p.codigo,base+"?p="+encodeURIComponent(p.codigo),"qr-"+p.codigo+".png",p));
   const boxes=()=>[...qg.querySelectorAll("[data-pick]")];
   boxes().forEach(b=>b.onchange=()=>{ const c=items[b.dataset.pick].code; if(b.checked) S.qrSkip.delete(c); else S.qrSkip.add(c); });
   $("#q_all").onclick=()=>{ S.qrSkip.clear(); boxes().forEach(b=>b.checked=true); };
@@ -1706,6 +1733,9 @@ function viewQR(){
   $("#q_print").onclick=()=>printLabels(items.filter(i=>!S.qrSkip.has(i.code)),S.qrCm);
   const qq=$("#q_q"); let qt;
   qq.addEventListener("input",()=>{ clearTimeout(qt); qt=setTimeout(()=>{ S.qrQ=qq.value; const pos=qq.selectionStart; viewQR(); const n=$("#q_q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} },250); });
+  const sb=$("#q_sort"), sm=$("#q_sm");
+  sb.onclick=e=>{ e.stopPropagation(); sm.hidden=!sm.hidden; sb.setAttribute("aria-expanded",String(!sm.hidden)); };
+  sm.querySelectorAll("[data-sort]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); const k=b.dataset.sort; qrSortSet(k===so.k?{k,inv:!so.inv}:{k,inv:false}); viewQR(); });
   $("#q_f_all").onclick=()=>{ S.qrNoBar=false; viewQR(); };
   $("#q_f_nobar").onclick=()=>{ S.qrNoBar=true; viewQR(); };
   const ql=$("#q_list"); if(ql) ql.onclick=()=>printList("Productos sin código de barras",noBar);
@@ -2005,7 +2035,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.12";
+const APP_VERSION="2026-10-08.13";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
