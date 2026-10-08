@@ -141,6 +141,15 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
   #printsheet .lbl img{width:calc(var(--lbl) * .60);height:calc(var(--lbl) * .60);flex:none;image-rendering:pixelated}
   #printsheet .lbl b{font-size:calc(var(--lbl) * .062);line-height:1.15;max-height:2.3em;flex:none;margin-top:.6mm;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;width:100%}
   #printsheet .lbl span{flex:none;font-size:calc(var(--lbl) * .09);font-weight:700;font-family:monospace}
+  #printsheet.plist{display:block!important;color:#000;font-family:Arial,sans-serif;font-size:11pt}
+  #printsheet.plist h1{font-size:16pt;margin:0 0 2mm}
+  #printsheet.plist p{margin:0 0 4mm;color:#333}
+  #printsheet.plist table{width:100%;border-collapse:collapse}
+  #printsheet.plist th,#printsheet.plist td{border:.2mm solid #999;padding:1.5mm 2mm;text-align:left;vertical-align:top}
+  #printsheet.plist th{background:#eee}
+  #printsheet.plist td:first-child{font-family:monospace;white-space:nowrap}
+  #printsheet.plist td:last-child,#printsheet.plist th:last-child{width:8mm;text-align:center}
+  #printsheet.plist tr{break-inside:avoid;page-break-inside:avoid}
 }
 .qrcard button{border:1px solid #bbb;background:#f4f4f4;color:#111;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer}
 .groups{display:flex;flex-direction:column;gap:8px}
@@ -343,6 +352,8 @@ const locOf = p => p.prestamo ? LOAN_LOC : (SHELVES[p.ubicacion] || NO_LOC);
 const locKey = p => p.prestamo ? "prestamos" : (SHELVES[p.ubicacion] ? p.ubicacion : "none");
 const locName = k => k==="prestamos" ? LOAN_LOC.name : k==="none" ? NO_LOC.name : SHELVES[k].name;
 const isLow = p => Number(p.minimo)>0 && p.cantidad < Number(p.minimo);
+/* Los avisos de stock solo los ve Xavi. */
+const showLow = p => canRestricted() && isLow(p);
 const IDLE_MS = 15*60*1000;
 const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolucion:"Devuelto", recuento:"Recuento", alta:"Alta", ajuste:"Ajuste", edicion:"Cambio", baja:"Baja"};
 
@@ -455,7 +466,7 @@ function productRow(p){
     <span class="txt"><div class="name">${esc(p.nombre)}${p.ejemplo?'<span class="pill">Ejemplo</span>':''}</div>
       <div class="code">${esc(p.codigo)}</div>
       ${sh?`<span class="chip"><span class="dot" style="background:${sh.color}"></span>${sh.name}${nivLabel(p)?" · "+esc(nivLabel(p)):""}</span>`:""}</span>
-    <span class="qty ${isLow(p)?'low':''}">${p.cantidad}</span></button>`;
+    <span class="qty ${showLow(p)?'low':''}">${p.cantidad}</span></button>`;
 }
 
 function viewSearch(){
@@ -516,7 +527,7 @@ function viewFicha(){
     app.innerHTML=`<div class="empty">${S.loaded?`No existe ningún producto con el código <b>${esc(S.code)}</b>.`:"Cargando…"}</div><button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); return; }
   const sh = locOf(p);
   const img = imgFor(p);
-  const low = isLow(p);
+  const low = showLow(p);
   const allLoans = S.loans.filter(l=>l.codigo===p.codigo).sort((a,b)=>a.salida-b.salida);
   /* Who has what is only for Xavi (with the password); a technician only sees what they took. */
   const loans = S.adminOk ? allLoans : allLoans.filter(l=>S.tecnico&&l.tecnicoId===S.tecnico.id);
@@ -1620,7 +1631,7 @@ async function pngDpi(blob,dpi){
 function printLabels(items,cm){
   if(!items.length){ toast("Marca al menos una etiqueta."); return; }
   let sheet=$("#printsheet"); if(!sheet){ sheet=document.createElement("div"); sheet.id="printsheet"; document.body.appendChild(sheet); }
-  sheet.style.setProperty("--lbl",cm+"cm");
+  sheet.className=""; sheet.style.setProperty("--lbl",cm+"cm");
   sheet.innerHTML=items.map(it=>`<div class="lbl"><img src="${qrCanvas(it.text).toDataURL("image/png")}" alt=""><b>${esc(it.title)}</b><span${it.code.length>11?` style="font-size:calc(var(--lbl) * ${(0.99/it.code.length).toFixed(4)})"`:""}>${esc(it.code)}</span></div>`).join("");
   const clean=()=>{ window.removeEventListener("afterprint",clean); sheet.innerHTML=""; };
   window.addEventListener("afterprint",clean);
@@ -1631,8 +1642,12 @@ function wrapText(g,t,x,y,max,lh){ const words=String(t).split(" "); let line=""
 /* QR labels: only inside Acceso restringido, so technicians can't print or see them. */
 function viewQR(){
   const base = APP_URL, box=$("#adm"); if(!box||!S.adminOk) return;
-  const list=[...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  const all=[...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  const noBar=all.filter(p=>!barsOf(p.codigo).length), only=S.qrNoBar===true;
+  const list=only?noBar:all;
   box.innerHTML = `
+    <div class="links" role="group" aria-label="Qué etiquetas ver"><button class="btn${only?"":" primary"}" id="q_f_all">Todos (${all.length})</button><button class="btn${only?" primary":""}" id="q_f_nobar">Sin código de barras (${noBar.length})</button></div>
+    ${only?`<p class="note">Estos productos no tienen código de barras guardado en la app: necesitan su etiqueta QR.</p><button class="btn block" id="q_list">📄 Imprimir el listado (${noBar.length})</button>`:""}
     <p class="note">Imprime estas etiquetas y pégalas en cada producto. Al escanearlas con la cámara del móvil se abre directamente su ficha. El QR general abre el buscador; ponlo en la entrada del almacén.</p>
     ${base?"":'<p class="note" style="color:var(--danger)">Falta configurar la dirección de la app para generar los QR.</p>'}
     <div class="qrprint">
@@ -1654,7 +1669,7 @@ function viewQR(){
     const b=document.createElement("button"); b.textContent="Descargar etiqueta"; b.onclick=async()=>{ try{ const blob=await labelPng(title,code,text); saveFile(file,blob); }catch(e){ toast("No se pudo descargar la etiqueta."); } }; card.appendChild(b);
     qg.appendChild(card);
   };
-  add("QR general · Buscador","ALMACÉN",base,"qr-general.png");
+  if(!only) add("QR general · Buscador","ALMACÉN",base,"qr-general.png");
   list.forEach(p=>add(p.nombre,p.codigo,base+"?p="+encodeURIComponent(p.codigo),"qr-"+p.codigo+".png"));
   const boxes=()=>[...qg.querySelectorAll("[data-pick]")];
   boxes().forEach(b=>b.onchange=()=>{ const c=items[b.dataset.pick].code; if(b.checked) S.qrSkip.delete(c); else S.qrSkip.add(c); });
@@ -1662,6 +1677,20 @@ function viewQR(){
   $("#q_none").onclick=()=>{ items.forEach(i=>S.qrSkip.add(i.code)); boxes().forEach(b=>b.checked=false); };
   $("#q_cm").onchange=e=>{ S.qrCm=Number(e.target.value); };
   $("#q_print").onclick=()=>printLabels(items.filter(i=>!S.qrSkip.has(i.code)),S.qrCm);
+  $("#q_f_all").onclick=()=>{ S.qrNoBar=false; viewQR(); };
+  $("#q_f_nobar").onclick=()=>{ S.qrNoBar=true; viewQR(); };
+  const ql=$("#q_list"); if(ql) ql.onclick=()=>printList("Productos sin código de barras",noBar);
+}
+/* Listado en A4 para imprimir: código, nombre, estante y una casilla para marcar a mano. */
+function printList(title,prods){
+  if(!prods.length){ toast("No hay productos en la lista."); return; }
+  let sheet=$("#printsheet"); if(!sheet){ sheet=document.createElement("div"); sheet.id="printsheet"; document.body.appendChild(sheet); }
+  sheet.className="plist";
+  const d=new Date().toLocaleDateString("es-ES");
+  sheet.innerHTML=`<h1>${esc(title)}</h1><p>${prods.length} productos · ${esc(d)}</p><table><thead><tr><th>Código</th><th>Producto</th><th>Estante</th><th>✓</th></tr></thead><tbody>${prods.map(p=>`<tr><td>${esc(p.codigo)}</td><td>${esc(p.nombre)}</td><td>${esc(locOf(p).name)}</td><td></td></tr>`).join("")}</tbody></table>`;
+  const clean=()=>{ window.removeEventListener("afterprint",clean); sheet.innerHTML=""; sheet.className=""; };
+  window.addEventListener("afterprint",clean);
+  setTimeout(()=>window.print(),300);
 }
 
 /* ---------- Data ---------- */
@@ -1947,7 +1976,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.8";
+const APP_VERSION="2026-10-08.9";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
