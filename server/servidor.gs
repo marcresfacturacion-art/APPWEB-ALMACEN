@@ -863,23 +863,22 @@ function setBarcode_(tecId, bar, code) {
     });
   });
 }
-/* Al dar de alta un producto nuevo: busca el código de barras en internet, sin IA.
+/* Busca el código de barras en internet, sin IA (solo Xavi).
  * Mira los resultados de Google, Bing y DuckDuckGo y la base de datos gratuita UPCitemdb, y devuelve los títulos encontrados
- * para que el técnico toque el bueno. Lo encontrado se guarda 6 horas en la caché. */
+ * para que Xavi toque el bueno. Lo encontrado se guarda 6 horas en la caché. */
 function barSearch_(tecId, bar) {
   return guard_(function () {
     if (!bool_(tech_(tecId).restringido)) throw new Error('auth');   // la búsqueda en internet es solo para Xavi
     var k = String(bar || '').replace(/\s+/g, '');
     if (!/^\d{6,14}$/.test(k)) return { err: 'bad' };
-    var cache = CacheService.getScriptCache(), hit = cache.get('bs2_' + k);
+    var cache = CacheService.getScriptCache(), hit = cache.get('bs3_' + k);
     if (hit) return JSON.parse(hit);
     var web = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept-Language': 'es-ES,es;q=0.9' };
-    var q = encodeURIComponent('"' + k + '"');   // entre comillas: solo páginas con ese número exacto
     var reqs = [
-      { url: 'https://www.google.com/search?q=' + q + '&hl=es&gl=es&gbv=1&num=20', muteHttpExceptions: true, headers: web },
+      { url: 'https://www.google.com/search?q=' + k + '&hl=es&gl=es&gbv=1&num=10', muteHttpExceptions: true, headers: web },
       { url: 'https://api.upcitemdb.com/prod/trial/lookup?upc=' + k, muteHttpExceptions: true, headers: { Accept: 'application/json' } },
-      { url: 'https://www.bing.com/search?q=' + k + '&setlang=es&cc=ES&count=20', muteHttpExceptions: true, headers: web },
-      { url: 'https://html.duckduckgo.com/html/?q=' + q + '&kl=es-es', muteHttpExceptions: true, headers: web }
+      { url: 'https://www.bing.com/search?q=' + k + '&setlang=es&cc=ES', muteHttpExceptions: true, headers: web },
+      { url: 'https://html.duckduckgo.com/html/?q=' + k + '&kl=es-es', muteHttpExceptions: true, headers: web }
     ];
     var res = UrlFetchApp.fetchAll(reqs), items = [], seen = {}, fails = [];
     var add = function (title, url, src, snippet) {
@@ -923,27 +922,16 @@ function barSearch_(tecId, bar) {
       if (code !== 200) { fails.push(NAMES[i] + ' ' + code); return; }
       try { parsers[i](r.getContentText()); } catch (e) { fails.push(NAMES[i] + ' ilegible'); }
     });
-    /* Primero lo que lleva el código exacto; dentro de eso, lo que es de lo nuestro (agua, bombas, fontanería, electricidad). */
+    /* Como al principio: todo lo que sale, en el orden de los buscadores (Google primero). Solo se marca si lleva el código exacto. */
     items.forEach(function (x) {
       var all = (x.title + ' ' + x.snippet + ' ' + x.url).replace(/[\s.\-]/g, '');
       x.ean = all.indexOf(k) >= 0 || (k.length === 13 && k[0] === '0' && all.indexOf(k.slice(1)) >= 0);
-      x.score = (x.ean ? 100 : 0) + (x.src === 'Google' ? 10 : 0) + oficio_(x.title + ' ' + x.snippet + ' ' + x.url) - (JUNK_RE_.test(x.url + ' ' + x.title) ? 60 : 0);
     });
-    items.sort(function (a, b) { return b.score - a.score || a.n - b.n; });
-    var out = { ok: true, items: items.slice(0, 10).map(function (x) { return { title: x.title, url: x.url, src: x.src, snippet: x.snippet, ean: x.ean }; }), fails: fails };
-    if (items.length) cache.put('bs2_' + k, JSON.stringify(out), 21600);
+    var out = { ok: true, items: items.slice(0, 12).map(function (x) { return { title: x.title, url: x.url, src: x.src, snippet: x.snippet, ean: x.ean }; }), fails: fails };
+    if (items.length) cache.put('bs3_' + k, JSON.stringify(out), 21600);
     return out;
   });
 }
-/* Marcres: instalación y mantenimiento de equipos electromecánicos para agua (trasiego, agua potable, aguas residuales). */
-var OFICIO_ = ['bomba', 'electrobomba', 'grupo de presion', 'presostato', 'variador', 'motor', 'valvula', 'retencion', 'compuerta', 'mariposa',
-  'manometro', 'caudalimetro', 'contador de agua', 'racor', 'manguito', 'tuberia', 'pvc', 'polietileno', 'laton', 'brida', 'junta', 'filtro',
-  'descalcificador', 'clorador', 'dosificador', 'cloro', 'depuradora', 'residual', 'fecales', 'achique', 'sumergible', 'pozo', 'deposito', 'aljibe',
-  'calderin', 'vaso de expansion', 'boya', 'flotador', 'sonda', 'cuadro electrico', 'magnetotermico', 'diferencial', 'contactor', 'guardamotor',
-  'rele', 'condensador', 'impulsor', 'cierre mecanico', 'rodamiento', 'fontaneria', 'piscina', 'riego', 'agua', 'hidraulic', 'presion', 'rosca',
-  'grundfos', 'ebara', 'pedrollo', 'wilo', 'lowara', 'ksb', 'zenit', 'flygt', 'idrhaus', 'genebre', 'astralpool', 'fluidra', 'danfoss', 'schneider',
-  'ferreteria', 'suministros', 'industrial', 'electricidad', 'climatizacion', 'calefaccion', 'pump', 'valve', 'pressure', 'gauge', 'water'];
-var JUNK_RE_ = /barcode-?generator|generador de codigo|numerolog|significado del numero|wikipedia|diccionario|dictionary|youtube\.com|facebook\.com|instagram\.com|pinterest\./i;
 /* Último paso de la búsqueda por código de barras, solo si Google no lo encuentra: la IA (Gemini) busca en Google el número
  * y dice qué producto es. Solo Xavi. Usa la misma clave GEMINI_KEY que la foto de placa. */
 var BAR_IA_PROMPT_ = 'Busca en Google el código de barras {EAN} (EAN/UPC) y dime qué producto es exactamente: marca, modelo y tipo. ' +
@@ -969,11 +957,6 @@ function barIA_(tecId, bar) {
     cache.put('bi_' + k, JSON.stringify(out), 21600);
     return out;
   });
-}
-function oficio_(s) {
-  s = String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  var n = 0; OFICIO_.forEach(function (w) { if (s.indexOf(w) >= 0) n++; });
-  return Math.min(n, 8) * 5;
 }
 function text_(h) {
   return String(h || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')

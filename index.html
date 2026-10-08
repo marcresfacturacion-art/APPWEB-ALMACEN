@@ -1108,7 +1108,7 @@ function viewBar(){
   app.innerHTML=`<section style="display:flex;flex-direction:column;gap:12px">
     <div><div class="label">Código de barras</div><h2 style="font-family:var(--f-mono);margin:4px 0 0">${esc(raw)}</h2></div>
     <p class="catnote" style="margin:0">Aún no está en ningún producto de la app.</p>
-    ${canRestricted()?`<div class="stock" id="b_web"><span class="label">Búsqueda en internet: Google y, si no, la IA</span>${webBlock(S.web&&S.web.raw===raw?S.web:null,"Dar de alta con este nombre")}
+    ${canRestricted()?`<div class="stock" id="b_web"><span class="label">Búsqueda en internet</span>${webBlock(S.web&&S.web.raw===raw?S.web:null,"Dar de alta con este nombre")}
       ${S.web&&S.web.raw===raw&&!S.web.busy?`<span class="note"><button class="linkbtn" id="b_again" style="padding:0">Buscar otra vez</button> · <a href="${esc(gq)}" target="_blank" rel="noopener">Abrir en Google</a></span>`:""}</div>`:""}
     ${S.canWrite?`<div class="label" style="margin-top:6px">Búsqueda en el almacén: ¿de qué producto es?</div>
     <div class="search"><input id="b_q" type="search" placeholder="Busca el producto por nombre" value="${esc(S.barQ||"")}" autocomplete="off" aria-label="Buscar el producto"></div>
@@ -1128,7 +1128,7 @@ function viewBar(){
 }
 
 /* Búsqueda en internet por código de barras, solo para Xavi (basta con entrar con su nombre).
-   Por pasos: 1) el código en la app, 2) Google (con otros buscadores de apoyo), 3) la IA, solo si Google no lo encuentra. */
+   Por pasos: 1) el código en la app, 2) internet (Google, Bing, DuckDuckGo y UPCitemdb), 3) la IA, solo si internet no saca nada. */
 function webErr(err){ return oldServer(err)?"Para buscar en internet hay que pegar servidor.gs en Apps Script.":/permis/i.test(err.msg||"")?"Falta el permiso de Google para salir a internet: en Apps Script ejecuta una vez probarGemini y acepta.":err.code==="network"?netMsg():"No se pudo buscar ("+(err.msg||err.code)+")."; }
 function iaErr(err){ const c=err&&err.code; return c==="nokey"?"La IA no tiene clave: pon GEMINI_KEY en Apps Script, como para la foto de placa.":c==="quota"?PLATE_ERR.quota:c==="badkey"?PLATE_ERR.badkey:webErr(err); }
 const hostOf=u=>(/^https?:\/\/([^/]+)/.exec(u||"")||[])[1]||"";
@@ -1136,26 +1136,19 @@ function webRedraw(){ if(S.view==="barra"){ if(!typing()) viewBar(); } else if(S
 function webBlock(w, label){
   if(!w||w.busy) return `<span class="note">Buscando en Google…</span>`;
   if(w.net) return `<span class="note">${esc(w.err)}</span>${navigator.onLine!==false?`<a class="btn block" href="arreglar.html">Arreglar el servidor</a>`:""}`;
-  let h=w.err?`<span class="note">${esc(w.err)}</span>`:!w.items.length?`<span class="note">Google no encuentra nada con este código.</span>`:webList(w.items,false,label);
-  const ia=w.ia, has=w.items.some(x=>x.ean!==false);
+  let h=w.err?`<span class="note">${esc(w.err)}</span>`:!w.items.length?`<span class="note">No sale nada en internet con este código.</span>`:webList(w.items,false);
+  const ia=w.ia, has=w.items.length>0;
   let i="";
   if(!ia) i=`<button type="button" class="linkbtn" data-askia style="padding:0;align-self:flex-start">${has?"¿No es ninguno? Preguntar a la IA":"Preguntar a la IA"}</button>`;
-  else if(ia.busy) i=`<span class="note">Google no lo encuentra; la IA lo está buscando…</span>`;
+  else if(ia.busy) i=`<span class="note">La IA lo está buscando…</span>`;
   else if(ia.item) i=`<div class="best"><span class="label">Según la IA</span><div class="name">${esc(ia.item.title)}</div>${ia.item.snippet?`<div class="snip">${esc(ia.item.snippet)}</div>`:""}${ia.item.url?`<div class="code">IA · ${esc(hostOf(ia.item.url))}</div>`:""}<button type="button" class="btn primary block" data-ia="1">${esc(label)}</button></div>`;
   else if(ia.none) i=`<span class="note">La IA tampoco lo encuentra. Escribe el nombre a mano.</span>`;
   else i=`<span class="note">IA: ${esc(ia.err)}</span>`;
   return ia&&!has?i+h:h+i;   // si Google no tiene el código exacto, lo de la IA va primero
 }
-/* Primero los que llevan el código exacto (los buenos); los demás aparte, por si acaso. */
-function webList(items, off, bestLabel){
-  const best=!off&&bestLabel&&items[0]&&items[0].ean!==false?items[0]:null;
-  const top=best?`<div class="best"><span class="label">Lo más probable</span><div class="name">${esc(best.title)}</div><div class="code">${esc(best.src)}${best.url?" · "+esc(hostOf(best.url)):""}</div><button type="button" class="btn primary block" data-bi="0">${esc(bestLabel)}</button></div>`:"";
-  if(best) items=items.slice(1);
-  const off1=best?1:0;
-  const row=(x,i)=>`<button type="button" class="row" data-bi="${i}" ${off?"disabled":""}><span class="txt"><div class="name">${esc(x.title)}</div>${x.snippet?`<div class="snip">${esc(x.snippet)}</div>`:""}<div class="code">${esc(x.src)}${x.url?" · "+esc(hostOf(x.url)):""}</div></span></button>`;
-  const ok=[], rest=[]; items.forEach((x,i)=>(x.ean===false?rest:ok).push(row(x,i+off1)));
-  return top+(ok.length?`${rest.length||best?`<span class="label">${best?"Otros con el mismo código":"Coinciden con el código"}</span>`:""}<div class="list">${ok.join("")}</div>`:best?"":`<span class="note">Ninguna página tiene este código exacto.</span>`)
-    +(rest.length?`<span class="label">Otros resultados (puede que no sean)</span><div class="list webrest">${rest.join("")}</div>`:"");
+/* Como al principio: todo lo que sale en internet, en el orden de los buscadores; se toca el bueno. */
+function webList(items, off){
+  return `<span class="note">${off?"Esto es lo que sale en internet:":"Toca el bueno:"}</span><div class="list">${items.map((x,i)=>`<button type="button" class="row" data-bi="${i}" ${off?"disabled":""}><span class="txt"><div class="name">${esc(x.title)}</div>${x.snippet?`<div class="snip">${esc(x.snippet)}</div>`:""}<div class="code">${esc(x.src)}${x.url?" · "+esc(hostOf(x.url)):""}</div></span></button>`).join("")}</div>`;
 }
 /* pick(nombre, descripcion, botón) */
 function bindWeb(box, raw, pick){
@@ -1171,7 +1164,7 @@ async function webSearch(raw, again){
   try{ const r=await api("api_barSearch", S.tecnico.id, raw); w={raw,items:r&&r.items||[]}; }catch(err){ w={raw,items:[],err:webErr(err),net:err&&err.code==="network"}; }
   if(!S.web||S.web.raw!==raw) return;
   S.web=w; webRedraw();
-  if(!w.net&&!w.items.some(x=>x.ean!==false)) iaSearch(raw);
+  if(!w.net&&!w.items.length) iaSearch(raw);   // la IA solo si internet no saca nada
 }
 async function iaSearch(raw){
   const w=S.web; if(!w||w.raw!==raw||w.busy||(w.ia&&w.ia.busy)) return;
@@ -1208,8 +1201,8 @@ function drawEditWeb(){
     <span class="note">Se guardará con el producto, y la próxima vez que se escanee abrirá su ficha.${xavi?` · <a href="${esc("https://www.google.com/search?q="+encodeURIComponent(raw))}" target="_blank" rel="noopener">Ver en Google</a>`:""}</span>`;
   const n0=$("#e_nombre");
   if(w&&!w.busy&&!w.autoDone&&n0&&!n0.value.trim()){
-    const g=w.items[0]&&w.items[0].ean!==false?nameFromTitle(w.items[0].title):"", a=w.ia&&w.ia.item?String(w.ia.item.title).toUpperCase().slice(0,120):"";
-    if(g||a){ n0.value=g||a; w.autoDone=true; toast(`Nombre puesto ${g?"desde Google":"por la IA"}. Revísalo antes de guardar.`); }
+    const a=w.ia&&w.ia.item?String(w.ia.item.title).toUpperCase().slice(0,120):"";
+    if(a){ n0.value=a; w.autoDone=true; toast("Nombre puesto por la IA. Revísalo antes de guardar."); }
   }
   bindWeb(box, raw, (n,desc,b)=>{
     $("#e_nombre").value=n; const d=$("#e_desc"); if(d&&!d.value.trim()&&desc) d.value=desc;
@@ -1954,7 +1947,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.7";
+const APP_VERSION="2026-10-08.8";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
