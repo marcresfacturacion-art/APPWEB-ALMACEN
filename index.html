@@ -87,8 +87,10 @@ main{max-width:560px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-dire
 .prices b{font-size:18px;color:var(--fg)}
 .pill{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:3px;background:var(--surface-2);color:var(--muted);margin-left:6px;vertical-align:2px}
 .empty{padding:24px 16px;text-align:center;color:var(--muted)}
-.photo{aspect-ratio:4/3;max-width:100%;width:100%;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;overflow:hidden;font-family:var(--f-display);font-size:64px;font-weight:700;color:var(--muted)}
-.photo img{width:100%;height:100%;object-fit:cover}
+.photo{aspect-ratio:1/1;max-height:70vh;max-width:100%;width:100%;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;overflow:hidden;font-family:var(--f-display);font-size:64px;font-weight:700;color:var(--muted)}
+.photo{position:relative}.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;cursor:zoom-in}
+.thumb img{object-fit:contain}
+.imgview{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:12px}.imgview img{max-width:100%;max-height:100%;object-fit:contain}.imgview button{position:absolute;top:calc(10px + env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:0;background:#fff;color:#111;font-size:22px;font-weight:700}
 .ficha h2{margin:0;font-family:var(--f-display);font-size:30px;line-height:1.1;text-wrap:balance}
 .ficha p{margin:0;color:var(--muted)}
 .facts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -519,6 +521,12 @@ function viewSearch(){
   app.querySelectorAll("details.group").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.openGroups.add(d.dataset.g):S.openGroups.delete(d.dataset.g); }));
 }
 
+/* Tocar la foto la abre a pantalla completa, entera. */
+function openImg(src){
+  const v=document.createElement("div"); v.className="imgview"; v.innerHTML=`<img src="${String(src).replace("sz=w800","sz=w2000")}" alt=""><button type="button" aria-label="Cerrar">✕</button>`;
+  v.onclick=()=>v.remove(); document.body.appendChild(v);
+}
+document.addEventListener("click",e=>{ if(e.target&&e.target.id==="f_img") openImg(e.target.src); });
 function viewFicha(){
   const p = S.products.get(S.code);
   if(!p){
@@ -553,7 +561,7 @@ function viewFicha(){
         <button class="btn in" id="in" ${S.busy?"disabled":""}>+ Añadir</button>
       </div></div>`;
   app.innerHTML = `<section class="ficha" style="display:flex;flex-direction:column;gap:14px">
-    <div class="photo">${img?`<img src="${img}" alt="Foto de ${esc(p.nombre)}">`:esc(initials(p.nombre))}</div>
+    <div class="photo">${img?`<img src="${img}" alt="Foto de ${esc(p.nombre)}" id="f_img">`:esc(initials(p.nombre))}</div>
     <div><div class="code">${esc(p.codigo)}${p.prestamo?'<span class="pill">Préstamo</span>':''}</div><h2>${esc(p.nombre)}</h2></div>
     ${p.descripcion?`<p>${esc(p.descripcion)}</p>`:""}
     ${p.proveedor?`<p class="note" style="margin:0">Proveedor: <b>${esc(p.proveedor)}</b></p>`:""}
@@ -1976,7 +1984,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.9";
+const APP_VERSION="2026-10-08.10";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
