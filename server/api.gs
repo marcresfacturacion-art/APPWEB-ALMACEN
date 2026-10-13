@@ -119,7 +119,8 @@ function mayusculas_() {
 
 /* Técnicos (pedido de Xavi, 13-10-2026), una sola vez: un solo apellido (fuera el de la madre),
  * altas de Vanesa Cano, Rebeca Gallego y Nicusor Roman, y acceso restringido para ellos tres,
- * Vanessa Caracuel y Cristhian Serna (Xavi ya lo tenía). Las bajas no se tocan. */
+ * Vanessa Caracuel, Cristhian Serna y Luis Crespo (Xavi ya lo tenía): en la app salen como «Administrativos».
+ * Las bajas no se tocan. Todo es repetible sin efecto, así que la versión se puede subir si cambia la lista. */
 var TEC13_NOMBRES_ = {
   'carlos alberto arboleda aguilar': 'Carlos Alberto Arboleda', 'christian ricardo salinas barahona': 'Christian Ricardo Salinas',
   'cristhian andres serna salazar': 'Cristhian Andres Serna', 'duvan antonio ruiz zuniga': 'Duvan Antonio Ruiz',
@@ -129,15 +130,15 @@ var TEC13_NOMBRES_ = {
   'ruben gonzalez vilaplana': 'Rubén Gonzalez', 'vanessa caracuel ferrer': 'Vanessa Caracuel', 'xavi alvarado alonso': 'Xavi Alvarado'
 };
 var TEC13_NUEVOS_ = ['Vanesa Cano', 'Rebeca Gallego', 'Nicusor Roman'];
-var TEC13_RESTR_ = ['vanesa cano', 'rebeca gallego', 'nicusor roman', 'vanessa caracuel', 'cristhian andres serna', 'xavi alvarado'];
+var TEC13_RESTR_ = ['vanesa cano', 'rebeca gallego', 'nicusor roman', 'vanessa caracuel', 'cristhian andres serna', 'xavi alvarado', 'luis crespo'];
 function fold13_(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function tecnicos13_() {
   var props = PropertiesService.getScriptProperties();
-  if (props.getProperty('TEC_V') === '13') return;
+  if (props.getProperty('TEC_V') === '13b') return;
   var l = LockService.getScriptLock();
   if (!l.tryLock(20000)) return;
   try {
-    if (props.getProperty('TEC_V') === '13') return;
+    if (props.getProperty('TEC_V') === '13b') return;
     var all = rows_('Tecnicos');
     all.forEach(function (t) {
       var k = fold13_(t.nombre), nuevo = TEC13_NOMBRES_[k], changed = false;
@@ -151,7 +152,7 @@ function tecnicos13_() {
       append_('Tecnicos', { id: 'tec-' + Utilities.getUuid().slice(0, 6), nombre: n, activo: true, restringido: true, alta: new Date() });
     });
     SpreadsheetApp.flush();
-    props.setProperty('TEC_V', '13');
+    props.setProperty('TEC_V', '13b');
     dropCache_(false);
   } finally { l.releaseLock(); }
 }

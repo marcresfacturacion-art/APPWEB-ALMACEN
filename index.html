@@ -195,9 +195,17 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 .group .gname{flex:1}
 .group .gcount{font-family:var(--f-body);font-size:14px;font-weight:600;color:var(--muted);background:var(--surface-2);border-radius:20px;padding:2px 10px;font-variant-numeric:tabular-nums}
 .group .chev{width:20px;height:20px;transition:transform .15s}
-.group[open] .chev{transform:rotate(180deg)}
+.group[open]>summary .chev{transform:rotate(180deg)}
 .group .list{border:0;border-top:1px solid var(--line);border-radius:0}
 .group .dot{width:14px;height:14px}
+.group.room>summary{min-height:56px;font-size:18px}
+.group.room>.shelves{display:flex;flex-direction:column;gap:8px;padding:0 8px 8px}
+.group.room .group{background:var(--bg)}
+.group.room .group summary{min-height:48px;font-size:17px}
+.ricon{width:30px;height:30px;border-radius:8px;background:var(--surface-2);display:grid;place-items:center;font-size:16px;flex:none}
+.homebtns .btn{min-height:48px;font-size:15px;letter-spacing:.02em;padding:0 10px;gap:6px}
+.homebtns .btn svg{width:18px;height:18px;flex:none}
+.btn .emo{font-size:20px;line-height:1}
 .whobtn{display:flex;align-items:center;gap:6px;background:none;border:1px solid currentColor;color:inherit;border-radius:20px;padding:5px 10px;font-weight:600;font-size:14px;cursor:pointer;max-width:45%;min-width:0}
 .whobtn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .whobtn svg{width:16px;height:16px;flex:none}
@@ -234,7 +242,19 @@ form.edit .check span{flex:1;min-width:0}
 .htipo.t-devolucion{background:var(--ok);color:#fff}
 .htipo.t-recuento{background:var(--fg);color:var(--bg)}
 .hwho .com{color:var(--fg);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.destbar{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--fg);border-radius:10px;padding:10px 12px;background:var(--surface);font-size:15px}
+.nb{background:#f7f3e8;color:#1d2a33;border-radius:10px;overflow:hidden;margin-bottom:14px;box-shadow:0 2px 0 #d8d0bc,0 4px 0 #c9c0a9}
+.nbh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:#e9e1cc;padding:10px 12px 8px 54px;border-bottom:2px solid #d26b5d;font-weight:800;font-size:16px}
+.nbh span:first-letter{text-transform:uppercase}.nbh small{font-weight:600;color:#6b6a5f;font-size:13px;white-space:nowrap}
+.nbl{display:grid;grid-template-columns:48px 1fr auto;align-items:center;width:100%;min-height:56px;border:0;border-bottom:1px solid #b9cfe0;background:none;color:inherit;text-align:left;cursor:pointer;position:relative;padding:0;font:inherit}
+.nbl:last-child{border-bottom:0}
+.nbl:before{content:"";position:absolute;left:44px;top:0;bottom:0;border-left:2px solid #e3a59c}
+.nbt{font:700 13px var(--f-mono,ui-monospace,monospace);color:#6b6a5f;text-align:center;font-variant-numeric:tabular-nums}
+.nbx{padding:8px 10px;min-width:0;display:flex;flex-direction:column}
+.nbx b{font-size:15px;line-height:1.25}.nbx span{font-size:13px;color:#4f5b64}.nbx .nbd{font-family:ui-monospace,monospace;font-size:12px;color:#7a838a}
+.nbq{padding:0 12px;font:800 17px ui-monospace,monospace;white-space:nowrap}.nbq.neg{color:#c0392b}.nbq.pos{color:#1e8449}
+.nbq.tag{font:700 11px var(--f-body,system-ui);letter-spacing:.05em;text-transform:uppercase;color:#5b6670}
+.destbar{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--surface);font-size:14px;color:var(--muted)}
+.destbar b{color:var(--fg)}
 .destbar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bigyes{min-height:72px;font-size:22px}
 .sheet{display:flex;flex-direction:column;gap:10px;border:2px solid var(--fg);border-radius:12px;padding:14px;background:var(--surface)}
@@ -471,8 +491,8 @@ function drawLoginResults(){
   if(typed<LOGIN_MIN){ box.innerHTML=typed?`<p class="note">Sigue escribiendo…</p>`:""; return; }
   const m=techMatches(q.value);
   box.innerHTML = m.length
-    ? `<div class="list">${m.map(t=>`<button class="row techpick" data-tec="${esc(t.id)}"><span class="txt"><div class="name">${esc(t.nombre)}</div></span><span class="go">Entrar</span></button>`).join("")}</div>`
-    : `<div class="empty">No hay ningún técnico con ese nombre. Si eres nuevo, pide a Xavi que te añada.</div>`;
+    ? `<div class="list">${m.map(t=>`<button class="row techpick" data-tec="${esc(t.id)}"><span class="txt"><div class="name">${esc(t.nombre)}</div>${t.restringido?'<div class="code">Administrativo</div>':""}</span><span class="go">Entrar</span></button>`).join("")}</div>`
+    : `<div class="empty">No hay nadie con ese nombre. Si eres nuevo, pide a Xavi que te añada.</div>`;
   box.querySelectorAll("[data-tec]").forEach(b=>b.onclick=()=>{ const t=m.find(x=>x.id===b.dataset.tec); if(t) login(t); });
 }
 
@@ -504,6 +524,22 @@ function productRow(p){
     <span class="qty ${showLow(p)?'low':''}">${p.cantidad}</span></button>`;
 }
 
+/* Inicio: cada almacén se despliega y dentro cada estante (también los vacíos, para saber que existen).
+   Préstamos y Sin ubicación van aparte. Lo abierto se recuerda en el móvil. */
+const GROUPS_KEY="almacen_open_v2";
+function groupsLoad(){ try{ const v=JSON.parse(localStorage.getItem(GROUPS_KEY)||"null"); if(Array.isArray(v)) S.openGroups=new Set(v); }catch(e){} }
+function groupsSave(){ try{ localStorage.setItem(GROUPS_KEY,JSON.stringify([...S.openGroups])); }catch(e){} }
+const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>';
+function homeGroups(all){
+  const by=new Map(); all.forEach(p=>{ const k=locKey(p); if(!by.has(k)) by.set(k,[]); by.get(k).push(p); });
+  const open=k=>S.openGroups.has(k)?"open":"";
+  const shelf=(k,v)=>{ const items=by.get(k)||[]; return `<details class="group" data-g="${k}" ${open(k)}><summary><span class="dot" style="background:${v.color}"></span><span class="gname">${esc(v.name)}</span><span class="gcount">${items.length}</span>${CHEV}</summary><div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">Vacío</div>'}</div></details>`; };
+  const room=(key,icon)=>{ const sh=shelvesIn(key), n=sh.reduce((t,[k])=>t+(by.get(k)||[]).length,0);
+    return `<details class="group room" data-g="@${key}" ${open("@"+key)}><summary><span class="ricon" aria-hidden="true">${icon}</span><span class="gname">${ROOMS[key]}</span><span class="gcount">${n}</span>${CHEV}</summary><div class="shelves">${sh.map(([k,v])=>shelf(k,v)).join("")}</div></details>`; };
+  const flat=(k,v,icon)=>{ const items=by.get(k)||[]; if(!items.length) return "";
+    return `<details class="group room" data-g="${k}" ${open(k)}><summary><span class="ricon" aria-hidden="true">${icon}</span><span class="gname">${v.name}</span><span class="gcount">${items.length}</span>${CHEV}</summary><div class="list">${items.map(productRow).join("")}</div></details>`; };
+  return room("main","📦")+room("cb","⚡")+flat("prestamos",LOAN_LOC,"🔁")+flat("none",NO_LOC,"❔");
+}
 function viewSearch(){
   const q = S.q.trim().toLowerCase();
   const all = [...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
@@ -514,9 +550,8 @@ function viewSearch(){
   if(q) ensureCat();
   app.innerHTML = `
     ${S.destino?`<div class="destbar"><span>Para: <b>${esc(destLabel())}</b></span><button class="linkbtn" id="d_change">Cambiar</button></div>`:""}
-    <button class="btn primary block" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR</button>
-    <button class="btn block" id="scanbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14"/></svg>Código de barras</button>
-    ${S.canWrite?'<button class="btn block" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':''}
+    <button class="btn primary block bigscan" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR</button>
+    <div class="${S.canWrite?"twobtn":""} homebtns"><button class="btn${S.canWrite?"":" block"}" id="scanbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14"/></svg>Código de barras</button>${S.canWrite?'<button class="btn" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':''}</div>
     <div class="search"><input id="q" type="search" inputmode="search" placeholder="Buscar en el almacén y el catálogo" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
     ${!S.loaded?loaderHtml("Cargando inventario…"):
       !all.length?'<div class="list"><div class="empty">Aún no hay productos. Pulsa «Nuevo producto» para dar de alta el primero.</div></div>':
@@ -525,19 +560,11 @@ function viewSearch(){
           :bk?`<div class="label">Código de barras</div><div class="list"><div class="empty">El código de barras ${esc(S.q.trim())} aún no está en ningún producto.</div></div><button class="btn block" id="tobar">¿De qué producto es?</button>`
           :`<div class="label">0 resultados</div><div class="list"><div class="empty">Ningún producto coincide con «${esc(S.q)}».</div></div>`)+`
         ${catBlock(cat)}`:
-      `<div class="label">Productos por estante · ${all.length}</div>
-       <div class="groups">${[["@main"],...shelvesIn("main"),["@cb"],...shelvesIn("cb"),["@other"],["prestamos",LOAN_LOC],["none",NO_LOC]].map(([k,v],i,arr)=>{
-         if(k[0]==="@"){ const next=arr.slice(i+1); const end=next.findIndex(([x])=>x[0]==="@"); const some=(end<0?next:next.slice(0,end)).some(([x])=>all.some(p=>locKey(p)===x)); return some&&k!=="@other"?`<div class="label roomlbl">${ROOMS[k.slice(1)]}</div>`:""; }
-         const items=all.filter(p=>locKey(p)===k);
-         if(!items.length) return "";
-         return `<details class="group" data-g="${k}" ${S.openGroups.has(k)?"open":""}><summary><span class="dot" style="background:${v.color}"></span><span class="gname">${v.name}</span><span class="gcount">${items.length}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary><div class="list">${items.map(productRow).join("")}</div></details>`;
-       }).join("")}</div>`}
+      `<div class="label">Productos · ${all.length}</div>
+       <div class="groups">${homeGroups(all)}</div>`}
     ${canRestricted()&&lowList().length?`<button class="alert" id="tolow">⚠ ${lowList().length} producto${lowList().length===1?"":"s"} por debajo del mínimo</button>`:""}
     ${myLoans().length?`<div><div class="label" style="margin-bottom:6px">Lo que tienes prestado</div><div class="list">${myLoans().map(l=>`<div class="loan"><span class="txt"><div class="name">${esc(l.producto)}</div><div class="sub">${since(l.salida)}</div></span><button class="btn" data-ret="${esc(l.id)}">Devolver</button></div>`).join("")}</div></div>`:""}
-    <div class="links">
-      <button class="btn" id="tomap">Mapa</button>
-    </div>
-    ${canRestricted()?`<button class="btn block" id="tohist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Acceso restringido</button>`:""}`;
+    <div class="${canRestricted()?"twobtn":""} homebtns"><button class="btn${canRestricted()?"":" block"}" id="tomap"><span class="emo" aria-hidden="true">🏭</span>Mapa</button>${canRestricted()?`<button class="btn" id="tohist" aria-label="Acceso restringido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Restringido</button>`:""}</div>`;
   const qi=$("#q");
   qi.addEventListener("input",()=>{ S.q=qi.value; const pos=qi.selectionStart; viewSearch(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
   qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value))||(isBarText(qi.value)&&prodByBar(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
@@ -551,7 +578,7 @@ function viewSearch(){
   const dc=$("#d_change"); if(dc) dc.onclick=changeDest;
   const tn=$("#tonew"); if(tn) tn.onclick=()=>go("editar",{editCode:null});
   app.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>go("catitem",{catSku:b.dataset.cat}));
-  app.querySelectorAll("details.group").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.openGroups.add(d.dataset.g):S.openGroups.delete(d.dataset.g); }));
+  app.querySelectorAll("details[data-g]").forEach(d=>d.addEventListener("toggle",e=>{ if(e.target!==d) return; d.open?S.openGroups.add(d.dataset.g):S.openGroups.delete(d.dataset.g); groupsSave(); }));
 }
 
 /* Tocar la foto la abre a pantalla completa, entera. */
@@ -1435,7 +1462,7 @@ function viewHist(){
   const tecs=[...new Set([...S.techs.map(t=>t.nombre),...S.hist.map(m=>m.tecnico).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,"es"));
   $("#adm").innerHTML = `
     <div class="filters">
-      <select id="h_tec" aria-label="Técnico"><option value="">Todos los técnicos</option>${tecs.map(t=>`<option ${S.hf.tec===t?"selected":""}>${esc(t)}</option>`).join("")}</select>
+      <select id="h_tec" aria-label="Persona"><option value="">Todas las personas</option>${tecs.map(t=>`<option ${S.hf.tec===t?"selected":""}>${esc(t)}</option>`).join("")}</select>
       <select id="h_tipo" aria-label="Tipo"><option value="">Todo</option>${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${S.hf.tipo===k?"selected":""}>${v}</option>`).join("")}</select>
       <input id="h_q" type="search" placeholder="Producto, código o comunidad" value="${esc(S.hf.q)}" aria-label="Buscar">
     </div>
@@ -1456,14 +1483,18 @@ function drawHist(){
   const el=$("#h_list"); if(!el) return;
   const rows=histFiltered();
   if(!S.hist.length){ el.innerHTML='<div class="list"><div class="empty">Todavía no hay movimientos (o se están cargando). Aquí aparecerá cada vez que alguien saque o ingrese material.</div></div>'; return; }
+  /* Cuaderno: cada día es una hoja y cada movimiento una línea (hora, producto, quién y para qué, cantidad). */
+  const shown=rows.slice().sort((a,b)=>Number(b.fecha)-Number(a.fecha)).slice(0,300), days=[];
+  shown.forEach(m=>{ const d=new Date(m.fecha), k=d.toDateString(); let g=days[days.length-1]; if(!g||g.k!==k){ g={k,d,items:[]}; days.push(g); } g.items.push(m); });
+  const dayName=d=>{ const t=new Date(), y=new Date(); y.setDate(t.getDate()-1); const base=d.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})+(d.getFullYear()!==t.getFullYear()?" de "+d.getFullYear():""); return d.toDateString()===t.toDateString()?"Hoy · "+base:d.toDateString()===y.toDateString()?"Ayer · "+base:base; };
   el.innerHTML = `<div class="label" style="margin-bottom:6px">${rows.length} movimiento${rows.length===1?"":"s"}</div>
-    <div class="list">${rows.length?rows.slice(0,300).map(m=>{
-      const d=Number(m.delta)||0;
-      const qty = m.tipo==="edicion" ? esc(m.detalle||"") : `<b class="d ${d<0?'neg':'pos'}">${d>0?"+":""}${d}</b> · quedan ${m.despues}`;
-      return `<button class="hrow" data-open="${esc(m.codigo)}">
-        <span class="htipo t-${esc(m.tipo)}">${esc(TIPOS[m.tipo]||m.tipo)}</span>
-        <span class="txt"><div class="name">${esc(m.producto||m.codigo)}</div><div class="code">${esc(m.codigo)} · ${qty}</div></span>
-        <span class="hwho"><b>${esc(m.tecnico||"—")}</b>${m.comunidad?`<span class="com">${esc(m.comunidad)}</span>`:""}<span>${fmtDate(m.fecha)}</span></span></button>`;}).join(""):'<div class="empty">Ningún movimiento coincide con el filtro.</div>'}</div>
+    ${rows.length?days.map(g=>`<section class="nb"><header class="nbh"><span>${esc(dayName(g.d))}</span><small>${g.items.length} movimiento${g.items.length===1?"":"s"}</small></header>${g.items.map(m=>{
+      const d=Number(m.delta)||0, num=["salida","entrada","recuento","ajuste","alta"].includes(m.tipo)&&d;
+      const who=[m.tecnico||"—", m.comunidad?[m.empresa,m.comunidad].filter(Boolean).join(" · "):(m.destino==="almacen"?"Almacén":"")].filter(Boolean).join(" · ");
+      const extra=m.tipo==="edicion"?(m.detalle||""):num&&m.despues!==undefined&&m.despues!==""?`quedan ${m.despues}`:"";
+      return `<button class="nbl" data-open="${esc(m.codigo)}"><span class="nbt">${new Date(m.fecha).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span>
+        <span class="nbx"><b>${esc(m.producto||m.codigo)}</b><span>${esc(who)}</span>${extra?`<span class="nbd">${esc(m.codigo)} · ${esc(extra)}</span>`:`<span class="nbd">${esc(m.codigo)}</span>`}</span>
+        <span class="nbq ${num?(d<0?"neg":"pos"):"tag t-"+esc(m.tipo)}">${num?(d>0?"+":"−")+Math.abs(d):esc(TIPOS[m.tipo]||m.tipo)}</span></button>`;}).join("")}</section>`).join(""):'<div class="list"><div class="empty">Ningún movimiento coincide con el filtro.</div></div>'}
     ${rows.length>300?'<p class="note">Se muestran los 300 más recientes. Descarga el CSV para verlos todos.</p>':""}`;
 }
 async function exportCsv(){
@@ -1624,8 +1655,9 @@ async function saveRecount(){
 function viewTechs(){
   const list=S.techs.filter(t=>t.activo!==false).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
   $("#adm").innerHTML = `
-    <p class="note">Estos nombres son los que aparecen al entrar en la app.</p>
-    <div class="list">${list.length?list.map(t=>`<div class="trow"><span class="name">${esc(t.nombre)}${t.prueba?'<span class="pill">Prueba</span>':""}${t.restringido?'<span class="pill">Acceso restringido</span>':""}</span>${t.restringido?"":`<button class="linkbtn danger" data-del="${esc(t.id)}">Quitar</button>`}</div>`).join(""):'<div class="empty">No hay técnicos. Añade el primero abajo.</div>'}</div>
+    <p class="note">Estos nombres son los que aparecen al entrar en la app. Los administrativos tienen acceso restringido.</p>
+    ${[["Administrativos",list.filter(t=>t.restringido)],["Técnicos",list.filter(t=>!t.restringido)]].map(([h,l])=>`<div class="label">${h} · ${l.length}</div>
+    <div class="list">${l.length?l.map(t=>`<div class="trow"><span class="name">${esc(t.nombre)}${t.prueba?'<span class="pill">Prueba</span>':""}</span>${t.restringido?"":`<button class="linkbtn danger" data-del="${esc(t.id)}">Quitar</button>`}</div>`).join(""):'<div class="empty">Nadie todavía.</div>'}</div>`).join("")}
     <div id="t_confirm" class="stock" hidden></div>
     <form class="search" id="t_add" novalidate><input id="t_name" placeholder="Nombre y apellido" autocomplete="off" aria-label="Nombre del técnico"><button class="btn primary" type="submit">Añadir</button></form>
     <button class="btn block" id="t_pw">Cambiar contraseña</button>`;
@@ -2086,7 +2118,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-08.14";
+const APP_VERSION="2026-10-13.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
@@ -2118,7 +2150,7 @@ async function poll(){
 (async function boot(){
   render();
   if(BOOT.p) S.pending=normCode(BOOT.p);
-  catLoad();
+  catLoad(); groupsLoad();
   const cached=IN_GAS?null:loadCache();
   if(cached&&cached.products&&cached.techs){ applyData(cached); render(); }
   /* First visit on this phone: ask for the technicians on their own so the name search works while the rest loads. */
