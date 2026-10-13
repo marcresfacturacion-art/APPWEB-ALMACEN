@@ -279,6 +279,7 @@ form.edit .check span{flex:1;min-width:0}
 .shgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .shtile{min-height:58px;border-radius:12px;border:3px solid transparent;background:var(--c);color:#fff;font-weight:700;font-size:13px;text-shadow:0 1px 2px rgba(0,0,0,.7);cursor:pointer;padding:4px}
 .shtile b{display:inline-block;background:rgba(0,0,0,.5);border-radius:6px;padding:2px 6px;text-shadow:none;line-height:1.2}
+.posgrid{display:grid;grid-template-columns:1fr;gap:8px}.posgrid.three{grid-template-columns:1fr 1fr 1fr}.posgrid .btn{min-height:56px;font-size:16px;padding:0 6px}.posgrid .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
 .shtile.sel{border-color:var(--fg);box-shadow:0 0 0 3px var(--accent)}
 .photo.nophoto{aspect-ratio:auto;height:120px;font-size:40px}
 .bcbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:2px}.bcbox b{font-family:var(--f-mono);font-size:24px;letter-spacing:.08em}
@@ -1439,6 +1440,10 @@ function viewEdit(){
     const cantidad=Math.max(0,Math.floor(Number($("#e_cant").value)||0));
     const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value),nivel:$("#e_niv").value,lado:$("#e_lado").value};
     if($("#e_min")) fields.minimo=Math.max(0,Math.floor(Number($("#e_min").value)||0));
+    if(!p&&!fields.prestamo){   // a new product must say shelf, height and side
+      const miss=!SHELVES[fields.ubicacion]?["#e_ubic","Elige el estante."]:!fields.nivel?["#e_niv","Elige la altura (balda)."]:!fields.lado?["#e_lado","Elige el lado."]:null;
+      if(miss){ toast(miss[1]); $(miss[0]).focus(); return; }
+    }
     const again = !!(e.submitter && e.submitter.dataset.again);
     S.busy=true; setBusy(true);
     try{
@@ -1476,13 +1481,29 @@ function viewEdit(){
 function startAlta(pre){
   if(!canAlta()){ toast("Solo los administrativos pueden dar de alta productos."); return; }
   const keep=S.alta&&S.alta.ubic||"";
-  S.alta={step:1, foto:"", fotoB64:"", bar:"", nombre:"", desc:"", cant:1, ubic:keep, ...(pre||{})};
+  S.alta={step:1, foto:"", fotoB64:"", bar:"", nombre:"", desc:"", cant:1, ubic:keep, niv:0, lado:"", ...(pre||{})};
   if(S.alta.bar) webSearch(S.alta.bar);   // the names are ready by the time step 2 opens
   go("alta");
 }
 function altaShelves(sel){
   const tile=(k,v)=>`<button type="button" class="shtile${sel===k?" sel":""}" data-sh="${k}" style="--c:${v.color}" aria-pressed="${sel===k}"><b>${esc(v.name.replace("Estante ",""))}</b></button>`;
-  return Object.entries(ROOMS).map(([rk,rn])=>`<div class="label">${rn}</div><div class="shgrid">${shelvesIn(rk).map(([k,v])=>tile(k,v)).join("")}</div>`).join("")+`<div class="shgrid">${tile("",NO_LOC)}</div>`;
+  return Object.entries(ROOMS).map(([rk,rn])=>`<div class="label">${rn}</div><div class="shgrid">${shelvesIn(rk).map(([k,v])=>tile(k,v)).join("")}</div>`).join("");
+}
+/* New products must say shelf, height and side (Xavi, 2026-10-13). */
+function altaPos(a){
+  if(!SHELVES[a.ubic]) return `<p class="note">Elige el estante y después la altura y el lado.</p>`;
+  const n=nBaldas(a.ubic), lv=[]; for(let i=n;i>=1;i--) lv.push(i);
+  return `<div class="label">Altura · obligatorio</div>
+    <div class="posgrid">${lv.map(i=>`<button type="button" class="btn" data-niv="${i}" aria-pressed="${a.niv===i}">${nivName(i,n)}</button>`).join("")}</div>
+    <div class="label">Lado · obligatorio</div>
+    <div class="posgrid three">${Object.entries(LADOS).map(([k,v])=>`<button type="button" class="btn" data-lado="${k}" aria-pressed="${a.lado===k}">${v}</button>`).join("")}</div>
+    ${a.niv||a.lado?rack3d(SHELVES[a.ubic].color, a.niv, n, a.lado):""}`;
+}
+function drawAltaPos(){
+  const a=S.alta, box=$("#a_pos"); if(!a||!box) return;
+  box.innerHTML=altaPos(a);
+  box.querySelectorAll("[data-niv]").forEach(b=>b.onclick=()=>{ a.niv=+b.dataset.niv; drawAltaPos(); });
+  box.querySelectorAll("[data-lado]").forEach(b=>b.onclick=()=>{ a.lado=b.dataset.lado; drawAltaPos(); });
 }
 function altaSugs(txt){
   const words=qWords(txt); if(fold(txt).replace(/\s+/g,"").length<3) return "";
@@ -1553,12 +1574,14 @@ function viewAlta(){
       <p class="note" style="margin:0"><b>${esc(String(a.nombre).toLocaleUpperCase("es-ES"))}</b></p>
       <div class="bigstep"><button type="button" id="a_dec" aria-label="Menos">−</button><input id="a_cant" type="number" inputmode="numeric" min="0" value="${a.cant}" aria-label="Cantidad"><button type="button" id="a_inc" aria-label="Más">+</button></div>
       ${altaShelves(a.ubic)}
+      <div id="a_pos" class="alta"></div>
       <button class="btn primary block" id="a_save">✓ Guardar</button>
       <button class="btn block" id="a_more">Guardar y completar la ficha</button>
       <button class="btn block" id="a_back">Atrás</button></section>`;
     const c=$("#a_cant"), setC=v=>{ a.cant=Math.max(0,Math.floor(Number(v)||0)); c.value=a.cant; };
     c.onchange=()=>setC(c.value); $("#a_dec").onclick=()=>setC(a.cant-1); $("#a_inc").onclick=()=>setC(a.cant+1);
-    app.querySelectorAll("[data-sh]").forEach(b=>b.onclick=()=>{ a.ubic=b.dataset.sh; app.querySelectorAll("[data-sh]").forEach(x=>{ x.classList.toggle("sel",x===b); x.setAttribute("aria-pressed",String(x===b)); }); });
+    app.querySelectorAll("[data-sh]").forEach(b=>b.onclick=()=>{ a.ubic=b.dataset.sh; app.querySelectorAll("[data-sh]").forEach(x=>{ x.classList.toggle("sel",x===b); x.setAttribute("aria-pressed",String(x===b)); }); if(a.niv>nBaldas(a.ubic)) a.niv=0; drawAltaPos(); });
+    drawAltaPos();
     $("#a_save").onclick=()=>altaSave(false);
     $("#a_more").onclick=()=>altaSave(true);
     $("#a_back").onclick=()=>{ a.step=2; viewAlta(); };
@@ -1576,15 +1599,19 @@ function viewAlta(){
 async function altaSave(more){
   const a=S.alta; if(!a||S.busy) return;
   const nombre=String(a.nombre||"").trim().toLocaleUpperCase("es-ES"); if(!nombre){ a.step=2; viewAlta(); return; }
+  const miss=!SHELVES[a.ubic]?"Elige el estante.":!a.niv?"Elige la altura: en qué balda está.":!a.lado?"Elige el lado: izquierda, centro o derecha.":"";
+  if(miss){ toast(miss); const box=$(SHELVES[a.ubic]?"#a_pos":".shgrid"); if(box) box.scrollIntoView({behavior:"smooth",block:"center"}); return; }
   S.busy=true; app.querySelectorAll("#a_save,#a_more").forEach(b=>b.disabled=true);
   let r=null;
   try{
     for(let i=0;i<3&&!r;i++){
-      try{ r=await api("api_saveProduct", S.tecnico.id, {codigo:nextCode(), nombre, descripcion:String(a.desc||"").toLocaleUpperCase("es-ES"), ubicacion:a.ubic||"", foto:a.foto||"", prestamo:false, proveedor:"", cantidad:a.cant}, true); }
+      try{ r=await api("api_saveProduct", S.tecnico.id, {codigo:nextCode(), nombre, descripcion:String(a.desc||"").toLocaleUpperCase("es-ES"), ubicacion:a.ubic||"", foto:a.foto||"", prestamo:false, proveedor:"", cantidad:a.cant, nivel:a.niv, lado:a.lado}, true); }
       catch(err){ if(err&&err.code==="exists"){ await poll(); continue; } throw err; }
     }
     if(!r) throw {code:"busy"};
     S.products.set(r.product.codigo, r.product);
+    if(r.product.nivel===undefined) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
+    else { if(r.product.nivel) S.niv[r.product.codigo]=r.product.nivel; if(r.product.lado) S.lados[r.product.codigo]=r.product.lado; }
     S.busy=false;
     if(a.bar) await linkBar(a.bar, r.product.codigo);
     if(more){ go("editar",{editCode:r.product.codigo}); return; }
@@ -2375,7 +2402,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.8";
+const APP_VERSION="2026-10-13.9";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
