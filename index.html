@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Almacén Marcres</title>
 <meta name="description" content="Inventario del almacén de Marcres y Rivagua: escanear, sacar y meter material.">
-<meta name="theme-color" content="#1597dc">
+<meta name="theme-color" content="#184595">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preload" as="image" href="logo-marcres.png">
 <link rel="preload" as="image" href="logo-rivagua.png">
@@ -17,21 +17,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: one-column phone app, sticky header, big touch targets; Marcres brand: celeste and white (logo blue ~#24adfc, deepened for text contrast) */
+/* Layout: one-column phone app, sticky header, big touch targets; same palette as the Marcres partes app (blue #184595 on light grey) so technicians see one look */
 :root{
-  --bg:#f4fbff; --surface:#def1fc; --surface-2:#c8e7fa; --fg:#0d2a3d; --muted:#45606f; --line:#a7d3ee;
-  --accent:#1597dc; --accent-fg:#ffffff; --brand:#1597dc; --brand-fg:#ffffff; --danger:#c8372d; --ok:#2f8a4e;
+  --bg:#F1F4F9; --surface:#FFFFFF; --surface-2:#EEF2F8; --fg:#0F1115; --muted:#59616E; --line:#D5DDE9;
+  --accent:#184595; --accent-fg:#ffffff; --brand:#184595; --brand-fg:#ffffff; --danger:#8B1A1A; --ok:#2D6A4F; color-scheme:light;
   --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff; --cb-lavanda:#c3b1f0; --cb-granate:#8e1b45;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0b1a24; --surface:#12293a; --surface-2:#1b3a51; --fg:#e4f3fd; --muted:#9bb9cc; --line:#28495f;
-  --accent:#3db3f0; --accent-fg:#06202f; --brand:#1478b0; --brand-fg:#ffffff; --danger:#ef6157; --ok:#4cbc72; --sh-negro:#c9d2db; --sh-gris:#7d8995; --sh-loan:#a98bf0; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0b1a24; --surface:#12293a; --surface-2:#1b3a51; --fg:#e4f3fd; --muted:#9bb9cc; --line:#28495f;
-  --accent:#3db3f0; --accent-fg:#06202f; --brand:#1478b0; --brand-fg:#ffffff; --danger:#ef6157; --ok:#4cbc72; --sh-negro:#c9d2db; --sh-gris:#7d8995; --sh-loan:#a98bf0; color-scheme:dark}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--f-body);font-size:16px;line-height:1.45}
 *{box-sizing:border-box}
@@ -50,11 +44,11 @@ a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;ali
 .top h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #e_nombre,#e_desc,#e_prov{text-transform:uppercase}
 .rack{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
-.row.sel{outline:3px solid var(--accent,#1597dc)}
+.row.sel{outline:3px solid var(--accent,#184595)}
 #e_barbox .name,#b_web .name{white-space:normal;overflow:visible;text-overflow:clip}
 #e_barbox .snip,#b_web .snip{font-size:13px;color:var(--muted);margin-top:2px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .webrest .row{opacity:.75}
-.best{display:flex;flex-direction:column;gap:6px;background:var(--bg);border:2px solid var(--brand,#1597dc);border-radius:12px;padding:12px}.best .name{font-weight:700;font-size:17px;white-space:normal}.best .code{font-size:13px;color:var(--muted)}
+.best{display:flex;flex-direction:column;gap:6px;background:var(--bg);border:2px solid var(--brand,#184595);border-radius:12px;padding:12px}.best .name{font-weight:700;font-size:17px;white-space:normal}.best .code{font-size:13px;color:var(--muted)}
 #e_barbox .list{min-width:0}
 .top h1.long{font-size:15px;letter-spacing:.02em;white-space:normal;line-height:1.15}
 .top .tag{background:var(--brand-fg);color:var(--brand);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:2px 8px;border-radius:3px}
@@ -62,7 +56,7 @@ a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;ali
 .iconbtn svg{width:24px;height:24px}
 main{max-width:560px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-direction:column;gap:16px}
 .label{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 18px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 18px;border-radius:8px;border:2px solid var(--accent);background:var(--surface);color:var(--accent);font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
 .btn svg{width:22px;height:22px}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .btn.block{width:100%}
@@ -2318,7 +2312,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.3";
+const APP_VERSION="2026-10-13.4";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
