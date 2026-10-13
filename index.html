@@ -709,8 +709,16 @@ async function takeNew(p){
 }
 
 /* ---------- Destino: obligatorio tras elegir el nombre ---------- */
-function destLabel(){ const d=S.destino; if(!d) return "—"; return d.tipo==="almacen"?"Almacén":`${d.comunidad} (${d.empresa})`; }
-function destFields(){ const d=S.destino; if(!d) return {}; return d.tipo==="almacen"?{destino:"almacen",empresa:"",comunidad:"Almacén"}:{destino:"comunidad",empresa:d.empresa,comunidad:d.comunidad}; }
+/* Company vehicles, from «VEHICULOS GRUPO MARCRES.xlsx» in the Marcres Drive (2026-10-13). */
+const VANS=[
+  ["4006 FVK","Peugeot Partner","Marcres"],["4054 DFP","Nissan Primastar (furgoneta grande)","Rivagua"],["6209 DZV","Citroën C4","Marcres"],
+  ["2247 DWB","Renault Kangoo","Rivagua"],["5808 DKS","Citroën Berlingo","Marcres"],["7668 CPM","Citroën Berlingo","Marcres"],
+  ["9434 DVZ","Opel Combo","Marcres"],["9084 JTP","Mercedes-Benz","Soltec"],["9410 JRS","Opel Astra","Noemol"],
+  ["5795 CCV","Seat Inca","Marcres"],["A-6833-DZ","Peugeot 206","Marcres"],["4306 DFR","Citroën Berlingo","Marcres"]
+].map(([matricula,modelo,empresa])=>({matricula,modelo,empresa}));
+const plateKey = t => String(t||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+function destLabel(){ const d=S.destino; if(!d) return "—"; return d.tipo==="almacen"?"Almacén":d.tipo==="furgoneta"?`Furgoneta ${d.matricula}`:`${d.comunidad} (${d.empresa})`; }
+function destFields(){ const d=S.destino; if(!d) return {}; return d.tipo==="almacen"?{destino:"almacen",empresa:"",comunidad:"Almacén"}:d.tipo==="furgoneta"?{destino:"furgoneta",empresa:d.empresa,comunidad:d.comunidad}:{destino:"comunidad",empresa:d.empresa,comunidad:d.comunidad}; }
 function changeDest(){ S.destStep="q1"; S.destNew=false; S.comunidad=""; go("destino"); }
 function exactClient(){ const i=$("#pk_com"); if(!i||!S.empresa) return null; const q=fold(i.value); return q?S.clientes.find(c=>fold(c.nombre)===q&&(!c.empresa||c.empresa===S.empresa))||null:null; }
 function finishDest(d){
@@ -721,19 +729,29 @@ function finishDest(d){
 }
 function viewDest(){
   const st=S.destStep||"q1";
-  const yesNo=`<div class="seg"><button class="btn primary bigyes" id="d_si">Sí</button><button class="btn bigyes" id="d_no">No</button></div>`;
   app.innerHTML = `<section class="login">
-    ${st==="q1"?`<h2>¿Es para una comunidad?</h2>${yesNo}`:
-      st==="alm"?`<h2>¿Es para almacén?</h2>${yesNo}`:
+    ${st==="q1"?`<h2>¿Para qué es?</h2>
+       <button class="choice" id="d_com"><span>🏢</span>Para una comunidad</button>
+       <button class="choice" id="d_alm"><span>📦</span>Para el almacén</button>
+       <button class="choice" id="d_van"><span>🚐</span>Para una furgoneta</button>`:
+      st==="van"?`<h2>¿Qué furgoneta?</h2>
+       <label class="field"><span class="label">Matrícula</span><input id="v_q" autocomplete="off" autocapitalize="characters" placeholder="Escribe la matrícula, p. ej. 4006"></label>
+       <div class="list" id="v_list"></div>
+       <button class="linkbtn" id="d_back">Atrás</button>`:
       `<h2>¿Para qué comunidad?</h2>${pickerHtml("Comunidad o cliente")}
        <button class="btn primary block" id="d_ok" disabled>Continuar</button>
        <button class="linkbtn" id="d_back">Atrás</button>`}
     ${S.pending?`<p class="note">Después se abrirá el producto <b>${esc(S.pending)}</b>.</p>`:""}
   </section>`;
-  if(st==="q1"){ $("#d_si").onclick=()=>{ S.destStep="com"; viewDest(); setTimeout(()=>{const i=$("#pk_com"); if(i) i.focus();},50); }; $("#d_no").onclick=()=>{ S.destStep="alm"; viewDest(); }; return; }
-  if(st==="alm"){ $("#d_si").onclick=()=>finishDest({tipo:"almacen"}); $("#d_no").onclick=()=>{ S.destStep="q1"; viewDest(); }; return; }
-  bindPicker();
+  if(st==="q1"){
+    $("#d_com").onclick=()=>{ S.destStep="com"; viewDest(); setTimeout(()=>{const i=$("#pk_com"); if(i) i.focus();},50); };
+    $("#d_alm").onclick=()=>finishDest({tipo:"almacen"});
+    $("#d_van").onclick=()=>{ S.destStep="van"; viewDest(); setTimeout(()=>{const i=$("#v_q"); if(i) i.focus();},50); };
+    return;
+  }
   $("#d_back").onclick=()=>{ S.destStep="q1"; viewDest(); };
+  if(st==="van"){ const i=$("#v_q"); i.oninput=drawVans; drawVans(); return; }
+  bindPicker();
   $("#d_ok").onclick=()=>{
     const typed=($("#pk_com").value||"").trim(), ex=exactClient();
     if(!S.empresa){ toast("Elige la empresa: Marcres o Rivagua."); return; }
@@ -742,6 +760,18 @@ function viewDest(){
     finishDest({tipo:"comunidad",empresa:S.empresa,comunidad:ex?ex.nombre:typed});
   };
 }
+/* Vehicle list filtered by what is typed (ignores spaces and dashes); a plate not on the list can still be used. */
+function drawVans(){
+  const box=$("#v_list"), i=$("#v_q"); if(!box||!i) return;
+  const raw=i.value.trim(), q=plateKey(raw), words=fold(raw).split(/\s+/).filter(Boolean);
+  const hits=VANS.filter(v=>!q||plateKey(v.matricula).includes(q)||words.every(w=>fold(v.modelo+" "+v.empresa).includes(w)));
+  box.innerHTML = hits.map(v=>`<button type="button" class="row" data-van="${esc(v.matricula)}"><span class="txt"><div class="name">🚐 ${esc(v.matricula)}</div><div class="sub">${esc(v.modelo)} · ${esc(v.empresa)}</div></span></button>`).join("")
+    + (!hits.length&&q.length>=4?`<button type="button" class="btn block" id="v_other">Usar la matrícula «${esc(raw.toUpperCase())}»</button>`:"")
+    + (!hits.length&&q.length<4?'<div class="empty">No hay ninguna furgoneta con esa matrícula.</div>':"");
+  box.querySelectorAll("[data-van]").forEach(b=>b.onclick=()=>{ const v=VANS.find(x=>x.matricula===b.dataset.van); pickVan(v.matricula,v.empresa); });
+  const o=$("#v_other"); if(o) o.onclick=()=>pickVan(raw.toUpperCase(),"");
+}
+function pickVan(matricula,empresa){ finishDest({tipo:"furgoneta",matricula,empresa,comunidad:`Furgoneta ${matricula}`}); }
 function updateDestOk(){ const b=$("#d_ok"); if(!b) return; const typed=($("#pk_com")?.value||"").trim(); b.disabled=!(S.empresa&&(exactClient()||(S.destNew&&typed))); }
 
 /* Empresa + comunidad picker used by the destination step. */
@@ -2312,7 +2342,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.4";
+const APP_VERSION="2026-10-13.5";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

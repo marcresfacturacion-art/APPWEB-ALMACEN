@@ -133,6 +133,7 @@ function tech_(id) {
 function dest_(d) {
   d = d || {};
   if (d.tipo === 'almacen') return { destino: 'almacen', empresa: '', comunidad: 'Almacén' };
+  if (d.tipo === 'furgoneta') return { destino: 'furgoneta', empresa: str_(d.empresa, 40), comunidad: str_(d.comunidad || ('Furgoneta ' + str_(d.matricula, 20)), 200) };
   return { destino: 'comunidad', empresa: str_(d.empresa, 40), comunidad: str_(d.comunidad, 200) };
 }
 function logMove_(m, t, d) {
