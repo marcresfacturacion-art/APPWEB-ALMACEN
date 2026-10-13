@@ -148,6 +148,7 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
 /* Pantalla de carga: el logo de Marcres aparece, gira y se va; entra el de Rivagua igual; y otra vez, hasta que carga. */
 .loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px 16px;min-height:42vh;color:var(--muted);text-align:center}
 .loader.small{min-height:0;padding:14px 8px;gap:8px}
+#veil{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .25s}#veil[hidden]{display:none}#veil.out{opacity:0}#veil .loader{min-height:0}
 .lspin{position:relative;width:96px;height:96px;perspective:600px}
 .loader.small .lspin{width:56px;height:56px}
 .lspin img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;animation:logoSpin 3.2s ease-in-out infinite both}
@@ -464,7 +465,19 @@ const fmtDate = t => new Date(t).toLocaleString("es-ES",{day:"2-digit",month:"2-
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,3000); }
 
 const OPEN_VIEWS = new Set(["login","admin"]);
+/* Every change of screen shows the Marcres/Rivagua logo animation for 2 s on top (the user wants it to feel like it loads). */
+const VEIL_MS = window.__NO_VEIL ? 0 : 2000;
+let veilT=null;
+function veil(){
+  if(!VEIL_MS) return;
+  let v=$("#veil");
+  if(!v){ v=document.createElement("div"); v.id="veil"; v.innerHTML=loaderHtml("Cargando…"); document.body.appendChild(v); }
+  v.classList.remove("out"); v.hidden=false;
+  clearTimeout(veilT);
+  veilT=setTimeout(()=>{ v.classList.add("out"); veilT=setTimeout(()=>{ v.hidden=true; },250); },VEIL_MS);
+}
 function go(view, extra={}){
+  const from=S.view, fromCode=S.code;
   if (S.unMoves && !(view==="ficha" && extra.code===S.code)) { S.unMoves(); S.unMoves=null; S.moves=[]; }
   if (!S.tecnico && !OPEN_VIEWS.has(view)) { if(view==="ficha"&&extra.code) S.pending=extra.code; view="login"; extra={}; }
   if (S.tecnico && !S.destino && view!=="destino" && view!=="login") { if(view==="ficha"&&extra.code) S.pending=extra.code; view="destino"; extra={}; }
@@ -472,6 +485,7 @@ function go(view, extra={}){
   S.prefill=null; S.newBar=null; S.editBar=null;
   Object.assign(S, {view}, extra);
   if (view==="ficha") watchMoves(S.code);
+  if (view!==from || (view==="ficha" && S.code!==fromCode)) veil();
   render(); window.scrollTo(0,0);
 }
 
@@ -744,12 +758,12 @@ function viewDest(){
     ${S.pending?`<p class="note">Después se abrirá el producto <b>${esc(S.pending)}</b>.</p>`:""}
   </section>`;
   if(st==="q1"){
-    $("#d_com").onclick=()=>{ S.destStep="com"; viewDest(); setTimeout(()=>{const i=$("#pk_com"); if(i) i.focus();},50); };
+    $("#d_com").onclick=()=>{ veil(); S.destStep="com"; viewDest(); setTimeout(()=>{const i=$("#pk_com"); if(i) i.focus();},50); };
     $("#d_alm").onclick=()=>finishDest({tipo:"almacen"});
-    $("#d_van").onclick=()=>{ S.destStep="van"; viewDest(); setTimeout(()=>{const i=$("#v_q"); if(i) i.focus();},50); };
+    $("#d_van").onclick=()=>{ veil(); S.destStep="van"; viewDest(); setTimeout(()=>{const i=$("#v_q"); if(i) i.focus();},50); };
     return;
   }
-  $("#d_back").onclick=()=>{ S.destStep="q1"; viewDest(); };
+  $("#d_back").onclick=()=>{ veil(); S.destStep="q1"; viewDest(); };
   if(st==="van"){ const i=$("#v_q"); i.oninput=drawVans; drawVans(); return; }
   bindPicker();
   $("#d_ok").onclick=()=>{
@@ -2342,7 +2356,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.5";
+const APP_VERSION="2026-10-13.6";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
