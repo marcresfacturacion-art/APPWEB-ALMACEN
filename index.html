@@ -253,6 +253,41 @@ form.edit .check span{flex:1;min-width:0}
 .nbx b{font-size:15px;line-height:1.25}.nbx span{font-size:13px;color:#4f5b64}.nbx .nbd{font-family:ui-monospace,monospace;font-size:12px;color:#7a838a}
 .nbq{padding:0 12px;font:800 17px ui-monospace,monospace;white-space:nowrap}.nbq.neg{color:#c0392b}.nbq.pos{color:#1e8449}
 .nbq.tag{font:700 11px var(--f-body,system-ui);letter-spacing:.05em;text-transform:uppercase;color:#5b6670}
+.hello{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:.02em}
+.giant{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;min-height:118px;border:0;border-radius:18px;background:var(--accent);color:var(--accent-fg);cursor:pointer;box-shadow:0 4px 0 color-mix(in srgb,var(--accent) 60%,#000)}
+.giant .gt{font-family:var(--f-display);font-weight:700;font-size:30px;letter-spacing:.05em;text-transform:uppercase}
+.giant small{font-size:15px;font-weight:600;opacity:.85}
+.search.big input{min-height:60px;font-size:19px;border-radius:14px}
+.mvbox{display:flex;flex-direction:column;gap:10px}
+.mvbig{min-height:96px;border:0;border-radius:16px;color:#fff;font-family:var(--f-display);font-weight:700;font-size:23px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.mvbig.out{background:var(--danger)}.mvbig.in{background:var(--ok)}.mvbig:disabled{opacity:.5}
+.qsheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.qsheet[hidden]{display:none}
+.qcard,.qdone{width:100%;max-width:520px;border-radius:20px;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.qcard{background:var(--surface);border:1px solid var(--line)}
+.qtitle{font-family:var(--f-display);font-weight:700;font-size:26px}
+.qnums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qn{min-height:72px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--fg);font-family:var(--f-display);font-weight:700;font-size:30px;cursor:pointer}
+.qn:disabled{opacity:.3}
+.qother{display:grid;grid-template-columns:1fr auto;gap:8px}.qother input{min-height:56px;font-size:22px;text-align:center}
+.qdone{background:var(--ok);color:#fff;text-align:center;align-self:center}
+.qcheck{font-size:64px;line-height:1;font-weight:800}
+.qbig{font-family:var(--f-display);font-weight:700;font-size:30px}
+.qsub{font-size:18px;font-weight:600}
+.qdone .btn{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.5);color:#fff}
+.alta{display:flex;flex-direction:column;gap:12px}.alta h2{margin:0;font-size:24px}
+.steps{display:flex;gap:6px}.steps span{flex:1;height:7px;border-radius:4px;background:var(--surface-2)}.steps span.on{background:var(--accent)}
+.bigstep{display:grid;grid-template-columns:72px 1fr 72px;gap:10px;align-items:center}
+.bigstep button{height:72px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-size:36px;font-weight:800;cursor:pointer}
+.bigstep input{min-width:0;width:100%;height:72px;text-align:center;font-family:var(--f-display);font-size:40px;font-weight:700}
+.shgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.shtile{min-height:58px;border-radius:12px;border:3px solid transparent;background:var(--c);color:#fff;font-weight:700;font-size:13px;text-shadow:0 1px 2px rgba(0,0,0,.7);cursor:pointer;padding:4px}
+.shtile b{display:inline-block;background:rgba(0,0,0,.5);border-radius:6px;padding:2px 6px;text-shadow:none;line-height:1.2}
+.shtile.sel{border-color:var(--fg);box-shadow:0 0 0 3px var(--accent)}
+.photo.nophoto{aspect-ratio:auto;height:120px;font-size:40px}
+.bcbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:2px}.bcbox b{font-family:var(--f-mono);font-size:24px;letter-spacing:.08em}
+.choice{display:flex;align-items:center;gap:14px;width:100%;min-height:84px;padding:0 18px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-family:var(--f-display);font-weight:700;font-size:21px;text-align:left;cursor:pointer}
+.choice span{font-size:30px}
 .destbar{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--surface);font-size:14px;color:var(--muted)}
 .destbar b{color:var(--fg)}
 .destbar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -314,6 +349,7 @@ form.edit .check span{flex:1;min-width:0}
 <input type="file" id="qrfile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del código QR">
 <input type="file" id="photofile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del producto">
 <div class="toast" id="toast" hidden></div>
+<div class="qsheet" id="qsheet" role="dialog" hidden></div>
 <button class="lblfab" id="lblfab" hidden></button>
 <div class="scanner" id="scanner" hidden role="dialog" aria-label="Escanear código QR o de barras">
   <video id="scanvideo" muted playsinline></video>
@@ -447,12 +483,12 @@ function render(){
   $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", destino:"¿Para qué es?", etiquetas:"Etiquetas"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", destino:"¿Para qué es?", etiquetas:"Etiquetas", alta:"Nuevo producto"};
   $("#title").textContent = titles[S.view]; $("#title").classList.toggle("long", titles[S.view].length>12);
   VIEWS[S.view]();
   drawLblFab();
 }
-const VIEWS={login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest, etiquetas:viewLblCart};
+const VIEWS={login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest, etiquetas:viewLblCart, alta:viewAlta};
 
 const LOGIN_MIN=3;
 function techMatches(q){
@@ -496,6 +532,8 @@ function drawLoginResults(){
   box.querySelectorAll("[data-tec]").forEach(b=>b.onclick=()=>{ const t=m.find(x=>x.id===b.dataset.tec); if(t) login(t); });
 }
 
+/* Dar de alta productos: solo administrativos (acceso restringido). */
+const canAlta = () => S.canWrite && canRestricted();
 function canRestricted(){
   if(!S.tecnico) return false;
   const t=S.techs.find(x=>x.id===S.tecnico.id);
@@ -550,9 +588,10 @@ function viewSearch(){
   if(q) ensureCat();
   app.innerHTML = `
     ${S.destino?`<div class="destbar"><span>Para: <b>${esc(destLabel())}</b></span><button class="linkbtn" id="d_change">Cambiar</button></div>`:""}
-    <button class="btn primary block bigscan" id="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Escanear QR</button>
-    <div class="${S.canWrite?"twobtn":""} homebtns"><button class="btn${S.canWrite?"":" block"}" id="scanbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14"/></svg>Código de barras</button>${S.canWrite?'<button class="btn" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':''}</div>
-    <div class="search"><input id="q" type="search" inputmode="search" placeholder="Buscar en el almacén y el catálogo" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
+    ${S.tecnico&&!q?`<div class="hello">Hola, ${esc(S.tecnico.nombre.split(" ")[0])} 👋</div>`:""}
+    <button class="giant" id="scan"><span class="gt">📷 Escanear</span><small>QR o código de barras, da igual</small></button>
+    <div class="search big"><input id="q" type="search" inputmode="search" placeholder="🔍 Buscar producto" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar producto"></div>
+    ${canAlta()&&!q?'<button class="btn block" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':""}
     ${!S.loaded?loaderHtml("Cargando inventario…"):
       !all.length?'<div class="list"><div class="empty">Aún no hay productos. Pulsa «Nuevo producto» para dar de alta el primero.</div></div>':
       q?(hits.length?`<div class="label">En el almacén · ${hits.length}</div><div class="list">${hits.map(productRow).join("")}</div>`
@@ -570,13 +609,12 @@ function viewSearch(){
   qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value))||(isBarText(qi.value)&&prodByBar(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
   const tb=$("#tobar"); if(tb) tb.onclick=()=>openBar(S.q.trim());
   $("#scan").onclick=()=>{ S.scanFor=null; openScanner(); };
-  $("#scanbar").onclick=()=>{ S.scanFor="bar"; openScanner(); };
   $("#tomap").onclick=()=>go("mapa",{mapSel:null});
   bindLoanButtons();
   const th=$("#tohist"); if(th) th.onclick=()=>{ S.adminWant=null; go("admin"); };
   const tl=$("#tolow"); if(tl) tl.onclick=()=>{ S.adminWant="ped"; if(S.adminOk) S.adminTab="ped"; go("admin"); };
   const dc=$("#d_change"); if(dc) dc.onclick=changeDest;
-  const tn=$("#tonew"); if(tn) tn.onclick=()=>go("editar",{editCode:null});
+  const tn=$("#tonew"); if(tn) tn.onclick=()=>startAlta();
   app.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>go("catitem",{catSku:b.dataset.cat}));
   app.querySelectorAll("details[data-g]").forEach(d=>d.addEventListener("toggle",e=>{ if(e.target!==d) return; d.open?S.openGroups.add(d.dataset.g):S.openGroups.delete(d.dataset.g); groupsSave(); }));
 }
@@ -608,20 +646,12 @@ function viewFicha(){
         <button class="btn out" id="lend" ${S.busy||p.cantidad<1?"disabled":""}>Llevar</button>
         <button class="btn in" id="giveback" ${S.busy||!allLoans.length?"disabled":""}>Devolver</button>
       </div>${p.cantidad<1?'<span class="note">No queda ninguna en el almacén.</span>':""}</div>`;
-  else actions=`<div class="stock">
-      <span class="label">Cantidad a mover</span>
+  else actions=`<div class="mvbox">
       <span class="note">Para: <b>${esc(destLabel())}</b> · <button class="linkbtn" data-dchange>Cambiar</button></span>
-      <div class="stepper">
-        <button class="iconbtn" id="dec" aria-label="Menos"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 12h14"/></svg></button>
-        <input id="amt" type="number" inputmode="numeric" min="1" step="1" value="${S.amount}" aria-label="Cantidad a mover">
-        <button class="iconbtn" id="inc" aria-label="Más"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5v14"/></svg></button>
-      </div>
-      <div class="twobtn">
-        <button class="btn out" id="out" ${S.busy?"disabled":""}>− Sacar</button>
-        <button class="btn in" id="in" ${S.busy?"disabled":""}>+ Añadir</button>
-      </div></div>`;
+      <div class="twobtn"><button class="mvbig out" id="out" ${S.busy?"disabled":""}>➖ Sacar</button><button class="mvbig in" id="in" ${S.busy?"disabled":""}>➕ Añadir</button></div>
+    </div>`;
   app.innerHTML = `<section class="ficha" style="display:flex;flex-direction:column;gap:14px">
-    <div class="photo">${img?`<img src="${img}" alt="Foto de ${esc(p.nombre)}" id="f_img">`:esc(initials(p.nombre))}</div>
+    <div class="photo${img?"":" nophoto"}">${img?`<img src="${img}" alt="Foto de ${esc(p.nombre)}" id="f_img">`:esc(initials(p.nombre))}</div>
     <div><div class="code">${esc(p.codigo)}${p.prestamo?'<span class="pill">Préstamo</span>':''}</div><h2>${esc(p.nombre)}</h2></div>
     ${p.descripcion?`<p>${esc(p.descripcion)}</p>`:""}
     ${p.proveedor?`<p class="note" style="margin:0">Proveedor: <b>${esc(p.proveedor)}</b></p>`:""}
@@ -653,13 +683,8 @@ function viewFicha(){
     const g=$("#giveback"); if(g) g.onclick=()=>{ const mine=allLoans.find(x=>S.tecnico&&x.tecnicoId===S.tecnico.id); const l2=mine||allLoans[0]; if(l2) returnLoan(l2); };
     return;
   }
-  const amt=$("#amt");
-  const getAmt=()=>Math.max(1,Math.floor(Number(amt.value)||1));
-  amt.onchange=()=>{S.amount=getAmt(); amt.value=S.amount};
-  $("#dec").onclick=()=>{S.amount=Math.max(1,getAmt()-1); amt.value=S.amount};
-  $("#inc").onclick=()=>{S.amount=getAmt()+1; amt.value=S.amount};
-  $("#out").onclick=()=>move(p.codigo,-getAmt());
-  $("#in").onclick=()=>move(p.codigo,getAmt());
+  $("#out").onclick=()=>askQty(p,-1);
+  $("#in").onclick=()=>askQty(p,1);
 }
 
 async function toggleLoan(p){
@@ -1008,14 +1033,14 @@ function viewCatItem(){
   const code=catCode(r[0]), inStock=S.products.get(code);
   if(S.adminOk&&!c.admin) ensureCat();
   app.innerHTML=`<section class="ficha" style="display:flex;flex-direction:column;gap:14px">
-    <div class="photo">${esc(initials(r[1]))}</div>
+    <div class="photo nophoto">${esc(initials(r[1]))}</div>
     <div><div class="code">${esc(code)}<span class="pill">Catálogo</span></div><h2>${esc(r[1])}</h2></div>
     ${r[2]&&fold(r[2])!==fold(r[1])?`<p>${esc(r[2])}</p>`:""}
     ${r[3]?`<p class="note" style="margin:0">Material: <b>${esc(material(r[3]))}</b></p>`:""}
     ${pricesHtml(r)}
     ${inStock?`<p class="catnote" style="margin:0">Ya está en el almacén.</p><button class="btn primary block" id="c_open">Ver en el almacén</button>`
       :`<p class="catnote" style="margin:0">No está en el almacén. Lo trabajáis, pero ahora mismo no hay.</p>
-        ${S.canWrite?`<button class="btn primary block" id="c_add">Ponerlo en el almacén</button>`:""}`}
+        ${canAlta()?`<button class="btn primary block" id="c_add">Ponerlo en el almacén</button>`:""}`}
   </section>`;
   const o=$("#c_open"); if(o) o.onclick=()=>go("ficha",{code});
   const a=$("#c_add"); if(a) a.onclick=()=>go("editar",{editCode:null, prefill:{cat:true, codigo:code, nombre:r[1], descripcion:r[2]&&fold(r[2])!==fold(r[1])?r[2]:""}});
@@ -1150,7 +1175,7 @@ const isBarText = t => /^\d{6,14}$/.test(String(t||"").trim());
 function barsOf(code){ const out=[]; for(const [k,c] of S.bars) if(c===code) out.push(k); return out; }
 function prodByBar(t){ const c=S.bars.get(barKey(t)); return c&&S.products.get(c)||null; }
 const oldServer = err => err&&err.code==="bad"&&/desconocida/.test(err.msg||"");
-function openBar(raw){ S.barPick=null; S.barQ=""; S.web=null; go("barra",{bar:String(raw||"").trim()}); }
+function openBar(raw){ S.barPick=null; S.barQ=""; S.web=null; S.barMode="ask"; go("barra",{bar:String(raw||"").trim()}); }
 async function linkBar(raw, code){
   const p=S.products.get(code); if(!p||!S.tecnico) return false;
   try{
@@ -1179,33 +1204,50 @@ function bindBarLine(p){
   const a=$("#addbar"); if(a) a.onclick=()=>{ S.scanFor="link"; S.linkCode=p.codigo; openScanner(); };
   app.querySelectorAll("[data-unbar]").forEach(b=>b.onclick=()=>unlinkBar(b.dataset.unbar,p.codigo));
 }
+/* Código de barras desconocido: solo dos preguntas. ¿Es de un producto que ya tenemos? (se busca y se toca)
+   ¿Es nuevo? (solo administrativos, abre el alta en 3 pasos). Internet, solo si un administrativo lo pide. */
 function viewBar(){
   const raw=S.bar, known=prodByBar(raw);
   if(known){ go("ficha",{code:known.codigo}); return; }
+  const mode=S.barMode||"ask";
   const words=qWords(S.barQ||"");
   const hits=words.length?[...S.products.values()].filter(p=>hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""),words)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,30):[];
   const pick=S.barPick&&S.products.get(S.barPick);
   const gq="https://www.google.com/search?q="+encodeURIComponent(raw);
-  app.innerHTML=`<section style="display:flex;flex-direction:column;gap:12px">
-    <div><div class="label">Código de barras</div><h2 style="font-family:var(--f-mono);margin:4px 0 0">${esc(raw)}</h2></div>
-    <p class="catnote" style="margin:0">Aún no está en ningún producto de la app.</p>
-    ${canRestricted()?`<div class="stock" id="b_web"><span class="label">Búsqueda en internet</span>${webBlock(S.web&&S.web.raw===raw?S.web:null,"Dar de alta con este nombre")}
-      ${S.web&&S.web.raw===raw&&!S.web.busy?`<span class="note"><button class="linkbtn" id="b_again" style="padding:0">Buscar otra vez</button> · <a href="${esc(gq)}" target="_blank" rel="noopener">Abrir en Google</a></span>`:""}</div>`:""}
-    ${S.canWrite?`<div class="label" style="margin-top:6px">Búsqueda en el almacén: ¿de qué producto es?</div>
-    <div class="search"><input id="b_q" type="search" placeholder="Busca el producto por nombre" value="${esc(S.barQ||"")}" autocomplete="off" aria-label="Buscar el producto"></div>
-    ${pick?`<div class="stock"><span>¿Guardar el código <b>${esc(raw)}</b> en <b>${esc(pick.nombre)}</b>?</span><div class="twobtn"><button class="btn" id="b_no">Cancelar</button><button class="btn primary" id="b_yes">Guardar</button></div></div>`:""}
-    ${words.length?(hits.length?`<div class="list">${hits.map(p=>productRow(p).replace('data-open=','data-pick=')).join("")}</div>`:`<div class="list"><div class="empty">Ningún producto coincide.</div></div>`):""}
-    <button class="btn block" id="b_new">No está: es un producto nuevo</button>`:`<p class="note">Tienes acceso de solo lectura.</p>`}
-  </section>`;
-  const ag=$("#b_again"); if(ag) ag.onclick=()=>webSearch(raw,true);
-  const bw=$("#b_web"); if(bw) bindWeb(bw, raw, (n,desc)=>go("editar",{editCode:null, prefill:{bar:raw, web:true, nombre:n, descripcion:desc, note:`Rellenado desde internet (código de barras ${raw}). Revísalo, elige estante y cantidad y pulsa Guardar.`}}));
-  const qi=$("#b_q");
-  if(qi) qi.addEventListener("input",()=>{ S.barQ=qi.value; S.barPick=null; const pos=qi.selectionStart; viewBar(); const n=$("#b_q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
-  app.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ S.barPick=b.dataset.pick; viewBar(); window.scrollTo(0,0); });
-  const no=$("#b_no"); if(no) no.onclick=()=>{ S.barPick=null; viewBar(); };
-  const yes=$("#b_yes"); if(yes) yes.onclick=async()=>{ yes.disabled=true; const code=S.barPick; if(await linkBar(raw,code)) go("ficha",{code}); else { yes.disabled=false; } };
-  const nw=$("#b_new"); if(nw) nw.onclick=()=>go("editar",{editCode:null, prefill:{bar:raw, note:`Código de barras ${raw}. Escribe el nombre, elige estante y cantidad y pulsa Guardar.`}});
-  if(!S.web||S.web.raw!==raw) webSearch(raw);
+  const head=`<div class="bcbox"><span class="note">Has escaneado</span><b>${esc(raw)}</b></div>`;
+  if(!S.canWrite){ app.innerHTML=`<section class="alta">${head}<p class="catnote" style="margin:0">Este código aún no está en la app.</p><p class="note">Tienes acceso de solo lectura.</p></section>`; return; }
+  if(mode==="pick"){
+    app.innerHTML=`<section class="alta">${head}<h2>Busca el producto y tócalo</h2>
+      <div class="search big"><input id="b_q" type="search" placeholder="Ej. bomba espa" value="${esc(S.barQ||"")}" autocomplete="off" aria-label="Buscar el producto"></div>
+      ${pick?`<div class="stock"><span>¿Guardar el código <b>${esc(raw)}</b> en <b>${esc(pick.nombre)}</b>?</span><div class="twobtn"><button class="btn" id="b_no">No</button><button class="btn primary" id="b_yes">Sí, guardar</button></div></div>`:""}
+      ${words.length?(hits.length?`<div class="list">${hits.map(p=>productRow(p).replace('data-open=','data-pick=')).join("")}</div>`:`<div class="list"><div class="empty">Ningún producto coincide.</div></div>`):""}
+      <button class="btn block" id="b_back">Atrás</button></section>`;
+    const qi=$("#b_q");
+    qi.addEventListener("input",()=>{ S.barQ=qi.value; S.barPick=null; const pos=qi.selectionStart; viewBar(); const n=$("#b_q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
+    if(!pick&&!S.barQ) setTimeout(()=>{ const n=$("#b_q"); if(n) n.focus(); },50);
+    app.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ S.barPick=b.dataset.pick; viewBar(); window.scrollTo(0,0); });
+    const no=$("#b_no"); if(no) no.onclick=()=>{ S.barPick=null; viewBar(); };
+    const yes=$("#b_yes"); if(yes) yes.onclick=async()=>{ yes.disabled=true; const code=S.barPick; if(await linkBar(raw,code)) go("ficha",{code}); else { yes.disabled=false; } };
+    $("#b_back").onclick=()=>{ S.barMode="ask"; S.barPick=null; viewBar(); };
+    return;
+  }
+  if(mode==="web"&&canRestricted()){
+    app.innerHTML=`<section class="alta">${head}<div class="stock" id="b_web"><span class="label">Búsqueda en internet</span>${webBlock(S.web&&S.web.raw===raw?S.web:null,"Dar de alta con este nombre")}
+      ${S.web&&S.web.raw===raw&&!S.web.busy?`<span class="note"><button class="linkbtn" id="b_again" style="padding:0">Buscar otra vez</button> · <a href="${esc(gq)}" target="_blank" rel="noopener">Abrir en Google</a></span>`:""}</div>
+      <button class="btn block" id="b_back">Atrás</button></section>`;
+    const ag=$("#b_again"); if(ag) ag.onclick=()=>webSearch(raw,true);
+    bindWeb($("#b_web"), raw, (n,desc)=>startAlta({bar:raw, nombre:String(n||"").toLocaleUpperCase("es-ES"), desc:desc||"", step:2}));
+    $("#b_back").onclick=()=>{ S.barMode="ask"; viewBar(); };
+    if(!S.web||S.web.raw!==raw) webSearch(raw);
+    return;
+  }
+  app.innerHTML=`<section class="alta">${head}<h2>Este código aún no está en la app. ¿Qué es?</h2>
+    <button class="choice" id="b_have"><span>📦</span>Un producto que ya tenemos</button>
+    ${canAlta()?`<button class="choice" id="b_new"><span>➕</span>Un producto nuevo</button>`:`<p class="note" style="margin:0">Si es un producto nuevo, avisa a un administrativo para que lo dé de alta.</p>`}
+    ${canRestricted()?`<button class="btn block" id="b_webgo">🌐 Buscar en internet</button>`:""}</section>`;
+  $("#b_have").onclick=()=>{ S.barMode="pick"; viewBar(); };
+  const nw=$("#b_new"); if(nw) nw.onclick=()=>startAlta({bar:raw, step:2});
+  const wg=$("#b_webgo"); if(wg) wg.onclick=()=>{ S.barMode="web"; viewBar(); };
 }
 
 /* Búsqueda en internet por código de barras, solo para Xavi (basta con entrar con su nombre).
@@ -1384,6 +1426,112 @@ function viewEdit(){
     $("#e_no").onclick=()=>{ $("#e_confirm").hidden=true; $("#e_del").hidden=false; };
     $("#e_yes").onclick=async()=>{ try{ await api("api_deleteProduct", S.tecnico.id, p.codigo); S.products.delete(p.codigo); toast("Producto eliminado"); go("buscar"); }catch(err){ handleWriteError(err); } };
   }
+}
+
+/* ---------- Nuevo producto en 3 pasos (solo administrativos) ----------
+   1) foto y, si tiene, su código de barras; 2) el nombre, con sugerencias del catálogo al momento;
+   3) cuántos hay y en qué estante. El código MAT-xxx se pone solo. «Más datos» abre la ficha completa. */
+function startAlta(pre){
+  if(!canAlta()){ toast("Solo los administrativos pueden dar de alta productos."); return; }
+  const keep=S.alta&&S.alta.ubic||"";
+  S.alta={step:1, foto:"", fotoB64:"", bar:"", nombre:"", desc:"", cant:1, ubic:keep, ...(pre||{})};
+  go("alta");
+}
+function altaShelves(sel){
+  const tile=(k,v)=>`<button type="button" class="shtile${sel===k?" sel":""}" data-sh="${k}" style="--c:${v.color}" aria-pressed="${sel===k}"><b>${esc(v.name.replace("Estante ",""))}</b></button>`;
+  return Object.entries(ROOMS).map(([rk,rn])=>`<div class="label">${rn}</div><div class="shgrid">${shelvesIn(rk).map(([k,v])=>tile(k,v)).join("")}</div>`).join("")+`<div class="shgrid">${tile("",NO_LOC)}</div>`;
+}
+function altaSugs(txt){
+  const words=qWords(txt); if(fold(txt).replace(/\s+/g,"").length<3) return "";
+  const mine=[...S.products.values()].filter(p=>hasWords(p.codigo+" "+p.nombre,words)).slice(0,3);
+  const c=catIndex(), cat=[];
+  if(c) for(let i=0;i<c.items.length&&cat.length<6;i++){ if(words.every(w=>c.text[i].includes(w))) cat.push(c.items[i]); }
+  return (mine.length?`<div class="label">Ya está en el almacén</div><div class="list">${mine.map(p=>`<button type="button" class="row" data-have="${esc(p.codigo)}"><span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · hay ${p.cantidad}</div></span><span class="go">Abrir</span></button>`).join("")}</div>`:"")+
+    (cat.length?`<div class="label">Del catálogo · toca para usar el nombre</div><div class="list">${cat.map((r,i)=>`<button type="button" class="row" data-sug="${i}"><span class="txt"><div class="name">${esc(r[1])}</div>${r[2]&&fold(r[2])!==fold(r[1])?`<div class="code">${esc(String(r[2]).slice(0,80))}</div>`:""}</span></button>`).join("")}</div>`:"")+
+    (!mine.length&&!cat.length?`<p class="note">No sale en el catálogo. Escríbelo tú y pulsa Siguiente.</p>`:"");
+}
+function viewAlta(){
+  const a=S.alta; if(!a||!canAlta()){ go("buscar"); return; }
+  const bar=`<div class="steps" aria-label="Paso ${Math.min(a.step,3)} de 3">${[1,2,3].map(i=>`<span class="${i<=a.step?"on":""}"></span>`).join("")}</div>`;
+  if(a.step===1){
+    app.innerHTML=`<section class="alta">${bar}<h2>1. Haz una foto</h2>
+      <div class="photo${a.fotoB64?"":" nophoto"}">${a.fotoB64?`<img src="data:image/jpeg;base64,${a.fotoB64}" alt="">`:'<span style="font-size:56px">📷</span>'}</div>
+      <button class="btn primary block" id="a_photo">${a.fotoB64?"Repetir la foto":"Hacer foto"}</button>
+      ${a.bar?`<p class="catnote" style="margin:0">Código de barras: <b style="font-family:var(--f-mono)">${esc(a.bar)}</b></p>`:`<button class="btn block" id="a_bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14"/></svg>Escanear su código de barras</button>`}
+      <button class="btn primary block" id="a_next">${a.fotoB64||a.bar?"Siguiente":"Saltar este paso"}</button></section>`;
+    $("#a_photo").onclick=()=>{ const inp=$("#photofile"); inp.value=""; inp.onchange=async()=>{
+      const file=inp.files[0]; if(!file) return; const b=$("#a_photo"); if(b){ b.disabled=true; b.textContent="Subiendo…"; }
+      try{ const blob=await shrink(file,1000); const b64=await blobToBase64(blob); const r=await api("api_uploadPhoto", S.tecnico.id, b64); a.foto=r.id; a.fotoB64=b64; }
+      catch(e){ toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Inténtalo de nuevo."); }
+      if(S.view==="alta") viewAlta(); }; inp.click(); };
+    const ab=$("#a_bar"); if(ab) ab.onclick=()=>{ S.scanFor="altabar"; openScanner(); };
+    $("#a_next").onclick=()=>{ a.step=2; viewAlta(); setTimeout(()=>{ const n=$("#a_name"); if(n) n.focus(); },50); };
+    return;
+  }
+  if(a.step===2){
+    ensureCat();
+    app.innerHTML=`<section class="alta">${bar}<h2>2. ¿Cómo se llama?</h2>
+      <div class="search big"><input id="a_name" type="search" placeholder="Escribe 3 letras: bom…" value="${esc(a.nombre)}" autocomplete="off" aria-label="Nombre del producto"></div>
+      <div id="a_sugs">${altaSugs(a.nombre)}</div>
+      <button class="btn primary block" id="a_next">Siguiente</button>
+      <button class="btn block" id="a_back">Atrás</button></section>`;
+    const n=$("#a_name"), box=$("#a_sugs");
+    const bind=()=>{
+      box.querySelectorAll("[data-sug]").forEach(b=>b.onclick=()=>{ const words=qWords(a.nombre), c=catIndex(); const list=[]; for(let i=0;i<c.items.length&&list.length<6;i++){ if(words.every(w=>c.text[i].includes(w))) list.push(c.items[i]); } const r=list[+b.dataset.sug]; if(!r) return; a.nombre=String(r[1]).toLocaleUpperCase("es-ES"); a.desc=r[2]&&fold(r[2])!==fold(r[1])?String(r[2]):""; a.step=3; viewAlta(); });
+      box.querySelectorAll("[data-have]").forEach(b=>b.onclick=()=>go("ficha",{code:b.dataset.have}));
+    };
+    n.addEventListener("input",()=>{ a.nombre=n.value; a.desc=""; box.innerHTML=altaSugs(a.nombre); bind(); });
+    n.addEventListener("keydown",e=>{ if(e.key==="Enter") $("#a_next").click(); });
+    bind();
+    $("#a_next").onclick=()=>{ if(!a.nombre.trim()){ toast("Escribe el nombre del producto."); n.focus(); return; } a.step=3; viewAlta(); };
+    $("#a_back").onclick=()=>{ a.step=1; viewAlta(); };
+    return;
+  }
+  if(a.step===3){
+    app.innerHTML=`<section class="alta">${bar}<h2>3. ¿Cuántos hay y dónde?</h2>
+      <p class="note" style="margin:0"><b>${esc(String(a.nombre).toLocaleUpperCase("es-ES"))}</b></p>
+      <div class="bigstep"><button type="button" id="a_dec" aria-label="Menos">−</button><input id="a_cant" type="number" inputmode="numeric" min="0" value="${a.cant}" aria-label="Cantidad"><button type="button" id="a_inc" aria-label="Más">+</button></div>
+      ${altaShelves(a.ubic)}
+      <button class="btn primary block" id="a_save">✓ Guardar</button>
+      <button class="btn block" id="a_more">Guardar y completar la ficha</button>
+      <button class="btn block" id="a_back">Atrás</button></section>`;
+    const c=$("#a_cant"), setC=v=>{ a.cant=Math.max(0,Math.floor(Number(v)||0)); c.value=a.cant; };
+    c.onchange=()=>setC(c.value); $("#a_dec").onclick=()=>setC(a.cant-1); $("#a_inc").onclick=()=>setC(a.cant+1);
+    app.querySelectorAll("[data-sh]").forEach(b=>b.onclick=()=>{ a.ubic=b.dataset.sh; app.querySelectorAll("[data-sh]").forEach(x=>{ x.classList.toggle("sel",x===b); x.setAttribute("aria-pressed",String(x===b)); }); });
+    $("#a_save").onclick=()=>altaSave(false);
+    $("#a_more").onclick=()=>altaSave(true);
+    $("#a_back").onclick=()=>{ a.step=2; viewAlta(); };
+    return;
+  }
+  const p=S.products.get(a.saved);
+  app.innerHTML=`<section class="alta"><div class="qdone" style="align-self:stretch"><div class="qcheck">✓</div><div class="qbig">Guardado como ${esc(a.saved)}</div><div class="qsub">${esc(p?p.nombre:a.nombre)} · ${p?p.cantidad:a.cant} · ${esc(p?locOf(p).name:"")}</div></div>
+    <button class="btn primary block" id="a_again">➕ Añadir otro</button>
+    <button class="btn block" id="a_lbl">🏷️ Imprimir su etiqueta</button>
+    <button class="btn block" id="a_open">Ver la ficha</button></section>`;
+  $("#a_again").onclick=()=>startAlta();
+  $("#a_lbl").onclick=()=>{ if(!lblHas(a.saved)) lblToggle(a.saved); go("etiquetas"); };
+  $("#a_open").onclick=()=>go("ficha",{code:a.saved});
+}
+async function altaSave(more){
+  const a=S.alta; if(!a||S.busy) return;
+  const nombre=String(a.nombre||"").trim().toLocaleUpperCase("es-ES"); if(!nombre){ a.step=2; viewAlta(); return; }
+  S.busy=true; app.querySelectorAll("#a_save,#a_more").forEach(b=>b.disabled=true);
+  let r=null;
+  try{
+    for(let i=0;i<3&&!r;i++){
+      try{ r=await api("api_saveProduct", S.tecnico.id, {codigo:nextCode(), nombre, descripcion:String(a.desc||"").toLocaleUpperCase("es-ES"), ubicacion:a.ubic||"", foto:a.foto||"", prestamo:false, proveedor:"", cantidad:a.cant}, true); }
+      catch(err){ if(err&&err.code==="exists"){ await poll(); continue; } throw err; }
+    }
+    if(!r) throw {code:"busy"};
+    S.products.set(r.product.codigo, r.product);
+    S.busy=false;
+    if(a.bar) await linkBar(a.bar, r.product.codigo);
+    if(more){ go("editar",{editCode:r.product.codigo}); return; }
+    a.saved=r.product.codigo; a.step=4; if(S.view==="alta") viewAlta();
+  }catch(err){
+    if(err&&err.code==="auth") toast("Solo los administrativos pueden dar de alta productos.");
+    else handleWriteError(err);
+  }finally{ S.busy=false; app.querySelectorAll("#a_save,#a_more").forEach(b=>b.disabled=false); }
 }
 
 /* ---------- Responsable: historial y técnicos ---------- */
@@ -1842,6 +1990,7 @@ function handleWriteError(err){
   else if(c==="tecnico"){ logout("Tu nombre ya no está en la lista de técnicos. Habla con Xavi."); }
   else if(c==="network"||c==="offline") toast(netMsg());
   else if(c==="gone") toast("Este producto ya no existe.");
+  else if(c==="auth") toast("No tienes permiso para esto. Habla con un administrativo.");
   else if(c==="too_large") toast("La foto es demasiado grande.");
   else if(c==="server"&&/is not defined/.test(err.msg||"")) toast("Al servidor de Google le falta una parte ("+String(err.msg).slice(0,60)+"). Hay que pegar servidor.gs en Código.gs y hacer Nueva versión.");
   else if(c==="server"||c==="bad") toast("Error del servidor"+(err.msg?": "+String(err.msg).slice(0,160):"")+". Mándale una captura a Claude.");
@@ -1850,11 +1999,11 @@ function handleWriteError(err){
 
 /* Stock moves show at once; the server confirms in the background and the number is put back if it refuses. */
 const PEND=new Map();
-async function move(code,delta){
-  const p=S.products.get(code); if(!p||S.busy||!S.tecnico) return;
-  if(p.cantidad+delta<0){ toast(`Solo quedan ${p.cantidad}. No puedes sacar ${-delta}.`); return; }
+async function move(code,delta,quiet){
+  const p=S.products.get(code); if(!p||S.busy||!S.tecnico) return false;
+  if(p.cantidad+delta<0){ toast(`Solo quedan ${p.cantidad}. No puedes sacar ${-delta}.`); return false; }
   p.cantidad+=delta; PEND.set(code,(PEND.get(code)||0)+1);
-  toast(delta<0?`Sacadas ${-delta} uds. Quedan ${p.cantidad}.`:`Añadidas ${delta} uds. Hay ${p.cantidad}.`);
+  if(!quiet) toast(delta<0?`Sacadas ${-delta} uds. Quedan ${p.cantidad}.`:`Añadidas ${delta} uds. Hay ${p.cantidad}.`);
   S.amount=1; if(S.view==="ficha") render();
   let r=null;
   try{ r=await api("api_move", S.tecnico.id, code, delta, S.destino); }
@@ -1869,6 +2018,46 @@ async function move(code,delta){
     if(S.view==="ficha"&&S.code===code) render();
     if(r) refreshMoves();
   }
+  return !!r;
+}
+
+/* Sacar / Añadir para gente con poca costumbre: un botón grande, luego números grandes,
+   y una pantalla verde que confirma lo hecho, con «Deshacer» por si se equivocan. */
+function sheetEl(){ let el=$("#qsheet"); if(!el){ el=document.createElement("div"); el.id="qsheet"; el.className="qsheet"; el.setAttribute("role","dialog"); document.body.appendChild(el); } return el; }
+function closeSheet(){ const el=$("#qsheet"); if(el){ el.hidden=true; el.innerHTML=""; } clearTimeout(closeSheet._t); }
+function askQty(p,sign){
+  if(sign<0&&p.cantidad<1){ toast("No queda ninguno en el almacén."); return; }
+  const el=sheetEl(), max=sign<0?p.cantidad:Infinity;
+  el.innerHTML=`<div class="qcard">
+    <div class="qtitle">${sign<0?"¿Cuántos sacas?":"¿Cuántos añades?"}</div>
+    <div class="note">${esc(p.nombre)} · hay ${p.cantidad}</div>
+    <div class="qnums">${[1,2,3,4,5,10].map(n=>`<button class="qn" data-n="${n}" ${n>max?"disabled":""}>${n}</button>`).join("")}</div>
+    <div class="qother" id="q_other" hidden><input id="q_val" type="number" inputmode="numeric" min="1" step="1" placeholder="Cantidad"><button class="btn primary" id="q_ok">Vale</button></div>
+    <button class="btn block" id="q_more">Otro número</button>
+    <button class="btn block" id="q_cancel">Cancelar</button></div>`;
+  el.hidden=false;
+  const pick=n=>{ n=Math.floor(Number(n)||0); if(n<1){ toast("Escribe cuántos."); return; } if(n>max){ toast(`Solo quedan ${p.cantidad}.`); return; } closeSheet(); doMove(p,sign*n); };
+  el.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>pick(b.dataset.n));
+  $("#q_more").onclick=()=>{ $("#q_other").hidden=false; $("#q_more").hidden=true; const v=$("#q_val"); v.focus(); v.onkeydown=e=>{ if(e.key==="Enter") pick(v.value); }; };
+  $("#q_ok").onclick=()=>pick($("#q_val").value);
+  $("#q_cancel").onclick=closeSheet;
+  el.onclick=e=>{ if(e.target===el) closeSheet(); };
+}
+async function doMove(p,delta,undo){
+  const code=p.codigo;
+  const pr=move(code,delta,true);
+  const q=S.products.get(code);
+  if(undo){ closeSheet(); if(await pr) toast("Deshecho. Hay "+(S.products.get(code)||q).cantidad+"."); return; }
+  const el=sheetEl();
+  el.innerHTML=`<div class="qdone"><div class="qcheck">✓</div><div class="qbig">${delta<0?"Has sacado":"Has añadido"} ${Math.abs(delta)}</div><div class="qsub">${delta<0?"Quedan":"Ahora hay"} ${q?q.cantidad:""} · Para ${esc(destLabel())}</div>
+    <button class="btn block" id="q_undo">↩ Me he equivocado, deshacer</button><button class="btn block" id="q_home">Volver al inicio</button><button class="btn block" id="q_stay">Seguir aquí</button></div>`;
+  el.hidden=false;
+  $("#q_undo").onclick=()=>doMove(S.products.get(code)||p,-delta,true);
+  $("#q_home").onclick=()=>{ closeSheet(); go("buscar"); };
+  $("#q_stay").onclick=closeSheet;
+  el.onclick=e=>{ if(e.target===el) closeSheet(); };
+  clearTimeout(closeSheet._t); closeSheet._t=setTimeout(closeSheet,6000);
+  if(!(await pr)) closeSheet();
 }
 
 function watchMoves(code){
@@ -1903,6 +2092,13 @@ function handleScanText(found, fmt){
     S.scanFor=null;
     if(!isBar){ toast("Eso es un QR de la app. Escanea el código de barras que trae el producto."); return; }
     if(S.view==="editar") barSearch(raw);
+    return;
+  }
+  if(S.scanFor==="altabar"){
+    S.scanFor=null;
+    if(!isBar){ toast("Eso es un QR de la app. Escanea el código de barras que trae el producto."); return; }
+    if(byBar){ toast(`Ese código ya es de ${byBar.nombre}.`); go("ficha",{code:byBar.codigo}); return; }
+    if(S.view==="alta"&&S.alta){ S.alta.bar=raw; viewAlta(); }
     return;
   }
   if(S.scanFor==="link"){
@@ -1945,7 +2141,7 @@ function watchMotion(on){
   if(on) window.addEventListener("devicemotion",onMotion); else window.removeEventListener("devicemotion",onMotion);
   const w=$("#scanwarn"); if(w) w.hidden=true;
 }
-const moving=()=>MOVE.on&&["bar","newbar","link"].includes(S.scanFor)&&performance.now()-MOVE.at<700;
+const moving=()=>MOVE.on&&["bar","newbar","link","altabar"].includes(S.scanFor)&&performance.now()-MOVE.at<700;
 function barCheckOk(t){
   t=String(t||"").trim();
   if(!/^\d+$/.test(t)||![8,12,13,14].includes(t.length)) return true;
@@ -1993,7 +2189,7 @@ async function openScanner(){
   try{ if(window.DeviceMotionEvent&&typeof DeviceMotionEvent.requestPermission==="function") DeviceMotionEvent.requestPermission().then(r=>{ if(r==="granted"&&SCAN.stream) watchMotion(true); }).catch(()=>{}); }catch(e){}
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||IN_GAS){ $("#qrfile").click(); return; }
   SCAN.cand=null;
-  $("#scanner").hidden=false; $("#scanmsg").textContent=S.scanFor==="link"||S.scanFor==="bar"||S.scanFor==="newbar"?"Apunta al código de barras del producto":"Apunta al código QR";
+  $("#scanner").hidden=false; $("#scanmsg").textContent=["link","bar","newbar","altabar"].includes(S.scanFor)?"Apunta al código de barras del producto":S.scanFor==="count"?"Apunta al código QR":"Apunta al QR o al código de barras";
   try{
     SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
   }catch(e){
@@ -2118,7 +2314,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.1";
+const APP_VERSION="2026-10-13.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

@@ -535,6 +535,8 @@ function addShelves_() {
 function upper_(v) { return String(v == null ? '' : v).toLocaleUpperCase('es-ES'); }
 function saveProductUpper_(tecId, data, isNew) {
   data = Object.assign({}, data || {});
+  /* Dar de alta productos nuevos: solo administrativos (decisión 13-10-2026, por si los técnicos se equivocan). */
+  if (isNew) { var who = guard_(function () { return { r: bool_(tech_(tecId).restringido) }; }); if (who.err) return who; if (!who.r) return { err: 'auth' }; }
   ['nombre', 'descripcion', 'proveedor'].forEach(function (k) { if (data[k] != null) data[k] = upper_(data[k]); });
   var r = api_saveProduct(tecId, data, isNew);
   if (r && r.ok && r.product && (data.nivel !== undefined || data.lado !== undefined)) {
