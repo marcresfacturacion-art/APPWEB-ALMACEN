@@ -465,8 +465,8 @@ const fmtDate = t => new Date(t).toLocaleString("es-ES",{day:"2-digit",month:"2-
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,3000); }
 
 const OPEN_VIEWS = new Set(["login","admin"]);
-/* Every change of screen shows the Marcres/Rivagua logo animation for 2 s on top (the user wants it to feel like it loads). */
-const VEIL_MS = window.__NO_VEIL ? 0 : 2000;
+/* Every change of screen shows the Marcres/Rivagua logo animation for 1 s on top (the user wants it to feel like it loads). */
+const VEIL_MS = window.__NO_VEIL ? 0 : 1000;
 let veilT=null;
 function veil(){
   if(!VEIL_MS) return;
@@ -2356,7 +2356,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.6";
+const APP_VERSION="2026-10-13.7";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
