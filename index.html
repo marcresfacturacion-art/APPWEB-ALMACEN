@@ -271,7 +271,7 @@ form.edit .check span{flex:1;min-width:0}
 .qbig{font-family:var(--f-display);font-weight:700;font-size:30px}
 .qsub{font-size:18px;font-weight:600}
 .qdone .btn{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.5);color:#fff}
-.alta{display:flex;flex-direction:column;gap:12px}.alta h2{margin:0;font-size:24px}
+.alta{display:flex;flex-direction:column;gap:12px}.altaweb{display:flex;flex-direction:column;gap:8px}.altaweb .row.sel{outline:3px solid var(--accent);outline-offset:-3px;background:var(--surface-2)}.alta h2{margin:0;font-size:24px}
 .steps{display:flex;gap:6px}.steps span{flex:1;height:7px;border-radius:4px;background:var(--surface-2)}.steps span.on{background:var(--accent)}
 .bigstep{display:grid;grid-template-columns:72px 1fr 72px;gap:10px;align-items:center}
 .bigstep button{height:72px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-size:36px;font-weight:800;cursor:pointer}
@@ -1297,7 +1297,7 @@ function viewBar(){
 function webErr(err){ return oldServer(err)?"Para buscar en internet hay que pegar servidor.gs en Apps Script.":/permis/i.test(err.msg||"")?"Falta el permiso de Google para salir a internet: en Apps Script ejecuta una vez probarGemini y acepta.":err.code==="network"?netMsg():"No se pudo buscar ("+(err.msg||err.code)+")."; }
 function iaErr(err){ const c=err&&err.code; return c==="nokey"?"La IA no tiene clave: pon GEMINI_KEY en Apps Script, como para la foto de placa.":c==="quota"?PLATE_ERR.quota:c==="badkey"?PLATE_ERR.badkey:webErr(err); }
 const hostOf=u=>(/^https?:\/\/([^/]+)/.exec(u||"")||[])[1]||"";
-function webRedraw(){ if(S.view==="barra"){ if(!typing()) viewBar(); } else if(S.view==="editar") drawEditWeb(); }
+function webRedraw(){ if(S.view==="barra"){ if(!typing()) viewBar(); } else if(S.view==="editar") drawEditWeb(); else if(S.view==="alta") drawAltaWeb(); }
 function webBlock(w, label){
   if(!w||w.busy) return loaderHtml("Buscando en internet…",true);
   if(w.net) return `<span class="note">${esc(w.err)}</span>${navigator.onLine!==false?`<a class="btn block" href="arreglar.html">Arreglar el servidor</a>`:""}`;
@@ -1477,6 +1477,7 @@ function startAlta(pre){
   if(!canAlta()){ toast("Solo los administrativos pueden dar de alta productos."); return; }
   const keep=S.alta&&S.alta.ubic||"";
   S.alta={step:1, foto:"", fotoB64:"", bar:"", nombre:"", desc:"", cant:1, ubic:keep, ...(pre||{})};
+  if(S.alta.bar) webSearch(S.alta.bar);   // the names are ready by the time step 2 opens
   go("alta");
 }
 function altaShelves(sel){
@@ -1491,6 +1492,20 @@ function altaSugs(txt){
   return (mine.length?`<div class="label">Ya está en el almacén</div><div class="list">${mine.map(p=>`<button type="button" class="row" data-have="${esc(p.codigo)}"><span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · hay ${p.cantidad}</div></span><span class="go">Abrir</span></button>`).join("")}</div>`:"")+
     (cat.length?`<div class="label">Del catálogo · toca para usar el nombre</div><div class="list">${cat.map((r,i)=>`<button type="button" class="row" data-sug="${i}"><span class="txt"><div class="name">${esc(r[1])}</div>${r[2]&&fold(r[2])!==fold(r[1])?`<div class="code">${esc(String(r[2]).slice(0,80))}</div>`:""}</span></button>`).join("")}</div>`:"")+
     (!mine.length&&!cat.length?`<p class="note">No sale en el catálogo. Escríbelo tú y pulsa Siguiente.</p>`:"");
+}
+/* Step 2: internet results (and the AI) for the scanned barcode; tapping one fills the name. */
+function drawAltaWeb(){
+  const a=S.alta, box=$("#a_web"); if(!a||!a.bar||!box) return;
+  const w=S.web&&S.web.raw===a.bar?S.web:null;
+  if(!w&&canRestricted()) webSearch(a.bar);
+  box.innerHTML=webBlock(w||{busy:true});
+  bindWeb(box, a.bar, (nombre, desc, b)=>{
+    a.nombre=nombre; a.desc=desc;
+    const n=$("#a_name"); if(n) n.value=nombre;
+    const sb=$("#a_sugs"); if(sb) sb.innerHTML="";
+    box.querySelectorAll(".sel").forEach(x=>x.classList.remove("sel")); if(b) b.classList.add("sel");
+    toast("Nombre puesto. Puedes corregirlo o pulsar Siguiente.");
+  });
 }
 function viewAlta(){
   const a=S.alta; if(!a||!canAlta()){ go("buscar"); return; }
@@ -1507,12 +1522,15 @@ function viewAlta(){
       catch(e){ toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Inténtalo de nuevo."); }
       if(S.view==="alta") viewAlta(); }; inp.click(); };
     const ab=$("#a_bar"); if(ab) ab.onclick=()=>{ S.scanFor="altabar"; openScanner(); };
-    $("#a_next").onclick=()=>{ a.step=2; viewAlta(); setTimeout(()=>{ const n=$("#a_name"); if(n) n.focus(); },50); };
+    $("#a_next").onclick=()=>{ a.step=2; viewAlta(); if(!a.bar) setTimeout(()=>{ const n=$("#a_name"); if(n) n.focus(); },50); };   // with a barcode, leave the keyboard closed so the internet names show
     return;
   }
   if(a.step===2){
     ensureCat();
     app.innerHTML=`<section class="alta">${bar}<h2>2. ¿Cómo se llama?</h2>
+      ${a.bar?`<p class="catnote" style="margin:0">Código escaneado: <b style="font-family:var(--f-mono)">${esc(a.bar)}</b></p>
+        <div class="label">🌐 Lo que dice internet de este código</div><div id="a_web" class="altaweb"></div>
+        <div class="label">O escríbelo tú</div>`:""}
       <div class="search big"><input id="a_name" type="search" placeholder="Escribe 3 letras: bom…" value="${esc(a.nombre)}" autocomplete="off" aria-label="Nombre del producto"></div>
       <div id="a_sugs">${altaSugs(a.nombre)}</div>
       <button class="btn primary block" id="a_next">Siguiente</button>
@@ -1522,7 +1540,8 @@ function viewAlta(){
       box.querySelectorAll("[data-sug]").forEach(b=>b.onclick=()=>{ const words=qWords(a.nombre), c=catIndex(); const list=[]; for(let i=0;i<c.items.length&&list.length<6;i++){ if(words.every(w=>c.text[i].includes(w))) list.push(c.items[i]); } const r=list[+b.dataset.sug]; if(!r) return; a.nombre=String(r[1]).toLocaleUpperCase("es-ES"); a.desc=r[2]&&fold(r[2])!==fold(r[1])?String(r[2]):""; a.step=3; viewAlta(); });
       box.querySelectorAll("[data-have]").forEach(b=>b.onclick=()=>go("ficha",{code:b.dataset.have}));
     };
-    n.addEventListener("input",()=>{ a.nombre=n.value; a.desc=""; box.innerHTML=altaSugs(a.nombre); bind(); });
+    n.addEventListener("input",()=>{ a.nombre=n.value; a.desc=""; box.innerHTML=altaSugs(a.nombre); bind(); app.querySelectorAll("#a_web .sel").forEach(x=>x.classList.remove("sel")); });
+    drawAltaWeb();
     n.addEventListener("keydown",e=>{ if(e.key==="Enter") $("#a_next").click(); });
     bind();
     $("#a_next").onclick=()=>{ if(!a.nombre.trim()){ toast("Escribe el nombre del producto."); n.focus(); return; } a.step=3; viewAlta(); };
@@ -2140,7 +2159,7 @@ function handleScanText(found, fmt){
     S.scanFor=null;
     if(!isBar){ toast("Eso es un QR de la app. Escanea el código de barras que trae el producto."); return; }
     if(byBar){ toast(`Ese código ya es de ${byBar.nombre}.`); go("ficha",{code:byBar.codigo}); return; }
-    if(S.view==="alta"&&S.alta){ S.alta.bar=raw; viewAlta(); }
+    if(S.view==="alta"&&S.alta){ S.alta.bar=raw; webSearch(raw); viewAlta(); }
     return;
   }
   if(S.scanFor==="link"){
@@ -2356,7 +2375,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.7";
+const APP_VERSION="2026-10-13.8";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
