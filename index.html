@@ -108,7 +108,8 @@ main{max-width:560px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-dire
 .btn.in{background:var(--ok);border-color:var(--ok);color:#fff}
 .lblfab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:19;min-height:52px;padding:0 20px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-fg);font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.04em;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:pointer}
 .lblfab[hidden]{display:none}
-body.hasfab main{padding-bottom:96px}
+body.hasfab main{padding-bottom:16px}
+body.hasfab .credit{padding-bottom:96px}
 body.hasfab .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .lblrow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .lblrow .txt{min-width:0}.lblrow .x{flex:none;width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--fg);font-size:22px;cursor:pointer}
@@ -288,6 +289,8 @@ form.edit .check span{flex:1;min-width:0}
 .bcbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:2px}.bcbox b{font-family:var(--f-mono);font-size:24px;letter-spacing:.08em}
 .choice{display:flex;align-items:center;gap:14px;width:100%;min-height:84px;padding:0 18px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-family:var(--f-display);font-weight:700;font-size:21px;text-align:left;cursor:pointer}
 .choice span{font-size:30px}
+.credit{max-width:640px;margin:8px auto 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.5;text-align:center}
+@media print{.credit{display:none}}
 .destbar{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--surface);font-size:14px;color:var(--muted)}
 .destbar b{color:var(--fg)}
 .destbar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -346,6 +349,7 @@ form.edit .check span{flex:1;min-width:0}
   <div class="loader" role="status"><div class="lspin" aria-hidden="true"><img src="logo-marcres.png" alt=""><img src="logo-rivagua.png" alt=""></div><p>Cargando…</p></div>
 </main>
 
+<footer class="credit">Desarrollado por Xavi Alvarado Alonso © | 2026. Todos los derechos reservados. Prohibida su reproducción total o parcial sin autorización.</footer>
 <input type="file" id="qrfile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del código QR">
 <input type="file" id="photofile" class="hidden-file" accept="image/*" capture="environment" aria-label="Foto del producto">
 <div class="toast" id="toast" hidden></div>
@@ -2314,7 +2318,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.2";
+const APP_VERSION="2026-10-13.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
