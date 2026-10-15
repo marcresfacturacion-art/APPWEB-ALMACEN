@@ -279,6 +279,7 @@ form.edit .check span{flex:1;min-width:0}
 .shgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .shtile{min-height:58px;border-radius:12px;border:3px solid transparent;background:var(--c);color:#fff;font-weight:700;font-size:13px;text-shadow:0 1px 2px rgba(0,0,0,.7);cursor:pointer;padding:4px}
 .shtile b{display:inline-block;background:rgba(0,0,0,.5);border-radius:6px;padding:2px 6px;text-shadow:none;line-height:1.2}
+.paraq{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.paraq #q_pbox{display:flex;flex-direction:column;gap:6px;width:100%}.paraq #q_pbox[hidden]{display:none}.paraq input{width:100%;min-height:44px;font-size:16px}.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1.5px solid var(--accent);background:var(--surface);color:var(--accent);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;cursor:pointer}.chip.on{background:var(--accent);color:var(--accent-fg)}.qn.hint{outline:3px solid var(--accent);outline-offset:2px}.nbp{color:var(--accent);font-weight:600}
 .posgrid{display:grid;grid-template-columns:1fr;gap:8px}.posgrid.three{grid-template-columns:1fr 1fr 1fr}.posgrid .btn{min-height:56px;font-size:16px;padding:0 6px}.posgrid .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
 .shtile.sel{border-color:var(--fg);box-shadow:0 0 0 3px var(--accent)}
 .photo.nophoto{aspect-ratio:auto;height:120px;font-size:40px}
@@ -1713,7 +1714,7 @@ function viewHist(){
 }
 function histFiltered(){
   const q=S.hf.q.trim().toLowerCase();
-  return S.hist.filter(m=>(!S.hf.tec||m.tecnico===S.hf.tec)&&(!S.hf.tipo||m.tipo===S.hf.tipo)&&(!q||fold((m.producto||"")+" "+(m.codigo||"")+" "+(m.comunidad||"")+" "+(m.empresa||"")).includes(fold(q))));
+  return S.hist.filter(m=>(!S.hf.tec||m.tecnico===S.hf.tec||fold(m.detalle||"").includes(fold(S.hf.tec)))&&(!S.hf.tipo||m.tipo===S.hf.tipo)&&(!q||fold((m.producto||"")+" "+(m.codigo||"")+" "+(m.comunidad||"")+" "+(m.empresa||"")+" "+(m.detalle||"")).includes(fold(q))));
 }
 function drawHist(){
   const el=$("#h_list"); if(!el) return;
@@ -1728,8 +1729,9 @@ function drawHist(){
       const d=Number(m.delta)||0, num=["salida","entrada","recuento","ajuste","alta"].includes(m.tipo)&&d;
       const who=[m.tecnico||"—", m.comunidad?[m.empresa,m.comunidad].filter(Boolean).join(" · "):(m.destino==="almacen"?"Almacén":"")].filter(Boolean).join(" · ");
       const extra=m.tipo==="edicion"?(m.detalle||""):num&&m.despues!==undefined&&m.despues!==""?`quedan ${m.despues}`:"";
+      const forWho=/^Para: /.test(m.detalle||"")?String(m.detalle).slice(6):"";
       return `<button class="nbl" data-open="${esc(m.codigo)}"><span class="nbt">${new Date(m.fecha).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span>
-        <span class="nbx"><b>${esc(m.producto||m.codigo)}</b><span>${esc(who)}</span>${extra?`<span class="nbd">${esc(m.codigo)} · ${esc(extra)}</span>`:`<span class="nbd">${esc(m.codigo)}</span>`}</span>
+        <span class="nbx"><b>${esc(m.producto||m.codigo)}</b><span>${esc(who)}</span>${forWho?`<span class="nbp">👤 Para ${esc(forWho)}</span>`:""}${extra?`<span class="nbd">${esc(m.codigo)} · ${esc(extra)}</span>`:`<span class="nbd">${esc(m.codigo)}</span>`}</span>
         <span class="nbq ${num?(d<0?"neg":"pos"):"tag t-"+esc(m.tipo)}">${num?(d>0?"+":"−")+Math.abs(d):esc(TIPOS[m.tipo]||m.tipo)}</span></button>`;}).join("")}</section>`).join(""):'<div class="list"><div class="empty">Ningún movimiento coincide con el filtro.</div></div>'}
     ${rows.length>300?'<p class="note">Se muestran los 300 más recientes. Descarga el CSV para verlos todos.</p>':""}`;
 }
@@ -2087,14 +2089,14 @@ function handleWriteError(err){
 
 /* Stock moves show at once; the server confirms in the background and the number is put back if it refuses. */
 const PEND=new Map();
-async function move(code,delta,quiet){
+async function move(code,delta,quiet,para){
   const p=S.products.get(code); if(!p||S.busy||!S.tecnico) return false;
   if(p.cantidad+delta<0){ toast(`Solo quedan ${p.cantidad}. No puedes sacar ${-delta}.`); return false; }
   p.cantidad+=delta; PEND.set(code,(PEND.get(code)||0)+1);
   if(!quiet) toast(delta<0?`Sacadas ${-delta} uds. Quedan ${p.cantidad}.`:`Añadidas ${delta} uds. Hay ${p.cantidad}.`);
   S.amount=1; if(S.view==="ficha") render();
   let r=null;
-  try{ r=await api("api_move", S.tecnico.id, code, delta, S.destino); }
+  try{ r=await api("api_move", S.tecnico.id, code, delta, para?{...(S.destino||{}),para}:S.destino); }
   catch(err){
     const q=S.products.get(code); if(q) q.cantidad-=delta;
     if(err&&err.code==="short") toast(`No se guardó: solo quedan ${err.cur}.`);
@@ -2119,28 +2121,44 @@ function askQty(p,sign){
   el.innerHTML=`<div class="qcard">
     <div class="qtitle">${sign<0?"¿Cuántos sacas?":"¿Cuántos añades?"}</div>
     <div class="note">${esc(p.nombre)} · hay ${p.cantidad}</div>
+    ${sign<0&&canRestricted()?`<div class="paraq"><button type="button" class="linkbtn" id="q_para">👤 ¿Para quién? <small>(opcional)</small></button>
+      <div id="q_pbox" hidden><div id="q_chips" class="chips"></div><input id="q_pq" type="search" autocomplete="off" placeholder="Nombre del técnico"><div id="q_psug" class="chips"></div></div></div>`:""}
     <div class="qnums">${[1,2,3,4,5,10].map(n=>`<button class="qn" data-n="${n}" ${n>max?"disabled":""}>${n}</button>`).join("")}</div>
     <div class="qother" id="q_other" hidden><input id="q_val" type="number" inputmode="numeric" min="1" step="1" placeholder="Cantidad"><button class="btn primary" id="q_ok">Vale</button></div>
     <button class="btn block" id="q_more">Otro número</button>
     <button class="btn block" id="q_cancel">Cancelar</button></div>`;
   el.hidden=false;
-  const pick=n=>{ n=Math.floor(Number(n)||0); if(n<1){ toast("Escribe cuántos."); return; } if(n>max){ toast(`Solo quedan ${p.cantidad}.`); return; } closeSheet(); doMove(p,sign*n); };
+  /* Administrativos: who it is for (several people allowed); goes to the history as «Para: …». */
+  const para=[];
+  const drawPara=()=>{
+    const chips=$("#q_chips"), sug=$("#q_psug"), inp=$("#q_pq"); if(!chips) return;
+    chips.innerHTML=para.map((n,i)=>`<button type="button" class="chip on" data-rm="${i}">${esc(n)} ✕</button>`).join("");
+    const q=fold(inp.value).trim();
+    const hits=q.length<2?[]:S.techs.filter(t=>t.activo!==false&&!para.includes(t.nombre)&&q.split(/\s+/).every(w=>fold(t.nombre).includes(w))).slice(0,5);
+    sug.innerHTML=hits.map(t=>`<button type="button" class="chip" data-add="${esc(t.nombre)}">+ ${esc(t.nombre)}</button>`).join("");
+    chips.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{ para.splice(+b.dataset.rm,1); drawPara(); });
+    sug.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ para.push(b.dataset.add); inp.value=""; drawPara(); inp.focus(); });
+    $("#q_para").innerHTML=para.length?`👤 Para: <b>${esc(para.join(", "))}</b>`:'👤 ¿Para quién? <small>(opcional)</small>';
+    el.querySelectorAll("[data-n]").forEach(b=>b.classList.toggle("hint",para.length>1&&+b.dataset.n===para.length));
+  };
+  const pb=$("#q_para"); if(pb){ pb.onclick=()=>{ const box=$("#q_pbox"); box.hidden=!box.hidden; if(!box.hidden) $("#q_pq").focus(); }; $("#q_pq").oninput=drawPara; }
+  const pick=n=>{ n=Math.floor(Number(n)||0); if(n<1){ toast("Escribe cuántos."); return; } if(n>max){ toast(`Solo quedan ${p.cantidad}.`); return; } closeSheet(); doMove(p,sign*n,false,para.join(", ")); };
   el.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>pick(b.dataset.n));
   $("#q_more").onclick=()=>{ $("#q_other").hidden=false; $("#q_more").hidden=true; const v=$("#q_val"); v.focus(); v.onkeydown=e=>{ if(e.key==="Enter") pick(v.value); }; };
   $("#q_ok").onclick=()=>pick($("#q_val").value);
   $("#q_cancel").onclick=closeSheet;
   el.onclick=e=>{ if(e.target===el) closeSheet(); };
 }
-async function doMove(p,delta,undo){
+async function doMove(p,delta,undo,para){
   const code=p.codigo;
-  const pr=move(code,delta,true);
+  const pr=move(code,delta,true,para);
   const q=S.products.get(code);
   if(undo){ closeSheet(); if(await pr) toast("Deshecho. Hay "+(S.products.get(code)||q).cantidad+"."); return; }
   const el=sheetEl();
-  el.innerHTML=`<div class="qdone"><div class="qcheck">✓</div><div class="qbig">${delta<0?"Has sacado":"Has añadido"} ${Math.abs(delta)}</div><div class="qsub">${delta<0?"Quedan":"Ahora hay"} ${q?q.cantidad:""} · Para ${esc(destLabel())}</div>
+  el.innerHTML=`<div class="qdone"><div class="qcheck">✓</div><div class="qbig">${delta<0?"Has sacado":"Has añadido"} ${Math.abs(delta)}</div><div class="qsub">${delta<0?"Quedan":"Ahora hay"} ${q?q.cantidad:""} · Para ${esc(destLabel())}</div>${para?`<div class="qsub">👤 ${esc(para)}</div>`:""}
     <button class="btn block" id="q_undo">↩ Me he equivocado, deshacer</button><button class="btn block" id="q_home">Volver al inicio</button><button class="btn block" id="q_stay">Seguir aquí</button></div>`;
   el.hidden=false;
-  $("#q_undo").onclick=()=>doMove(S.products.get(code)||p,-delta,true);
+  $("#q_undo").onclick=()=>doMove(S.products.get(code)||p,-delta,true,para);
   $("#q_home").onclick=()=>{ closeSheet(); go("buscar"); };
   $("#q_stay").onclick=closeSheet;
   el.onclick=e=>{ if(e.target===el) closeSheet(); };
@@ -2402,7 +2420,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-13.9";
+const APP_VERSION="2026-10-15.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

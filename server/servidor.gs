@@ -139,9 +139,12 @@ function tech_(id) {
 }
 function dest_(d) {
   d = d || {};
-  if (d.tipo === 'almacen') return { destino: 'almacen', empresa: '', comunidad: 'Almacén' };
-  if (d.tipo === 'furgoneta') return { destino: 'furgoneta', empresa: str_(d.empresa, 40), comunidad: str_(d.comunidad || ('Furgoneta ' + str_(d.matricula, 20)), 200) };
-  return { destino: 'comunidad', empresa: str_(d.empresa, 40), comunidad: str_(d.comunidad, 200) };
+  var o = d.tipo === 'almacen' ? { destino: 'almacen', empresa: '', comunidad: 'Almacén' }
+    : d.tipo === 'furgoneta' ? { destino: 'furgoneta', empresa: str_(d.empresa, 40), comunidad: str_(d.comunidad || ('Furgoneta ' + str_(d.matricula, 20)), 200) }
+    : { destino: 'comunidad', empresa: str_(d.empresa, 40), comunidad: str_(d.comunidad, 200) };
+  // An administrativo can say who the material is for (technicians not using the app yet).
+  if (str_(d.para, 200)) o.detalle = 'Para: ' + str_(d.para, 200);
+  return o;
 }
 function logMove_(m, t, d) {
   const o = Object.assign({ fecha: new Date(), detalle: '' }, d || {}, m, { tecnico: t ? t.nombre : '', tecnicoId: t ? t.id : '' });
