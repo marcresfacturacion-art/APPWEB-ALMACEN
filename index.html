@@ -1576,15 +1576,13 @@ function viewAlta(){
       <div class="bigstep"><button type="button" id="a_dec" aria-label="Menos">−</button><input id="a_cant" type="number" inputmode="numeric" min="0" value="${a.cant}" aria-label="Cantidad"><button type="button" id="a_inc" aria-label="Más">+</button></div>
       ${altaShelves(a.ubic)}
       <div id="a_pos" class="alta"></div>
-      <button class="btn primary block" id="a_save">✓ Guardar</button>
-      <button class="btn block" id="a_more">Guardar y completar la ficha</button>
+      <button class="btn primary block" id="a_more">✓ Guardar y completar la ficha</button>
       <button class="btn block" id="a_back">Atrás</button></section>`;
     const c=$("#a_cant"), setC=v=>{ a.cant=Math.max(0,Math.floor(Number(v)||0)); c.value=a.cant; };
     c.onchange=()=>setC(c.value); $("#a_dec").onclick=()=>setC(a.cant-1); $("#a_inc").onclick=()=>setC(a.cant+1);
     app.querySelectorAll("[data-sh]").forEach(b=>b.onclick=()=>{ a.ubic=b.dataset.sh; app.querySelectorAll("[data-sh]").forEach(x=>{ x.classList.toggle("sel",x===b); x.setAttribute("aria-pressed",String(x===b)); }); if(a.niv>nBaldas(a.ubic)) a.niv=0; drawAltaPos(); });
     drawAltaPos();
-    $("#a_save").onclick=()=>altaSave(false);
-    $("#a_more").onclick=()=>altaSave(true);
+    $("#a_more").onclick=()=>altaSave(true);   // always finish in the full form (Xavi, 2026-10-15)
     $("#a_back").onclick=()=>{ a.step=2; viewAlta(); };
     return;
   }
@@ -2420,7 +2418,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-15.1";
+const APP_VERSION="2026-10-15.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
