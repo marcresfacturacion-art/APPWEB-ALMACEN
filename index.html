@@ -38,6 +38,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .scanmsg{position:relative;color:#fff;font-weight:600;margin:18px 16px 0;text-align:center;text-shadow:0 1px 3px #000}
 .scanbar{position:absolute;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:10px}
 .scanbar .btn{flex:1;min-width:0;padding-left:6px;padding-right:6px;font-size:14px}
+.scanpick{position:absolute;left:16px;right:16px;top:calc(16px + env(safe-area-inset-top,0px));background:#fff;color:var(--fg);border-radius:14px;padding:14px 16px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:2}
+.scanpick .spn{font-weight:800;font-size:22px;line-height:1.2}
+.scanpick .spc{color:var(--muted);font-size:15px;margin-top:4px}
+.scanok{position:relative;margin-top:18px;width:min(70vw,300px);padding:16px;border:0;border-radius:14px;background:var(--ok);color:#fff;font:800 30px var(--f-display),sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.5);cursor:pointer}
 .scanwarn{position:absolute;left:16px;right:16px;top:42%;transform:translateY(-50%);background:#d32f2f;color:#fff;font-weight:800;font-size:24px;text-align:center;padding:16px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:2}
 a.btn{text-decoration:none;color:inherit;display:flex;justify-content:center;align-items:center}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);padding:10px 16px;display:flex;align-items:center;gap:12px}
@@ -357,7 +361,9 @@ form.edit .check span{flex:1;min-width:0}
   <video id="scanvideo" muted playsinline></video>
   <div class="scanframe" aria-hidden="true"></div>
   <div class="scanwarn" id="scanwarn" hidden>¡No muevas el móvil!</div>
+  <div class="scanpick" id="scanpick" hidden aria-live="polite"><div class="spn" id="spname"></div><div class="spc" id="spcode"></div></div>
   <p class="scanmsg" id="scanmsg">Apunta al código QR</p>
+  <button class="scanok" id="scanok" hidden>OK</button>
   <div class="scanbar"><button class="btn" id="scanphoto">Hacer foto</button><button class="btn" id="scantype">Escribir número</button><button class="btn primary" id="scanclose">Cerrar</button></div>
 </div>
 
@@ -2213,13 +2219,17 @@ function codeFromScan(text){
   return normCode(decodeURIComponent(t));
 }
 
-function handleScanText(found, fmt){
+function resolveScan(found, fmt){
   const raw=String(found||"").trim();
   /* A manufacturer's barcode (EAN…), not one of our QR labels. */
   const isBar=!/^https?:/i.test(raw)&&!raw.includes("#")&&(isBarText(raw)||(fmt&&fmt!=="qr_code"));
   const byBar=isBar?prodByBar(raw):null;
   let code=codeFromScan(found);
   if(isBar&&!S.products.has(code)) code=byBar?byBar.codigo:"";
+  return {raw,isBar,byBar,code};
+}
+function handleScanText(found, fmt){
+  const {raw,isBar,byBar,code}=resolveScan(found,fmt);
   if(S.scanFor==="bar") S.scanFor=null;
   if(S.scanFor==="newbar"){
     S.scanFor=null;
@@ -2256,7 +2266,7 @@ function handleScanText(found, fmt){
 }
 
 /* Live scanner: camera preview, reads the QR on its own (BarcodeDetector when the phone has it, jsQR otherwise). */
-const SCAN={stream:null,raf:0,det:null,busy:false,zx:null,n:0,cand:null};
+const SCAN={stream:null,raf:0,det:null,busy:false,zx:null,n:0,cand:null,pick:null,next:null};
 /* A barcode only counts after the same number has been read several times over at least a second,
    and EAN/UPC numbers must pass their check digit: a quick misread never gets through. */
 const BAR_CONFIRM_MS=1000, BAR_CONFIRM_READS=3;
@@ -2310,7 +2320,29 @@ async function makeDetector(){
   }catch(e){}
   SCAN.det=false;
 }
+/* What was read is shown at the top; it only opens with «OK». Pointing at another label changes it
+   (it must be read twice in a row, so two labels side by side don't flicker). */
+function scanLabel(found, fmt){
+  const {raw,isBar,code}=resolveScan(found,fmt), p=code&&S.products.get(code);
+  if(p) return {name:p.nombre, sub:p.codigo+" · "+locOf(p).name};
+  if(isBar) return {name:"Código de barras sin producto", sub:raw};
+  if(!code) return {name:"QR general", sub:"Abre el buscador"};
+  return {name:"No hay ningún producto con este código", sub:code};
+}
+function pickScan(found, fmt){
+  const P=SCAN.pick;
+  if(P&&P.text===found){ SCAN.next=null; return; }
+  if(P){ SCAN.next=SCAN.next&&SCAN.next.text===found?{text:found,n:SCAN.next.n+1}:{text:found,n:1}; if(SCAN.next.n<2) return; }
+  SCAN.next=null; SCAN.pick={text:found,fmt};
+  if(navigator.vibrate) navigator.vibrate(60);
+  const l=scanLabel(found,fmt);
+  $("#spname").textContent=l.name; $("#spcode").textContent=l.sub;
+  $("#scanpick").hidden=false; $("#scanok").hidden=false;
+  $("#scanmsg").textContent="¿Es este? Pulsa OK. Si no, apunta a otro.";
+}
+function resetPick(){ SCAN.pick=null; SCAN.next=null; const a=$("#scanpick"), b=$("#scanok"); if(a) a.hidden=true; if(b) b.hidden=true; }
 function closeScanner(){
+  resetPick();
   watchMotion(false);
   cancelAnimationFrame(SCAN.raf); SCAN.raf=0;
   if(SCAN.stream){ SCAN.stream.getTracks().forEach(t=>t.stop()); SCAN.stream=null; }
@@ -2366,13 +2398,16 @@ async function openScanner(){
         else { SCAN.cand.n++; if(SCAN.cand.n<BAR_CONFIRM_READS||now-SCAN.cand.t0<BAR_CONFIRM_MS) found=null; }
         if(!found&&SCAN.cand) $("#scanmsg").textContent="Leyendo el código… no muevas el móvil";
       }
-      if(found){ SCAN.cand=null; if(navigator.vibrate) navigator.vibrate(60); closeScanner(); handleScanText(found,fmt); }
+      if(found){ SCAN.cand=null;
+        if(!S.scanFor||S.scanFor==="count") pickScan(found,fmt);   // several labels may be together: show the name and wait for OK
+        else { if(navigator.vibrate) navigator.vibrate(60); closeScanner(); handleScanText(found,fmt); } }
     }catch(e){}
     finally{ SCAN.busy=false; }
   };
   SCAN.raf=requestAnimationFrame(tick);
 }
 $("#scanclose").onclick=()=>{ S.scanFor=null; closeScanner(); };
+$("#scanok").onclick=()=>{ const P=SCAN.pick; closeScanner(); if(P) handleScanText(P.text,P.fmt); };
 $("#scanphoto").onclick=()=>{ closeScanner(); $("#qrfile").click(); };
 /* Barcode too worn to read: type the number printed under the bars. */
 $("#scantype").onclick=()=>{
@@ -2448,7 +2483,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-16.2";
+const APP_VERSION="2026-10-16.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
