@@ -38,6 +38,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .scanmsg{position:relative;color:#fff;font-weight:600;margin:18px 16px 0;text-align:center;text-shadow:0 1px 3px #000}
 .scanbar{position:absolute;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:10px}
 .scanbar .btn{flex:1;min-width:0;padding-left:6px;padding-right:6px;font-size:14px}
+.shutter{position:relative;width:78px;height:78px;border-radius:50%;border:6px solid #fff;background:rgba(255,255,255,.35);margin-top:16px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.shutter:active{background:#fff}
 .scanpick{position:absolute;left:16px;right:16px;top:calc(16px + env(safe-area-inset-top,0px));background:#fff;color:var(--fg);border-radius:14px;padding:14px 16px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:2}
 .scanpick .spn{font-weight:800;font-size:22px;line-height:1.2}
 .scanpick .spc{color:var(--muted);font-size:15px;margin-top:4px}
@@ -357,6 +359,13 @@ form.edit .check span{flex:1;min-width:0}
 <div class="toast" id="toast" hidden></div>
 <div class="qsheet" id="qsheet" role="dialog" hidden></div>
 <button class="lblfab" id="lblfab" hidden></button>
+<div class="scanner" id="cam" hidden role="dialog" aria-label="Hacer foto">
+  <video id="camvideo" autoplay muted playsinline></video>
+  <p class="scanmsg" id="cammsg" style="margin-top:auto">Encuadra el producto y pulsa el botón redondo</p>
+  <button class="shutter" id="camshot" aria-label="Hacer la foto"></button>
+  <div class="scanbar" style="position:relative;left:auto;right:auto;bottom:auto;width:calc(100% - 32px);margin:16px 16px calc(20px + env(safe-area-inset-bottom,0px))"><button class="btn" id="camgal">Galería</button><button class="btn primary" id="camclose">Cerrar</button></div>
+</div>
+<input type="file" id="galfile" class="hidden-file" accept="image/*" aria-label="Elegir foto de la galería">
 <div class="scanner" id="scanner" hidden role="dialog" aria-label="Escanear código QR o de barras">
   <video id="scanvideo" muted playsinline></video>
   <div class="scanframe" aria-hidden="true"></div>
@@ -495,6 +504,7 @@ function go(view, extra={}){
   if (S.tecnico && !S.destino && view!=="destino" && view!=="login") { if(view==="ficha"&&extra.code) S.pending=extra.code; view="destino"; extra={}; }
   if (!(view==="ficha" && extra.code===S.code)) S.sheet=null;
   S.prefill=null; S.newBar=null; S.editBar=null;
+  if(view!=="alta"&&view!=="editar") resumeClear();
   Object.assign(S, {view}, extra);
   if (view==="ficha") watchMoves(S.code);
   if (view!==from || (view==="ficha" && S.code!==fromCode)) veil();
@@ -1213,11 +1223,10 @@ function viewPlate(){
       <button class="btn block" id="pl_new">Dar de alta con estos datos</button>`:""}
   </div>`;
   const shot=$("#pl_shot");
-  shot.onclick=()=>{ const inp=$("#photofile"); inp.value=""; inp.onchange=async()=>{
-    const file=inp.files[0]; if(!file) return;
+  shot.onclick=async()=>{ { const blob=await takePhoto(1600); if(!blob) return;
     S.plate={busy:true}; viewPlate();
     try{
-      const blob=await shrink(file,1600), b64=await blobToBase64(blob);
+      const b64=await blobToBase64(blob);
       S.plate.img="data:image/jpeg;base64,"+b64; viewPlate();
       const r=await api("api_plate", S.adminToken, b64);
       S.plate={img:S.plate.img, data:r.data||{}};
@@ -1227,7 +1236,7 @@ function viewPlate(){
       S.plate={img:S.plate&&S.plate.img, err:err&&err.msg==="función desconocida"?"old":c, msg:err&&err.msg};
     }
     if(S.view==="admin"&&S.adminTab==="plate") viewPlate();
-  }; inp.click(); };
+  } };
   box.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>go("ficha",{code:b.dataset.open}));
   box.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>go("catitem",{catSku:b.dataset.cat}));
   const nw=$("#pl_new");
@@ -1444,13 +1453,11 @@ function viewEdit(){
   </form>`;
   let fotoId = p?.foto || "";
   const ph=$("#e_photo");
-  if(ph) ph.onclick=()=>{ const inp=$("#photofile"); inp.value=""; inp.onchange=async()=>{
-      const file=inp.files[0]; if(!file) return;
+  if(ph) ph.onclick=async()=>{ { resumeSave({editCode:S.editCode||""}); const blob=await takePhoto(1000); if(!blob) return;
       ph.disabled=true; ph.textContent="Subiendo…";
-      try{ const blob=await shrink(file,1000); const b64=await blobToBase64(blob); const r=await api("api_uploadPhoto", S.tecnico.id, b64); fotoId=r.id; $("#e_thumb").innerHTML=`<img src="data:image/jpeg;base64,${b64}" alt="">`; toast("Foto lista. Pulsa Guardar."); }
+      try{ const b64=await blobToBase64(blob); const r=await api("api_uploadPhoto", S.tecnico.id, b64); fotoId=r.id; $("#e_thumb").innerHTML=`<img src="data:image/jpeg;base64,${b64}" alt="">`; toast("Foto lista. Pulsa Guardar."); }
       catch(e){ toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Inténtalo de nuevo."); }
-      ph.disabled=false; ph.textContent="Cambiar foto"; };
-    inp.click(); };
+      ph.disabled=false; ph.textContent="Cambiar foto"; } };
   const eu=$("#e_ubic"), en=$("#e_niv");
   if(eu&&en) eu.addEventListener("change",()=>{ const cur=Number(en.value)||0; en.innerHTML=nivOptions(eu.value,Math.min(cur,nBaldas(eu.value))); });
   const eb=$("#e_bar"); if(eb) eb.onclick=()=>{ S.scanFor="newbar"; openScanner(); };
@@ -1563,6 +1570,7 @@ function drawAltaWeb(){
 }
 function viewAlta(){
   const a=S.alta; if(!a||!canAlta()){ go("buscar"); return; }
+  resumeSave();
   const bar=`<div class="steps" aria-label="Paso ${Math.min(a.step,3)} de 3">${[1,2,3].map(i=>`<span class="${i<=a.step?"on":""}"></span>`).join("")}</div>`;
   if(a.step===1){
     app.innerHTML=`<section class="alta">${bar}<h2>1. Haz una foto</h2>
@@ -1570,11 +1578,11 @@ function viewAlta(){
       <button class="btn primary block" id="a_photo">${a.fotoB64?"Repetir la foto":"Hacer foto"}</button>
       ${a.bar?`<p class="catnote" style="margin:0">Código de barras: <b style="font-family:var(--f-mono)">${esc(a.bar)}</b></p>`:`<button class="btn block" id="a_bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14"/></svg>Escanear su código de barras</button>`}
       <button class="btn primary block" id="a_next">${a.fotoB64||a.bar?"Siguiente":"Saltar este paso"}</button></section>`;
-    $("#a_photo").onclick=()=>{ const inp=$("#photofile"); inp.value=""; inp.onchange=async()=>{
-      const file=inp.files[0]; if(!file) return; const b=$("#a_photo"); if(b){ b.disabled=true; b.textContent="Subiendo…"; }
-      try{ const blob=await shrink(file,1000); const b64=await blobToBase64(blob); const r=await api("api_uploadPhoto", S.tecnico.id, b64); a.foto=r.id; a.fotoB64=b64; }
+    $("#a_photo").onclick=async()=>{ const blob=await takePhoto(1000); if(!blob) return;
+      const b=$("#a_photo"); if(b){ b.disabled=true; b.textContent="Subiendo…"; }
+      try{ const b64=await blobToBase64(blob); const r=await api("api_uploadPhoto", S.tecnico.id, b64); a.foto=r.id; a.fotoB64=b64; }
       catch(e){ toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Inténtalo de nuevo."); }
-      if(S.view==="alta") viewAlta(); }; inp.click(); };
+      if(S.view==="alta") viewAlta(); };
     const ab=$("#a_bar"); if(ab) ab.onclick=()=>{ S.scanFor="altabar"; openScanner(); };
     $("#a_next").onclick=()=>{ a.step=2; viewAlta(); if(!a.bar) setTimeout(()=>{ const n=$("#a_name"); if(n) n.focus(); },50); };   // with a barcode, leave the keyboard closed so the internet names show
     return;
@@ -2208,6 +2216,48 @@ function watchMoves(code){
 function refreshMoves(){ if(S.view==="ficha"&&S.code){ S.unMoves=null; watchMoves(S.code); } }
 function blobToBase64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=rej; r.readAsDataURL(blob); }); }
 
+/* «Hacer foto» uses the camera inside the page. Opening the phone's camera app made Android close the
+   browser when the phone was short of memory or space, and the app started again from the beginning. */
+const CAM={stream:null,done:null};
+function camStop(){ if(CAM.stream){ CAM.stream.getTracks().forEach(t=>t.stop()); CAM.stream=null; } const v=$("#camvideo"); if(v) v.srcObject=null; $("#cam").hidden=true; }
+function camFinish(v){ const d=CAM.done; CAM.done=null; camStop(); if(d) d(v); }
+function pickFile(inp, max){
+  return new Promise(res=>{ inp.value=""; inp.onchange=async()=>{ const f=inp.files[0]; if(!f) return res(null); try{ res(await shrink(f,max)); }catch(e){ toast("No se pudo leer la foto."); res(null); } }; inp.click(); });
+}
+async function takePhoto(max){
+  max=max||1000; CAM.max=max;
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||IN_GAS){ resumeSave(); return pickFile($("#photofile"),max); }
+  if(CAM.done) camFinish(null);
+  $("#cam").hidden=false;
+  try{ CAM.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false}); }
+  catch(e){ camStop(); toast("No se pudo abrir la cámara. Elige la foto de la galería."); resumeSave(); return pickFile($("#galfile"),max); }
+  const v=$("#camvideo"); v.srcObject=CAM.stream; try{ await v.play(); }catch(e){}
+  return new Promise(res=>{ CAM.done=res; });
+}
+$("#camclose").onclick=()=>camFinish(null);
+$("#camshot").onclick=()=>{
+  const v=$("#camvideo"); if(!CAM.stream||!v.videoWidth) return;
+  const max=CAM.max||1000, k=Math.min(1,max/Math.max(v.videoWidth,v.videoHeight)), c=document.createElement("canvas");
+  c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k); c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+  if(navigator.vibrate) navigator.vibrate(40);
+  c.toBlob(b=>camFinish(b||null),"image/jpeg",0.85);
+};
+$("#camgal").onclick=async()=>{ const d=CAM.done, max=CAM.max||1000; CAM.done=null; camStop(); resumeSave(); const b=await pickFile($("#galfile"),max); if(d) d(b); };
+
+/* If the page still reloads while adding a product (phone short of memory), it comes back to the same
+   person, destination and step instead of the name screen. Kept for 15 minutes, only in this tab. */
+const RESUME_KEY="almacen_resume";
+function resumeSave(extra){
+  try{
+    if(!S.tecnico) return;
+    const a=S.view==="alta"&&S.alta?{...S.alta}:null; if(a&&a.fotoB64&&a.fotoB64.length>600000) a.fotoB64="";
+    sessionStorage.setItem(RESUME_KEY,JSON.stringify({at:Date.now(),tecnico:S.tecnico,destino:S.destino,view:S.view,alta:a,...(extra||{})}));
+  }catch(e){}
+}
+function resumeClear(){ try{ sessionStorage.removeItem(RESUME_KEY); }catch(e){} }
+function resumeTake(){
+  try{ const r=JSON.parse(sessionStorage.getItem(RESUME_KEY)||"null"); resumeClear(); return r&&Date.now()-r.at<IDLE_MS&&r.tecnico?r:null; }catch(e){ return null; }
+}
 function shrink(file,max){
   return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(img.src); c.toBlob(b=>b?res(b):rej(new Error("blob")),"image/jpeg",0.82); }; img.onerror=rej; img.src=URL.createObjectURL(file); });
 }
@@ -2483,7 +2533,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-16.3";
+const APP_VERSION="2026-10-16.4";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
@@ -2491,7 +2541,7 @@ async function checkUpdate(){
     const m=/const APP_VERSION="([^"]+)"/.exec(txt); if(!m||m[1]===APP_VERSION) return;
     let tried=""; try{ tried=sessionStorage.getItem("almacen_upd")||""; }catch(e){}
     if(tried===m[1]) return;
-    if(S.busy||PEND.size||WBUSY||typing()||S.view==="editar"||!$("#scanner").hidden) return;
+    if(S.busy||PEND.size||WBUSY||typing()||S.view==="editar"||S.view==="alta"||!$("#scanner").hidden||!$("#cam").hidden) return;
     try{ sessionStorage.setItem("almacen_upd",m[1]); }catch(e){}
     await fetch(url,{cache:"reload"}).catch(()=>{});
     location.reload();
@@ -2518,6 +2568,14 @@ async function poll(){
   catLoad(); groupsLoad();
   const cached=IN_GAS?null:loadCache();
   if(cached&&cached.products&&cached.techs){ applyData(cached); render(); }
+  const rs=resumeTake();
+  if(rs){
+    S.tecnico=rs.tecnico; S.destino=rs.destino; S.lastActive=Date.now();
+    if(rs.view==="alta"&&rs.alta){ S.alta=rs.alta; go("alta"); toast("Seguimos con el producto que estabas dando de alta."); }
+    else if(rs.view==="editar"){ go("editar",{editCode:rs.editCode||null}); toast("Seguimos donde estabas. Repite la foto."); }
+    else if(S.destino) go("buscar");
+    else go("destino");
+  }
   /* First visit on this phone: ask for the technicians on their own so the name search works while the rest loads. */
   let full=false;
   if(!IN_GAS&&!(cached&&cached.techs)) api("api_techs").then(r=>{
