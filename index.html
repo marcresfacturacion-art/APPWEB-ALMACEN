@@ -438,9 +438,12 @@ const shelvesIn = room => Object.entries(SHELVES).filter(([k])=>roomOf(k)===room
 const EMPRESAS = ["Marcres","Rivagua"];
 const LOAN_LOC = {name:"Préstamos", color:"var(--sh-loan)"};
 const NO_LOC = {name:"Sin ubicación", color:"var(--line)"};
-/* Loan items live in the "Préstamos" location, whatever shelf they had. */
-const locOf = p => p.prestamo ? LOAN_LOC : (SHELVES[p.ubicacion] || NO_LOC);
-const locKey = p => p.prestamo ? "prestamos" : (SHELVES[p.ubicacion] ? p.ubicacion : "none");
+/* Every product, loan machines too, has its home shelf. A loan machine shows under «Préstamos»
+   while it is lent out, and goes back to its shelf when it is returned. */
+const locOf = p => SHELVES[p.ubicacion] || NO_LOC;
+const locKey = p => SHELVES[p.ubicacion] ? p.ubicacion : "none";
+const lentN = p => p&&p.prestamo ? S.loans.filter(l=>l.codigo===p.codigo).length : 0;
+const allOut = p => lentN(p)>0 && p.cantidad<1;   // none left on its shelf
 const locName = k => k==="prestamos" ? LOAN_LOC.name : k==="none" ? NO_LOC.name : SHELVES[k].name;
 const isLow = p => Number(p.minimo)>0 && p.cantidad < Number(p.minimo);
 function loaderHtml(text, small){ return `<div class="loader${small?" small":""}" role="status"><div class="lspin" aria-hidden="true"><img src="logo-marcres.png" alt=""><img src="logo-rivagua.png" alt=""></div><p>${esc(text)}</p></div>`; }
@@ -567,7 +570,7 @@ function logout(msg){
 }
 
 function productRow(p){
-  const sh = locKey(p)==="none" ? null : locOf(p);
+  const sh = allOut(p) ? LOAN_LOC : locKey(p)==="none" ? null : locOf(p);
   const img = imgFor(p);
   return `<button class="row" data-open="${esc(p.codigo)}">
     <span class="thumb">${img?`<img src="${img}" alt="">`:esc(initials(p.nombre))}</span>
@@ -584,7 +587,8 @@ function groupsLoad(){ try{ const v=JSON.parse(localStorage.getItem(GROUPS_KEY)|
 function groupsSave(){ try{ localStorage.setItem(GROUPS_KEY,JSON.stringify([...S.openGroups])); }catch(e){} }
 const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>';
 function homeGroups(all){
-  const by=new Map(); all.forEach(p=>{ const k=locKey(p); if(!by.has(k)) by.set(k,[]); by.get(k).push(p); });
+  const by=new Map(), add=(k,p)=>{ if(!by.has(k)) by.set(k,[]); by.get(k).push(p); };
+  all.forEach(p=>{ if(!allOut(p)) add(locKey(p),p); if(lentN(p)) add("prestamos",p); });
   const open=k=>S.openGroups.has(k)?"open":"";
   const shelf=(k,v)=>{ const items=by.get(k)||[]; return `<details class="group" data-g="${k}" ${open(k)}><summary><span class="dot" style="background:${v.color}"></span><span class="gname">${esc(v.name)}</span><span class="gcount">${items.length}</span>${CHEV}</summary><div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">Vacío</div>'}</div></details>`; };
   const room=(key,icon)=>{ const sh=shelvesIn(key), n=sh.reduce((t,[k])=>t+(by.get(k)||[]).length,0);
@@ -675,7 +679,7 @@ function viewFicha(){
     ${pricesHtml(catByCode(p.codigo))}${S.adminOk&&S.catVer&&!(S.cat&&S.cat.admin)?(ensureCat(),""):""}
     <div class="facts">
       <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&S.adminOk&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
-      <div class="fact"><span class="label">Ubicación</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button><span class="note">${nivLabel(p)?"<b>"+esc(nivLabel(p))+"</b> · ":""}${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
+      <div class="fact"><span class="label">${p.prestamo?"Su sitio":"Ubicación"}</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button>${allOut(p)?`<span class="chip" style="color:var(--sh-loan)">🔁 Ahora está prestada</span>`:""}<span class="note">${nivLabel(p)?"<b>"+esc(nivLabel(p))+"</b> · ":""}${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
     </div>
     ${rackBlock(p)}
     ${actions}
@@ -711,7 +715,7 @@ async function toggleLoan(p){
   try{
     await api("api_toggleLoan", S.tecnico.id, p.codigo, on);
     p.prestamo=on; refreshMoves();
-    toast(on?`${p.nombre} está ahora en Préstamos.`:`${p.nombre} vuelve a ${(SHELVES[p.ubicacion]||NO_LOC).name.toLowerCase()}.`);
+    toast(on?`${p.nombre} ahora es de préstamo.`:`${p.nombre} vuelve a ${(SHELVES[p.ubicacion]||NO_LOC).name.toLowerCase()}.`);
   }catch(err){ if(err&&err.code==="lent") toast("Antes de quitarlo de préstamos tienen que devolverlo."); else handleWriteError(err); }
   finally{ S.busy=false; if(S.view==="ficha") render(); }
 }
@@ -856,7 +860,7 @@ async function lend(code){
     const r=await api("api_lend", S.tecnico.id, code, S.destino);
     p.cantidad=r.next; remember("qty",code,r.next); remember("added",r.loan.id,r.loan);
     S.loans=[...S.loans.filter(l=>l.id!==r.loan.id), r.loan]; saveCache({loans:S.loans});
-    toast(`Apuntado: te llevas ${p.nombre}.`); refreshMoves();
+    toast(`Apuntado: te llevas ${p.nombre}. Al devolverla vuelve a ${locOf(p).name.toLowerCase()}.`); refreshMoves();
   }catch(err){
     if(err&&err.code==="gone") toast("Este producto ya no existe.");
     else if(err&&err.code==="none") toast("No queda ninguna disponible.");
@@ -871,7 +875,7 @@ async function returnLoan(l){
     const r=await api("api_return", S.tecnico.id, l.id);
     remember("gone",l.id,true); S.loans=S.loans.filter(x=>x.id!==l.id); saveCache({loans:S.loans});
     const p=S.products.get(l.codigo); if(p&&!r.gone){ p.cantidad=r.next; remember("qty",l.codigo,r.next); }
-    toast(`${l.producto} devuelto.`); refreshMoves();
+    toast(p?`Devuelta: ${l.producto} vuelve a ${locOf(p).name.toLowerCase()}.`:`${l.producto} devuelto.`); refreshMoves();
   }catch(err){
     if(err&&err.code==="done"){ remember("gone",l.id,true); S.loans=S.loans.filter(x=>x.id!==l.id); saveCache({loans:S.loans}); toast("Este préstamo ya estaba devuelto."); }
     else handleWriteError(err);
@@ -1009,11 +1013,11 @@ function viewMap(){
   const sel=S.mapSel;
   if(sel&&SHELVES[sel]) S.mapRoom=roomOf(sel);
   const room=S.mapRoom||"main";
-  const items = sel ? [...S.products.values()].filter(p=>locKey(p)===sel).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")) : [];
+  const items = sel ? [...S.products.values()].filter(p=>sel==="prestamos"?lentN(p)>0:locKey(p)===sel&&!allOut(p)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")) : [];
   app.innerHTML = `
     <div class="roomtabs">${Object.entries(ROOMS).map(([k,v])=>`<button data-room="${k}" aria-pressed="${room===k}">${v}</button>`).join("")}</div>
     <div class="map">${room==="cb"?cbSvg(sel):shelfSvg(sel)}</div>
-    <div class="legend">${shelvesIn(room).map(([k,v])=>`<button data-shelf="${k}" aria-pressed="${sel===k}"><span class="dot" style="background:${v.color}"></span>${v.name}</button>`).join("")}${room==="main"?` <button data-shelf="prestamos" aria-pressed="${sel==="prestamos"}"><span class="dot" style="background:var(--sh-loan)"></span>Préstamos · ${[...S.products.values()].filter(p=>p.prestamo).length}</button><button data-shelf="none" aria-pressed="${sel==="none"}"><span class="dot" style="background:var(--line)"></span>Sin ubicación · ${[...S.products.values()].filter(p=>locKey(p)==="none").length}</button>`:""}</div>
+    <div class="legend">${shelvesIn(room).map(([k,v])=>`<button data-shelf="${k}" aria-pressed="${sel===k}"><span class="dot" style="background:${v.color}"></span>${v.name}</button>`).join("")}${room==="main"?` <button data-shelf="prestamos" aria-pressed="${sel==="prestamos"}"><span class="dot" style="background:var(--sh-loan)"></span>Préstamos · ${[...S.products.values()].filter(p=>lentN(p)>0).length}</button><button data-shelf="none" aria-pressed="${sel==="none"}"><span class="dot" style="background:var(--line)"></span>Sin ubicación · ${[...S.products.values()].filter(p=>locKey(p)==="none").length}</button>`:""}</div>
     ${sel?`<div class="label">${locName(sel)} · ${items.length} producto${items.length===1?"":"s"}</div>
       <div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">No hay productos en esta ubicación.</div>'}</div>`
       :'<p class="note">Toca un estante para ver qué hay en él.</p>'}
@@ -1457,7 +1461,8 @@ function viewEdit(){
     const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value),nivel:$("#e_niv").value,lado:$("#e_lado").value,familia:$("#e_fam").value};
     if($("#e_min")) fields.minimo=Math.max(0,Math.floor(Number($("#e_min").value)||0));
     if(!p&&!fields.familia){ toast("Elige la familia."); $("#e_fam").focus(); return; }
-    if(!p&&!fields.prestamo){   // a new product must say shelf, height and side
+    if(fields.prestamo&&!SHELVES[fields.ubicacion]){ toast("Ponle su estante: ahí vuelve cuando la devuelvan."); $("#e_ubic").focus(); return; }
+    if(!p){   // a new product must say shelf, height and side (loan machines too: it is their home)
       const miss=!SHELVES[fields.ubicacion]?["#e_ubic","Elige el estante."]:!fields.nivel?["#e_niv","Elige la altura (balda)."]:!fields.lado?["#e_lado","Elige el lado."]:null;
       if(miss){ toast(miss[1]); $(miss[0]).focus(); return; }
     }
@@ -1810,7 +1815,7 @@ function recountItems(){
   return [...S.products.values()].filter(p=>k==="all"||locKey(p)===k||(k[0]==="@"&&SHELVES[locKey(p)]&&roomOf(locKey(p))===k.slice(1))).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
 }
 function viewRecount(){
-  const opts=[["","Elige qué vas a contar…"],["all","Todo"],["@main","Todo el almacén principal"],...shelvesIn("main").map(([k,v])=>[k,"&nbsp;&nbsp;&nbsp;"+v.name]),["@cb","Todo el Cuarto blanco"],...shelvesIn("cb").map(([k,v])=>[k,"&nbsp;&nbsp;&nbsp;"+v.name]),["prestamos","Préstamos"],["none","Sin ubicación"]];
+  const opts=[["","Elige qué vas a contar…"],["all","Todo"],["@main","Todo el almacén principal"],...shelvesIn("main").map(([k,v])=>[k,"&nbsp;&nbsp;&nbsp;"+v.name]),["@cb","Todo el Cuarto blanco"],...shelvesIn("cb").map(([k,v])=>[k,"&nbsp;&nbsp;&nbsp;"+v.name]),["none","Sin ubicación"]];
   const items=recountItems(), done=Object.keys(S.rc.done).length;
   $("#adm").innerHTML = `
     ${S.rc.cur?countCard():`<button class="btn primary block" id="r_scan">📷 Contar escaneando</button>
@@ -2443,7 +2448,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-16.1";
+const APP_VERSION="2026-10-16.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
