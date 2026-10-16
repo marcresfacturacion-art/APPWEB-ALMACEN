@@ -59,7 +59,31 @@ function saveProductUpper_(tecId, data, isNew) {
     if (nv !== (normNivel_(cur[1]) || '') || ld !== (cur[3] || '')) { locked_(function () { setNivel_(code, nv, ld); }); r.same = false; }
     r.product.nivel = nv; r.product.lado = ld;
   }
+  if (r && r.ok && r.product && data.familia !== undefined) {
+    var fc = r.product.codigo, fv = FAMILIAS_.indexOf(String(data.familia || '')) >= 0 ? String(data.familia) : '';
+    if (fv !== (famMap_()[fc] || '')) { locked_(function () { setFamilia_(fc, fv); }); r.same = false; }
+    r.product.familia = fv;
+  }
   return r;
+}
+/* ---------- Familia de cada producto (pedido de Xavi, 16-10-2026) ----------
+ * Pestaña «Familias» de la hoja: [código del producto, familia]. La gestiona solo este archivo.
+ * Las claves son las mismas que FAMILIAS en index.html. */
+var FAM_SHEET_ = 'Familias', FAMILIAS_ = ['pvc', 'laton', 'valv', 'pe', 'torn', 'cons', 'elec', 'cable', 'bombas', 'maq', 'otros'];
+function famRows_() {
+  var sh = sh_(FAM_SHEET_), n = sh ? sh.getLastRow() : 0;
+  return n < 2 ? [] : sh.getRange(2, 1, n - 1, 2).getValues().map(function (r, i) { return [String(r[0]).trim(), String(r[1]).trim().toLowerCase(), i + 2]; })
+    .filter(function (r) { return r[0]; });
+}
+function famMap_() { var o = {}; famRows_().forEach(function (r) { if (FAMILIAS_.indexOf(r[1]) >= 0) o[r[0]] = r[1]; }); return o; }
+function setFamilia_(code, fam) {
+  var ss = ss_(), sh = ss.getSheetByName(FAM_SHEET_);
+  if (!sh) { if (!fam) return; sh = ss.insertSheet(FAM_SHEET_); sh.setFrozenRows(1); }
+  sh.getRange(1, 1, 1, 2).setValues([['Producto', 'Familia']]).setFontWeight('bold');
+  var cur = famRows_().filter(function (r) { return r[0] === code; })[0];
+  if (cur && fam) sh.getRange(cur[2], 2).setValue(fam);
+  else if (cur) sh.deleteRow(cur[2]);
+  else if (fam) sh.getRange(sh.getLastRow() + 1, 1, 1, 2).setValues([[code, fam]]);
 }
 /* ---------- Altura en el estante: arriba, en medio o abajo ----------
  * Pestaña «Niveles» de la hoja: [código del producto, nivel]. La gestiona solo este archivo. */
@@ -166,13 +190,13 @@ function api_techs() {
 function fastPoll_() {
   return guard_(function () {
     var inv = cachedInv_();
-    return { products: inv.products, loans: inv.loans, barras: inv.barras || [], niveles: inv.niveles || {}, lados: inv.lados || {}, baldas: baldas_(), techs: cachedTechs_(), catVer: catVer_() };
+    return { products: inv.products, loans: inv.loans, barras: inv.barras || [], niveles: inv.niveles || {}, lados: inv.lados || {}, familias: inv.familias || {}, baldas: baldas_(), techs: cachedTechs_(), catVer: catVer_() };
   });
 }
 function fastBootstrap_() {
   return guard_(function () {
     var inv = cachedInv_(), cli = cachedCli_();
-    return { products: inv.products, loans: inv.loans, barras: inv.barras || [], niveles: inv.niveles || {}, lados: inv.lados || {}, baldas: baldas_(), techs: cachedTechs_(), clientes: cli.clientes, proveedores: cli.proveedores,
+    return { products: inv.products, loans: inv.loans, barras: inv.barras || [], niveles: inv.niveles || {}, lados: inv.lados || {}, familias: inv.familias || {}, baldas: baldas_(), techs: cachedTechs_(), clientes: cli.clientes, proveedores: cli.proveedores,
       url: ScriptApp.getService().getUrl(), hasPassword: hasPassword_(), catVer: catVer_() };
   });
 }
@@ -212,7 +236,7 @@ function cachedTechs_() {
 }
 function cachedInv_() {
   var v = cget_('inv');
-  if (!v) { var v0 = cver_(); v = { products: rows_('Productos').map(prodOut_), loans: loansOut_(), barras: barRows_().map(function (r) { return [r[0], r[1]]; }), niveles: nivMap_(), lados: ladoMap_() }; if (cver_() === v0) cput_('inv', v, TTL_INV_); }
+  if (!v) { var v0 = cver_(); v = { products: rows_('Productos').map(prodOut_), loans: loansOut_(), barras: barRows_().map(function (r) { return [r[0], r[1]]; }), niveles: nivMap_(), lados: ladoMap_(), familias: famMap_() }; if (cver_() === v0) cput_('inv', v, TTL_INV_); }
   return v;
 }
 function cachedCli_() {

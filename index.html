@@ -280,6 +280,7 @@ form.edit .check span{flex:1;min-width:0}
 .shtile{min-height:58px;border-radius:12px;border:3px solid transparent;background:var(--c);color:#fff;font-weight:700;font-size:13px;text-shadow:0 1px 2px rgba(0,0,0,.7);cursor:pointer;padding:4px}
 .shtile b{display:inline-block;background:rgba(0,0,0,.5);border-radius:6px;padding:2px 6px;text-shadow:none;line-height:1.2}
 .paraq{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.paraq #q_pbox{display:flex;flex-direction:column;gap:6px;width:100%}.paraq #q_pbox[hidden]{display:none}.paraq input{width:100%;min-height:44px;font-size:16px}.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1.5px solid var(--accent);background:var(--surface);color:var(--accent);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;cursor:pointer}.chip.on{background:var(--accent);color:var(--accent-fg)}.qn.hint{outline:3px solid var(--accent);outline-offset:2px}.nbp{color:var(--accent);font-weight:600}
+.famgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.famtile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-height:64px;padding:8px 10px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;font-size:14px}.famtile span{font-size:20px;line-height:1}.famtile small{color:var(--muted);font-size:12px;line-height:1.2}.famtile[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-fg)}.famtile[aria-pressed="true"] small{color:var(--accent-fg)}
 .posgrid{display:grid;grid-template-columns:1fr;gap:8px}.posgrid.three{grid-template-columns:1fr 1fr 1fr}.posgrid .btn{min-height:56px;font-size:16px;padding:0 6px}.posgrid .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
 .shtile.sel{border-color:var(--fg);box-shadow:0 0 0 3px var(--accent)}
 .photo.nophoto{aspect-ratio:auto;height:120px;font-size:40px}
@@ -451,7 +452,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -597,7 +598,7 @@ function viewSearch(){
   const all = [...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
   const words = qWords(S.q);
   const bk = isBarText(S.q) ? barKey(S.q) : null, byBar = bk ? S.bars.get(bk) : null;
-  const hits = q ? all.filter(p => p.codigo===byBar || hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||"")+" "+barsOf(p.codigo).join(" "), words)) : all;
+  const hits = q ? all.filter(p => p.codigo===byBar || hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||"")+" "+barsOf(p.codigo).join(" ")+" "+(FAMILIAS[famOf(p)]?FAMILIAS[famOf(p)].n:""), words)) : all;
   const cat = q ? catHits(words) : null;
   if(q) ensureCat();
   app.innerHTML = `
@@ -669,6 +670,7 @@ function viewFicha(){
     <div><div class="code">${esc(p.codigo)}${p.prestamo?'<span class="pill">Préstamo</span>':''}</div><h2>${esc(p.nombre)}</h2></div>
     ${p.descripcion?`<p>${esc(p.descripcion)}</p>`:""}
     ${p.proveedor?`<p class="note" style="margin:0">Proveedor: <b>${esc(p.proveedor)}</b></p>`:""}
+    ${famOf(p)?`<p class="note" style="margin:0">Familia: <b>${esc(famName(famOf(p)))}</b></p>`:canRestricted()?`<p class="note" style="margin:0;color:var(--danger)">Sin familia: ponla en «Editar producto».</p>`:""}
     ${barLine(p)}
     ${pricesHtml(catByCode(p.codigo))}${S.adminOk&&S.catVer&&!(S.cat&&S.cat.admin)?(ensureCat(),""):""}
     <div class="facts">
@@ -938,6 +940,18 @@ function cbSvg(sel){
 const NIV_OLD={abajo:1,medio:2,arriba:3};
 const nBaldas = k => Math.min(8,Math.max(2,Number(S.baldas[k])||3));
 const LADOS={izq:"Izquierda",centro:"Centro",der:"Derecha"};
+/* Families (Xavi, 2026-10-16): small fittings and materials in the main warehouse; electrical, pumps,
+   machines and anything expensive or delicate in the Cuarto blanco. Same keys as FAMILIAS_ in api.gs. */
+const FAMILIAS={
+  pvc:{n:"Accesorios de PVC",i:"🔧",room:"main"}, laton:{n:"Latón y metal",s:"racores, enlaces",i:"🟡",room:"main"},
+  valv:{n:"Valvulería",s:"clapetas, compuertas, llaves",i:"🚰",room:"main"}, pe:{n:"Polietileno y electrofusión",i:"⚫",room:"main"},
+  torn:{n:"Tornillería y fijación",i:"🔩",room:"main"}, cons:{n:"Consumibles",s:"adhesivo, teflón, siliconas, EPIs",i:"🧴",room:"main"},
+  elec:{n:"Material eléctrico",s:"relés, contactores, magnetotérmicos",i:"⚡",room:"cb"}, cable:{n:"Cable y manguera",i:"🔌",room:"cb"},
+  bombas:{n:"Bombas y motores",i:"💧",room:"cb"}, maq:{n:"Maquinaria y herramientas",s:"lo caro o delicado",i:"🛠️",room:"cb"},
+  otros:{n:"Otros",i:"📦",room:""}
+};
+const famOf = p => p&&FAMILIAS[S.fam[p.codigo]]?S.fam[p.codigo]:"";
+const famName = k => FAMILIAS[k]?FAMILIAS[k].i+" "+FAMILIAS[k].n:"";
 const ladoOf = p => p&&LADOS[S.lados[p.codigo]]?S.lados[p.codigo]:"";
 function nivName(i,n){
   if(i===1) return "Abajo"; if(i===n) return "Arriba";
@@ -1400,6 +1414,7 @@ function viewEdit(){
       </div></div>
     ${p?"":`<div class="stock" id="e_barbox" hidden></div>`}
     <label><span class="label">Nombre</span><input id="e_nombre" required value="${esc(p?.nombre||pre?.nombre||"")}" placeholder="Ej. Bomba Espa Multi 35 5" autocomplete="off"></label>
+    <label><span class="label">Familia</span><select id="e_fam"><option value="">Elige la familia</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${Object.entries(FAMILIAS).filter(([,f])=>f.room===rk).map(([k,f])=>`<option value="${k}" ${famOf(p)===k?"selected":""}>${f.i} ${f.n}</option>`).join("")}</optgroup>`).join("")}<option value="otros" ${famOf(p)==="otros"?"selected":""}>📦 Otros</option></select></label>
     <div class="twobtn">
       <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
       <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${shelvesIn(rk).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</optgroup>`).join("")}</select></label>
@@ -1439,8 +1454,9 @@ function viewEdit(){
     if(!nombre){ toast("Escribe el nombre del producto."); $("#e_nombre").focus(); return; }
     if(!codigo){ toast("Falta el código del QR."); return; }
     const cantidad=Math.max(0,Math.floor(Number($("#e_cant").value)||0));
-    const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value),nivel:$("#e_niv").value,lado:$("#e_lado").value};
+    const fields={nombre,descripcion:UP($("#e_desc").value),ubicacion:$("#e_ubic").value,foto:fotoId,prestamo:$("#e_prest").checked,proveedor:UP($("#e_prov").value),nivel:$("#e_niv").value,lado:$("#e_lado").value,familia:$("#e_fam").value};
     if($("#e_min")) fields.minimo=Math.max(0,Math.floor(Number($("#e_min").value)||0));
+    if(!p&&!fields.familia){ toast("Elige la familia."); $("#e_fam").focus(); return; }
     if(!p&&!fields.prestamo){   // a new product must say shelf, height and side
       const miss=!SHELVES[fields.ubicacion]?["#e_ubic","Elige el estante."]:!fields.nivel?["#e_niv","Elige la altura (balda)."]:!fields.lado?["#e_lado","Elige el lado."]:null;
       if(miss){ toast(miss[1]); $(miss[0]).focus(); return; }
@@ -1453,6 +1469,8 @@ function viewEdit(){
       S.products.set(r.product.codigo, r.product);
       if(r.product.nivel!==undefined){ if(r.product.nivel) S.niv[r.product.codigo]=r.product.nivel; else delete S.niv[r.product.codigo]; }
       if(r.product.lado!==undefined){ if(r.product.lado) S.lados[r.product.codigo]=r.product.lado; else delete S.lados[r.product.codigo]; }
+      if(r.product.familia!==undefined){ if(r.product.familia) S.fam[r.product.codigo]=r.product.familia; else delete S.fam[r.product.codigo]; }
+      else if(fields.familia) toast("La familia no se ha guardado: hay que pegar servidor.gs en Apps Script.");
       if(r.product.nivel===undefined&&(fields.nivel||fields.lado)) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
       if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce el Cuarto blanco: hay que pegar el api.gs nuevo en Apps Script."); go("ficha",{code:r.product.codigo}); return; }
       if(!p){
@@ -1482,13 +1500,16 @@ function viewEdit(){
 function startAlta(pre){
   if(!canAlta()){ toast("Solo los administrativos pueden dar de alta productos."); return; }
   const keep=S.alta&&S.alta.ubic||"";
-  S.alta={step:1, foto:"", fotoB64:"", bar:"", nombre:"", desc:"", cant:1, ubic:keep, niv:0, lado:"", ...(pre||{})};
+  S.alta={step:1, foto:"", fotoB64:"", bar:"", nombre:"", desc:"", cant:1, ubic:keep, niv:0, lado:"", fam:"", ...(pre||{})};
   if(S.alta.bar) webSearch(S.alta.bar);   // the names are ready by the time step 2 opens
   go("alta");
 }
-function altaShelves(sel){
+function altaShelves(sel, room){
   const tile=(k,v)=>`<button type="button" class="shtile${sel===k?" sel":""}" data-sh="${k}" style="--c:${v.color}" aria-pressed="${sel===k}"><b>${esc(v.name.replace("Estante ",""))}</b></button>`;
-  return Object.entries(ROOMS).map(([rk,rn])=>`<div class="label">${rn}</div><div class="shgrid">${shelvesIn(rk).map(([k,v])=>tile(k,v)).join("")}</div>`).join("");
+  return Object.entries(ROOMS).filter(([rk])=>!room||rk===room).map(([rk,rn])=>`<div class="label">${rn}</div><div class="shgrid">${shelvesIn(rk).map(([k,v])=>tile(k,v)).join("")}</div>`).join("");
+}
+function altaFams(sel){
+  return `<div class="label">Familia · obligatorio</div><div class="famgrid">${Object.entries(FAMILIAS).map(([k,f])=>`<button type="button" class="famtile" data-fam="${k}" aria-pressed="${sel===k}"><span>${f.i}</span><b>${esc(f.n)}</b>${f.s?`<small>${esc(f.s)}</small>`:""}</button>`).join("")}</div>`;
 }
 /* New products must say shelf, height and side (Xavi, 2026-10-13). */
 function altaPos(a){
@@ -1574,12 +1595,14 @@ function viewAlta(){
     app.innerHTML=`<section class="alta">${bar}<h2>3. ¿Cuántos hay y dónde?</h2>
       <p class="note" style="margin:0"><b>${esc(String(a.nombre).toLocaleUpperCase("es-ES"))}</b></p>
       <div class="bigstep"><button type="button" id="a_dec" aria-label="Menos">−</button><input id="a_cant" type="number" inputmode="numeric" min="0" value="${a.cant}" aria-label="Cantidad"><button type="button" id="a_inc" aria-label="Más">+</button></div>
-      ${altaShelves(a.ubic)}
-      <div id="a_pos" class="alta"></div>
+      ${altaFams(a.fam)}
+      ${a.fam?`<p class="note" style="margin:0">${FAMILIAS[a.fam].room?`Va al <b>${ROOMS[FAMILIAS[a.fam].room]}</b>. Elige el estante:`:"Elige el estante:"}</p>${altaShelves(a.ubic, FAMILIAS[a.fam].room)}
+      <div id="a_pos" class="alta"></div>`:`<p class="note" style="margin:0">Elige primero la familia; después salen los estantes donde va.</p>`}
       <button class="btn primary block" id="a_more">✓ Guardar y completar la ficha</button>
       <button class="btn block" id="a_back">Atrás</button></section>`;
     const c=$("#a_cant"), setC=v=>{ a.cant=Math.max(0,Math.floor(Number(v)||0)); c.value=a.cant; };
     c.onchange=()=>setC(c.value); $("#a_dec").onclick=()=>setC(a.cant-1); $("#a_inc").onclick=()=>setC(a.cant+1);
+    app.querySelectorAll("[data-fam]").forEach(b=>b.onclick=()=>{ a.fam=b.dataset.fam; const rm=FAMILIAS[a.fam].room; if(a.ubic&&rm&&roomOf(a.ubic)!==rm){ a.ubic=""; a.niv=0; } const y=window.scrollY; viewAlta(); window.scrollTo(0,y); });
     app.querySelectorAll("[data-sh]").forEach(b=>b.onclick=()=>{ a.ubic=b.dataset.sh; app.querySelectorAll("[data-sh]").forEach(x=>{ x.classList.toggle("sel",x===b); x.setAttribute("aria-pressed",String(x===b)); }); if(a.niv>nBaldas(a.ubic)) a.niv=0; drawAltaPos(); });
     drawAltaPos();
     $("#a_more").onclick=()=>altaSave(true);   // always finish in the full form (Xavi, 2026-10-15)
@@ -1598,19 +1621,20 @@ function viewAlta(){
 async function altaSave(more){
   const a=S.alta; if(!a||S.busy) return;
   const nombre=String(a.nombre||"").trim().toLocaleUpperCase("es-ES"); if(!nombre){ a.step=2; viewAlta(); return; }
-  const miss=!SHELVES[a.ubic]?"Elige el estante.":!a.niv?"Elige la altura: en qué balda está.":!a.lado?"Elige el lado: izquierda, centro o derecha.":"";
-  if(miss){ toast(miss); const box=$(SHELVES[a.ubic]?"#a_pos":".shgrid"); if(box) box.scrollIntoView({behavior:"smooth",block:"center"}); return; }
+  const miss=!a.fam?"Elige la familia.":!SHELVES[a.ubic]?"Elige el estante.":!a.niv?"Elige la altura: en qué balda está.":!a.lado?"Elige el lado: izquierda, centro o derecha.":"";
+  if(miss){ toast(miss); const box=$(!a.fam?".famgrid":SHELVES[a.ubic]?"#a_pos":".shgrid"); if(box) box.scrollIntoView({behavior:"smooth",block:"center"}); return; }
   S.busy=true; app.querySelectorAll("#a_save,#a_more").forEach(b=>b.disabled=true);
   let r=null;
   try{
     for(let i=0;i<3&&!r;i++){
-      try{ r=await api("api_saveProduct", S.tecnico.id, {codigo:nextCode(), nombre, descripcion:String(a.desc||"").toLocaleUpperCase("es-ES"), ubicacion:a.ubic||"", foto:a.foto||"", prestamo:false, proveedor:"", cantidad:a.cant, nivel:a.niv, lado:a.lado}, true); }
+      try{ r=await api("api_saveProduct", S.tecnico.id, {codigo:nextCode(), nombre, descripcion:String(a.desc||"").toLocaleUpperCase("es-ES"), ubicacion:a.ubic||"", foto:a.foto||"", prestamo:false, proveedor:"", cantidad:a.cant, nivel:a.niv, lado:a.lado, familia:a.fam}, true); }
       catch(err){ if(err&&err.code==="exists"){ await poll(); continue; } throw err; }
     }
     if(!r) throw {code:"busy"};
     S.products.set(r.product.codigo, r.product);
     if(r.product.nivel===undefined) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
     else { if(r.product.nivel) S.niv[r.product.codigo]=r.product.nivel; if(r.product.lado) S.lados[r.product.codigo]=r.product.lado; }
+    if(r.product.familia) S.fam[r.product.codigo]=r.product.familia;
     S.busy=false;
     if(a.bar) await linkBar(a.bar, r.product.codigo);
     if(more){ go("editar",{editCode:r.product.codigo}); return; }
@@ -2404,6 +2428,7 @@ function applyData(r){
   if(r.niveles) S.niv={...r.niveles};
   if(r.baldas) S.baldas={...r.baldas};
   if(r.lados) S.lados={...r.lados};
+  if(r.familias) S.fam={...r.familias};
   if(r.barras) S.bars=new Map(r.barras.map(([k,c])=>[barKey(k),String(c)]));
   if(r.loans){
     const list=r.loans.filter(l=>!fresh("gone",l.id));
@@ -2418,7 +2443,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-15.2";
+const APP_VERSION="2026-10-16.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
