@@ -962,6 +962,10 @@ const nBaldas = k => Math.min(8,Math.max(2,Number(S.baldas[k])||3));
 const LADOS={izq:"Izquierda",centro:"Centro",der:"Derecha"};
 /* Families (Xavi, 2026-10-16): small fittings and materials in the main warehouse; electrical, pumps,
    machines and anything expensive or delicate in the Cuarto blanco. Same keys as FAMILIAS_ in api.gs. */
+/* Xavi, 2026-10-19: while the warehouse is being counted, any family can go to any warehouse.
+   Set to true to show only the shelves of the family's warehouse again (principal / cuarto blanco). */
+const FAM_POR_ALMACEN=false;
+const famRoom = k => FAM_POR_ALMACEN&&FAMILIAS[k] ? FAMILIAS[k].room : "";
 const FAMILIAS={
   pvc:{n:"Accesorios de PVC",s:"codos, tes, manguitos, enlaces",i:"🔧",room:"main"}, tubo:{n:"Tubos y corrugado",s:"PVC, corrugado, cobre, multicapa por metro",i:"➖",room:"main"},
   laton:{n:"Latón y bronce",s:"racores, machones, tapones",i:"🟡",room:"main"}, galv:{n:"Galvanizado, hierro y acero",s:"alargaderas, inox, fundición",i:"⚙️",room:"main"},
@@ -1462,7 +1466,7 @@ function viewEdit(){
       </div></div>
     ${p?"":`<div class="stock" id="e_barbox" hidden></div>`}
     <label><span class="label">Nombre</span><input id="e_nombre" required value="${esc(p?.nombre||pre?.nombre||"")}" placeholder="Ej. Bomba Espa Multi 35 5" autocomplete="off"></label>
-    <label><span class="label">Familia${!famOf(p)&&famSel?" · ✨ propuesta por el nombre, cámbiala si no es":""}</span><select id="e_fam"><option value="">Elige la familia</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${Object.entries(FAMILIAS).filter(([,f])=>f.room===rk).map(([k,f])=>`<option value="${k}" ${famSel===k?"selected":""}>${f.i} ${f.n}</option>`).join("")}</optgroup>`).join("")}<option value="otros" ${famSel==="otros"?"selected":""}>📦 Otros</option></select></label>
+    <label><span class="label">Familia${!famOf(p)&&famSel?" · ✨ propuesta por el nombre, cámbiala si no es":""}</span><select id="e_fam"><option value="">Elige la familia</option>${FAM_POR_ALMACEN?Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${Object.entries(FAMILIAS).filter(([,f])=>f.room===rk).map(([k,f])=>`<option value="${k}" ${famSel===k?"selected":""}>${f.i} ${f.n}</option>`).join("")}</optgroup>`).join("")+`<option value="otros" ${famSel==="otros"?"selected":""}>📦 Otros</option>`:Object.entries(FAMILIAS).map(([k,f])=>`<option value="${k}" ${famSel===k?"selected":""}>${f.i} ${f.n}</option>`).join("")}</select></label>
     <div class="twobtn">
       <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
       <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${shelvesIn(rk).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</optgroup>`).join("")}</select></label>
@@ -1646,13 +1650,13 @@ function viewAlta(){
       <div class="bigstep"><button type="button" id="a_dec" aria-label="Menos">−</button><input id="a_cant" type="number" inputmode="numeric" min="0" value="${a.cant}" aria-label="Cantidad"><button type="button" id="a_inc" aria-label="Más">+</button></div>
       ${a.famAuto?`<p class="note" style="margin:0">✨ He propuesto la familia por el nombre. Cámbiala si no es.</p>`:""}
       ${altaFams(a.fam)}
-      ${a.fam?`<p class="note" style="margin:0">${FAMILIAS[a.fam].room?`Va al <b>${ROOMS[FAMILIAS[a.fam].room]}</b>. Elige el estante:`:"Elige el estante:"}</p>${altaShelves(a.ubic, FAMILIAS[a.fam].room)}
+      ${a.fam||!FAM_POR_ALMACEN?`<p class="note" style="margin:0">${famRoom(a.fam)?`Va al <b>${ROOMS[famRoom(a.fam)]}</b>. Elige el estante:`:"Elige el estante:"}</p>${altaShelves(a.ubic, famRoom(a.fam))}
       <div id="a_pos" class="alta"></div>`:`<p class="note" style="margin:0">Elige primero la familia; después salen los estantes donde va.</p>`}
       <button class="btn primary block" id="a_more">✓ Guardar y completar la ficha</button>
       <button class="btn block" id="a_back">Atrás</button></section>`;
     const c=$("#a_cant"), setC=v=>{ a.cant=Math.max(0,Math.floor(Number(v)||0)); c.value=a.cant; };
     c.onchange=()=>setC(c.value); $("#a_dec").onclick=()=>setC(a.cant-1); $("#a_inc").onclick=()=>setC(a.cant+1);
-    app.querySelectorAll("[data-fam]").forEach(b=>b.onclick=()=>{ a.fam=b.dataset.fam; a.famAuto=false; const rm=FAMILIAS[a.fam].room; if(a.ubic&&rm&&roomOf(a.ubic)!==rm){ a.ubic=""; a.niv=0; } const y=window.scrollY; viewAlta(); window.scrollTo(0,y); });
+    app.querySelectorAll("[data-fam]").forEach(b=>b.onclick=()=>{ a.fam=b.dataset.fam; a.famAuto=false; const rm=famRoom(a.fam); if(a.ubic&&rm&&roomOf(a.ubic)!==rm){ a.ubic=""; a.niv=0; } const y=window.scrollY; viewAlta(); window.scrollTo(0,y); });
     app.querySelectorAll("[data-sh]").forEach(b=>b.onclick=()=>{ a.ubic=b.dataset.sh; app.querySelectorAll("[data-sh]").forEach(x=>{ x.classList.toggle("sel",x===b); x.setAttribute("aria-pressed",String(x===b)); }); if(a.niv>nBaldas(a.ubic)) a.niv=0; drawAltaPos(); });
     drawAltaPos();
     $("#a_more").onclick=()=>altaSave(true);   // always finish in the full form (Xavi, 2026-10-15)
@@ -2566,7 +2570,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-19.2";
+const APP_VERSION="2026-10-19.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
