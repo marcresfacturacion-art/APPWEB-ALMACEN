@@ -559,7 +559,7 @@ function saveProductUpper_(tecId, data, isNew) {
 /* ---------- Familia de cada producto (pedido de Xavi, 16-10-2026) ----------
  * Pestaña «Familias» de la hoja: [código del producto, familia]. La gestiona solo este archivo.
  * Las claves son las mismas que FAMILIAS en index.html. */
-var FAM_SHEET_ = 'Familias', FAMILIAS_ = ['pvc', 'laton', 'valv', 'pe', 'torn', 'cons', 'elec', 'cable', 'bombas', 'maq', 'otros'];
+var FAM_SHEET_ = 'Familias', FAMILIAS_ = ['pvc', 'tubo', 'laton', 'galv', 'cobre', 'pe', 'valv', 'junta', 'torn', 'mang', 'cons', 'epi', 'medida', 'elec', 'cable', 'nivel', 'bombas', 'recambio', 'maq', 'otros'];
 function famRows_() {
   var sh = sh_(FAM_SHEET_), n = sh ? sh.getLastRow() : 0;
   return n < 2 ? [] : sh.getRange(2, 1, n - 1, 2).getValues().map(function (r, i) { return [String(r[0]).trim(), String(r[1]).trim().toLowerCase(), i + 2]; })

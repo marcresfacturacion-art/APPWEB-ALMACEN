@@ -963,13 +963,41 @@ const LADOS={izq:"Izquierda",centro:"Centro",der:"Derecha"};
 /* Families (Xavi, 2026-10-16): small fittings and materials in the main warehouse; electrical, pumps,
    machines and anything expensive or delicate in the Cuarto blanco. Same keys as FAMILIAS_ in api.gs. */
 const FAMILIAS={
-  pvc:{n:"Accesorios de PVC",i:"🔧",room:"main"}, laton:{n:"Latón y metal",s:"racores, enlaces",i:"🟡",room:"main"},
-  valv:{n:"Valvulería",s:"clapetas, compuertas, llaves",i:"🚰",room:"main"}, pe:{n:"Polietileno y electrofusión",i:"⚫",room:"main"},
-  torn:{n:"Tornillería y fijación",i:"🔩",room:"main"}, cons:{n:"Consumibles",s:"adhesivo, teflón, siliconas, EPIs",i:"🧴",room:"main"},
-  elec:{n:"Material eléctrico",s:"relés, contactores, magnetotérmicos",i:"⚡",room:"cb"}, cable:{n:"Cable y manguera",i:"🔌",room:"cb"},
-  bombas:{n:"Bombas y motores",i:"💧",room:"cb"}, maq:{n:"Maquinaria y herramientas",s:"lo caro o delicado",i:"🛠️",room:"cb"},
+  pvc:{n:"Accesorios de PVC",s:"codos, tes, manguitos, enlaces",i:"🔧",room:"main"}, tubo:{n:"Tubos y corrugado",s:"PVC, corrugado, cobre, multicapa por metro",i:"➖",room:"main"},
+  laton:{n:"Latón y bronce",s:"racores, machones, tapones",i:"🟡",room:"main"}, galv:{n:"Galvanizado, hierro y acero",s:"alargaderas, inox, fundición",i:"⚙️",room:"main"},
+  cobre:{n:"Cobre y multicapa",i:"🟠",room:"main"}, pe:{n:"Polietileno y electrofusión",s:"PE, polipropileno, polibutileno",i:"⚫",room:"main"},
+  valv:{n:"Válvulas y llaves",s:"retención, esfera, compuerta, boyas de llenado",i:"🚰",room:"main"}, junta:{n:"Juntas, bridas, abrazaderas y reparación",s:"collarines, manguitos de reparación, Gebo",i:"⭕",room:"main"},
+  torn:{n:"Tornillería y fijación",s:"tornillos, tuercas, arandelas, tacos",i:"🔩",room:"main"}, mang:{n:"Mangueras y latiguillos",i:"🌀",room:"main"},
+  cons:{n:"Química y consumibles",s:"pegamento, teflón, silicona, WD-40",i:"🧴",room:"main"}, epi:{n:"EPIs y seguridad",s:"guantes, gafas, cascos, mascarillas, chalecos",i:"🦺",room:"main"},
+  medida:{n:"Manómetros y medición",i:"⏲️",room:"main"},
+  elec:{n:"Material eléctrico",s:"magnetotérmicos, contactores, relés, cajas",i:"⚡",room:"cb"}, cable:{n:"Cable y manguera eléctrica",i:"🔌",room:"cb"},
+  nivel:{n:"Boyas eléctricas, presostatos y sondas",i:"📶",room:"cb"}, bombas:{n:"Bombas, motores y calderines",i:"💧",room:"cb"},
+  recambio:{n:"Recambios de bombas",s:"rodamientos, cierres, rodetes",i:"🔄",room:"cb"}, maq:{n:"Herramientas y maquinaria",s:"lo caro o delicado",i:"🛠️",room:"cb"},
   otros:{n:"Otros",i:"📦",room:""}
 };
+/* Guess the family from the product name (same rules used to sort the Holded catalogue, 2026-10-19). Only a proposal: the person can change it. */
+const FAM_RULES=(()=>{ const W=(...w)=>new RegExp("\\b("+w.join("|")+")"); const FIT=/^(MANGUITO|CODO|TE|MACHON|RACOR|ENLACE|TAPON|CASQUILLO|CRUZ|CURVA|REDUCCION|ADAPTADOR|NIPLE|CONEXION|DOBLE|ALARGADERA|CONO|TAPA|UNION|INJERTO|DERIVACION|PORTAGOMA|ENTRONQUE)\b/;
+  const MAT=[["PVC","pvc"],["LATON","laton"],["BRONCE","laton"],["GALVANIZAD","galv"],["ACERO","galv"],["INOX","galv"],["HIERRO","galv"],["FUNDICION","galv"],["COBRE","cobre"],["MULTICAPA","cobre"],["POLIETILENO","pe"],["PEAD","pe"],["ELECTROFUSION","pe"],["ELECTROSOLD","pe"],["POLIPROPILENO","pe"],["POLIBUTILENO","pe"],["GOMA","junta"],["MARSELLA","laton"]];
+  const PRE=[[/^HIDROTUBO|^(TUBO|MICROTUBO)\b|CORRUGADO/,"tubo"],[/H07RN|RV-K|SUMFLEX|H07Z/,"cable"],[/^CURVA (TUBO|FLEXIBLE)|BLINDADO|^TAPA NILOE|^BASE LEGRAND/,"elec"],[/ANTIELECTROLISIS/,"laton"],[/OSMOSIS|FITTING PLASTICO|COLECTOR RIEGO/,"pe"],[/BIDON|INODORO|FLEXIBLE REPARACION|CREARP/,"pvc"],
+    [/^ABRAZADERA|^MANGUITO REPARACION|GEBO/,"junta"],[/^RACOR (PG|M-|RECTO M|TUBODIX)/,"elec"],[/^MANGUITO SEPARADOR/,"torn"],[/^CASQUILLO PRESION|^CRUZ \d/,"pvc"],[/^LATIGUILLO/,"mang"],[/^(BASE ASPIRACION|ADAPTADOR BOMBA|TAPA PREFILTRO|TAPA VENTILADOR)/,"recambio"]];
+  const RULES=[["epi",W("GUANTE","GAFA","CASCO","MASCARILLA","CHALECO","ARNES","BOTA","CALZADO","OREJERA","PROTECTOR","PANTALLA FACIAL","EPI","BUZO","CHAQUETA","PANTALON","SENALIZ","BALIZ","LINEA DE VIDA","ROPA")],
+    ["cable",/^(CABLE|MANGUERA ELECTRICA|HILO)/],["nivel",new RegExp(W("PRESOSTATO","SONDA","INTERRUPTOR DE NIVEL","INTERRUPTOR NIVEL","REGULADOR DE NIVEL","ELECTRODO","DETECTOR").source+"|^(BOYA|FLOTADOR).*(CABLE|NIVEL|ELECTRIC|CONTACTO|MTS)")],
+    ["recambio",W("RODAMIENTO","CIERRE MECANICO","RODETE","TURBINA","DIFUSOR","CONDENSADOR","EYECTOR","CUERPO BOMBA")],["bombas",/^(BOMBA|MOTOR|GRUPO|CALDERIN|ELECTROBOMBA|VASO EXPANSION|DEPOSITO)/],
+    ["elec",W("MAGNETOTERMICO","DIFERENCIAL","CONTACTOR","RELE","GUARDAMOTOR","CONMUTADOR","TERMINAL","ARMARIO","INTERRUPTOR","PULSADOR","SELECTOR","ARRANCADOR","TRANSFORMADOR","FUENTE","AMPERIMETRO","VOLTIMETRO","TEMPORIZADOR","PILOTO","TECLA","MARCO","CLAVIJA","ENCHUFE","LAMPARA","APLIQUE","LUZ","TIMBRE","PICA","PEINE","BORNA","REGLETA","CAJA ESTANCA","CAJA DISTRIBUCION","CAJA METALICA","CAJA PLEXO","CAJA EMPALME","CAJA SUPERFICIE","BASE","PRENSAESTOPA","CINTA AISLANTE","LED","VARIADOR","PROGRAMADOR","CUADRO","CONTACTO","FUSIBLE","DISYUNTOR","BOBINA")],
+    ["medida",W("MANOMETRO","TERMOMETRO","CAUDALIMETRO","CONTADOR","HIDROMETRO","VACUOMETRO")],
+    ["cons",W("PEGAMENTO","ADHESIVO","TEFLON","SILICONA","WD-40","ACEITE","GRASA","MASILLA","SELLADOR","LIMPIADOR","DECAPANTE","DESOXIDANTE","SPRAY","PINTURA","LOCTITE","CINTA","BOTE","CARTUCHO","BOTELLA","LIJA","DISCO","BROCA","ESTANO","PASTA")],
+    ["mang",/^(MANGUERA|LATIGUILLO|UNIFLEX|FLEXO|TUBO FLEXIBLE)/],["torn",W("TORNILLO","TUERCA","CONTRATUERCA","ARANDELA","TACO","FISCHER","VARILLA","ESPARRAGO","PERNO","REMACHE","ANCLAJE","GRAPA","SOPORTE","ABARCON")],
+    ["junta",W("JUNTA","BRIDA","ABRAZADERA","COLLARIN","ANILLO","ARO","TORICA","MALLA","CESTILLA","FILTRO")],["valv",W("VALVULA","LLAVE","ELECTROVALVULA","GRIFO","COMPUERTA","CLAPETA","VENTOSA","REDUCTORA","BOYA","FLOTADOR","PURGADOR","ENTRONQUE","INYECTOR")],
+    ["maq",W("MAQUINA","TALADRO","AMOLADORA","RADIAL","SIERRA","MARTILLO","ROTAMARTILLO","SOLDADOR","TERMOFUSORA","GENERADOR","COMPRESOR","HIDROLIMPIADORA","ESCALERA","DETECTOR","MEDIDOR","MEGOHMETRO","MULTIMETRO","PINZA","HERRAMIENTA","LLAVE INGLESA","DESTORNILLADOR","ALICATE","TERRAJA","CORTATUBO")]];
+  return {FIT,MAT,PRE,RULES}; })();
+function famGuess(name){
+  const n=" "+String(name||"").normalize("NFD").replace(/\p{Mn}/gu,"").toUpperCase().trim()+" ", t=n.trim(), {FIT,MAT,PRE,RULES}=FAM_RULES;
+  const mat=()=>{ for(const [k,f] of MAT) if(n.includes(k)) return f; return ""; };
+  for(const [rx,f] of PRE) if(rx.test(t)) return f;
+  if(FIT.test(t)){ const m=mat(); if(m) return m; }
+  for(const [f,rx] of RULES) if(rx.test(t)) return f;
+  return mat();
+}
 const famOf = p => p&&FAMILIAS[S.fam[p.codigo]]?S.fam[p.codigo]:"";
 const famName = k => FAMILIAS[k]?FAMILIAS[k].i+" "+FAMILIAS[k].n:"";
 const ladoOf = p => p&&LADOS[S.lados[p.codigo]]?S.lados[p.codigo]:"";
@@ -1421,6 +1449,7 @@ function viewEdit(){
   const img = imgFor(p);
   const baseCant = p ? p.cantidad : null;
   const pre = !p && S.prefill ? S.prefill : null;
+  const famSel = famOf(p) || famGuess(p?.nombre||pre?.nombre||"");
   app.innerHTML = `<form class="edit" id="f" novalidate>
     ${pre?`<p class="catnote" style="margin:0">${esc(pre.note||"Del catálogo. Elige estante y cantidad y pulsa Guardar.")}</p>`:""}
     <div><span class="label">Foto</span>
@@ -1433,7 +1462,7 @@ function viewEdit(){
       </div></div>
     ${p?"":`<div class="stock" id="e_barbox" hidden></div>`}
     <label><span class="label">Nombre</span><input id="e_nombre" required value="${esc(p?.nombre||pre?.nombre||"")}" placeholder="Ej. Bomba Espa Multi 35 5" autocomplete="off"></label>
-    <label><span class="label">Familia</span><select id="e_fam"><option value="">Elige la familia</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${Object.entries(FAMILIAS).filter(([,f])=>f.room===rk).map(([k,f])=>`<option value="${k}" ${famOf(p)===k?"selected":""}>${f.i} ${f.n}</option>`).join("")}</optgroup>`).join("")}<option value="otros" ${famOf(p)==="otros"?"selected":""}>📦 Otros</option></select></label>
+    <label><span class="label">Familia${!famOf(p)&&famSel?" · ✨ propuesta por el nombre, cámbiala si no es":""}</span><select id="e_fam"><option value="">Elige la familia</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${Object.entries(FAMILIAS).filter(([,f])=>f.room===rk).map(([k,f])=>`<option value="${k}" ${famSel===k?"selected":""}>${f.i} ${f.n}</option>`).join("")}</optgroup>`).join("")}<option value="otros" ${famSel==="otros"?"selected":""}>📦 Otros</option></select></label>
     <div class="twobtn">
       <label><span class="label">Cantidad</span><input id="e_cant" type="number" inputmode="numeric" min="0" step="1" value="${p?.cantidad??1}"></label>
       <label><span class="label">Estante</span><select id="e_ubic"><option value="" ${!p||!SHELVES[p.ubicacion]?"selected":""}>Sin ubicación</option>${Object.entries(ROOMS).map(([rk,rn])=>`<optgroup label="${rn}">${shelvesIn(rk).map(([k,v])=>`<option value="${k}" ${p?.ubicacion===k?"selected":""}>${v.name.replace("Estante ","")}</option>`).join("")}</optgroup>`).join("")}</select></label>
@@ -1488,7 +1517,7 @@ function viewEdit(){
       if(r.product.nivel!==undefined){ if(r.product.nivel) S.niv[r.product.codigo]=r.product.nivel; else delete S.niv[r.product.codigo]; }
       if(r.product.lado!==undefined){ if(r.product.lado) S.lados[r.product.codigo]=r.product.lado; else delete S.lados[r.product.codigo]; }
       if(r.product.familia!==undefined){ if(r.product.familia) S.fam[r.product.codigo]=r.product.familia; else delete S.fam[r.product.codigo]; }
-      else if(fields.familia) toast("La familia no se ha guardado: hay que pegar servidor.gs en Apps Script.");
+      if(fields.familia&&r.product.familia!==fields.familia) toast("La familia no se ha guardado: hay que pegar servidor.gs en Apps Script y publicar una Nueva versión.");
       if(r.product.nivel===undefined&&(fields.nivel||fields.lado)) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
       if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce ese estante: hay que pegar servidor.gs en Apps Script y publicar una Nueva versión."); go("ficha",{code:r.product.codigo}); return; }
       if(!p){
@@ -1599,21 +1628,23 @@ function viewAlta(){
       <button class="btn block" id="a_back">Atrás</button></section>`;
     const n=$("#a_name"), box=$("#a_sugs");
     const bind=()=>{
-      box.querySelectorAll("[data-sug]").forEach(b=>b.onclick=()=>{ const words=qWords(a.nombre), c=catIndex(); const list=[]; for(let i=0;i<c.items.length&&list.length<6;i++){ if(words.every(w=>c.text[i].includes(w))) list.push(c.items[i]); } const r=list[+b.dataset.sug]; if(!r) return; a.nombre=String(r[1]).toLocaleUpperCase("es-ES"); a.desc=r[2]&&fold(r[2])!==fold(r[1])?String(r[2]):""; a.step=3; viewAlta(); });
+      box.querySelectorAll("[data-sug]").forEach(b=>b.onclick=()=>{ const words=qWords(a.nombre), c=catIndex(); const list=[]; for(let i=0;i<c.items.length&&list.length<6;i++){ if(words.every(w=>c.text[i].includes(w))) list.push(c.items[i]); } const r=list[+b.dataset.sug]; if(!r) return; a.nombre=String(r[1]).toLocaleUpperCase("es-ES"); a.desc=r[2]&&fold(r[2])!==fold(r[1])?String(r[2]):""; if(a.famAuto){ a.fam=""; a.famSeen=false; } a.step=3; viewAlta(); });
       box.querySelectorAll("[data-have]").forEach(b=>b.onclick=()=>go("ficha",{code:b.dataset.have}));
     };
     n.addEventListener("input",()=>{ a.nombre=n.value; a.desc=""; box.innerHTML=altaSugs(a.nombre); bind(); app.querySelectorAll("#a_web .sel").forEach(x=>x.classList.remove("sel")); });
     drawAltaWeb();
     n.addEventListener("keydown",e=>{ if(e.key==="Enter") $("#a_next").click(); });
     bind();
-    $("#a_next").onclick=()=>{ if(!a.nombre.trim()){ toast("Escribe el nombre del producto."); n.focus(); return; } a.step=3; viewAlta(); };
+    $("#a_next").onclick=()=>{ if(!a.nombre.trim()){ toast("Escribe el nombre del producto."); n.focus(); return; } if(a.famAuto){ a.fam=""; a.famSeen=false; } a.step=3; viewAlta(); };
     $("#a_back").onclick=()=>{ a.step=1; viewAlta(); };
     return;
   }
   if(a.step===3){
+    if(!a.fam&&!a.famSeen){ a.fam=famGuess(a.nombre)||""; a.famAuto=!!a.fam; } a.famSeen=true;
     app.innerHTML=`<section class="alta">${bar}<h2>3. ¿Cuántos hay y dónde?</h2>
       <p class="note" style="margin:0"><b>${esc(String(a.nombre).toLocaleUpperCase("es-ES"))}</b></p>
       <div class="bigstep"><button type="button" id="a_dec" aria-label="Menos">−</button><input id="a_cant" type="number" inputmode="numeric" min="0" value="${a.cant}" aria-label="Cantidad"><button type="button" id="a_inc" aria-label="Más">+</button></div>
+      ${a.famAuto?`<p class="note" style="margin:0">✨ He propuesto la familia por el nombre. Cámbiala si no es.</p>`:""}
       ${altaFams(a.fam)}
       ${a.fam?`<p class="note" style="margin:0">${FAMILIAS[a.fam].room?`Va al <b>${ROOMS[FAMILIAS[a.fam].room]}</b>. Elige el estante:`:"Elige el estante:"}</p>${altaShelves(a.ubic, FAMILIAS[a.fam].room)}
       <div id="a_pos" class="alta"></div>`:`<p class="note" style="margin:0">Elige primero la familia; después salen los estantes donde va.</p>`}
@@ -1621,7 +1652,7 @@ function viewAlta(){
       <button class="btn block" id="a_back">Atrás</button></section>`;
     const c=$("#a_cant"), setC=v=>{ a.cant=Math.max(0,Math.floor(Number(v)||0)); c.value=a.cant; };
     c.onchange=()=>setC(c.value); $("#a_dec").onclick=()=>setC(a.cant-1); $("#a_inc").onclick=()=>setC(a.cant+1);
-    app.querySelectorAll("[data-fam]").forEach(b=>b.onclick=()=>{ a.fam=b.dataset.fam; const rm=FAMILIAS[a.fam].room; if(a.ubic&&rm&&roomOf(a.ubic)!==rm){ a.ubic=""; a.niv=0; } const y=window.scrollY; viewAlta(); window.scrollTo(0,y); });
+    app.querySelectorAll("[data-fam]").forEach(b=>b.onclick=()=>{ a.fam=b.dataset.fam; a.famAuto=false; const rm=FAMILIAS[a.fam].room; if(a.ubic&&rm&&roomOf(a.ubic)!==rm){ a.ubic=""; a.niv=0; } const y=window.scrollY; viewAlta(); window.scrollTo(0,y); });
     app.querySelectorAll("[data-sh]").forEach(b=>b.onclick=()=>{ a.ubic=b.dataset.sh; app.querySelectorAll("[data-sh]").forEach(x=>{ x.classList.toggle("sel",x===b); x.setAttribute("aria-pressed",String(x===b)); }); if(a.niv>nBaldas(a.ubic)) a.niv=0; drawAltaPos(); });
     drawAltaPos();
     $("#a_more").onclick=()=>altaSave(true);   // always finish in the full form (Xavi, 2026-10-15)
@@ -1655,6 +1686,7 @@ async function altaSave(more){
     else if(r.product.nivel===undefined) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
     else { if(r.product.nivel) S.niv[r.product.codigo]=r.product.nivel; if(r.product.lado) S.lados[r.product.codigo]=r.product.lado; }
     if(r.product.familia) S.fam[r.product.codigo]=r.product.familia;
+    if(a.fam&&r.product.familia!==a.fam) toast("La familia no se ha guardado: hay que pegar servidor.gs en Apps Script y publicar una Nueva versión.");
     S.busy=false;
     if(a.bar) await linkBar(a.bar, r.product.codigo);
     if(more){ go("editar",{editCode:r.product.codigo}); return; }
@@ -2534,7 +2566,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-19.1";
+const APP_VERSION="2026-10-19.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
