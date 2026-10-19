@@ -21,7 +21,7 @@
 :root{
   --bg:#F1F4F9; --surface:#FFFFFF; --surface-2:#EEF2F8; --fg:#0F1115; --muted:#59616E; --line:#D5DDE9;
   --accent:#184595; --accent-fg:#ffffff; --brand:#184595; --brand-fg:#ffffff; --danger:#8B1A1A; --ok:#2D6A4F; color-scheme:light;
-  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff; --cb-lavanda:#c3b1f0; --cb-granate:#8e1b45;
+  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-verdeclaro:#a5d6a7; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff; --cb-lavanda:#c3b1f0; --cb-granate:#8e1b45;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -432,15 +432,15 @@ const SHELVES = {
   azul:   {name:"Estante azul",   color:"var(--sh-azul)"},
   marron: {name:"Estante marrón", color:"var(--sh-marron)"},
   negro:  {name:"Estante negro",  color:"var(--sh-negro)"},
+  verdeclaro:{name:"Estante verde claro", color:"var(--sh-verdeclaro)"},
   /* Cuarto blanco: lo eléctrico y las bombas. Colores que no se repiten en el almacén principal. */
-  /* Según el segundo dibujo de Xavi (2026-10-06). */
+  /* Según el segundo dibujo de Xavi (2026-10-06), retocado por él en el editor del mapa (2026-10-19). */
   cb_bombas:    {name:"Zona de bombas",   color:"var(--cb-bombas)",   room:"cb"},
-  cb_cajas:     {name:"Zona de cajas",    color:"var(--cb-cajas)",    room:"cb"},
-  cb_tapiado:   {name:"Estante tapiado",  color:"var(--cb-dorado)",   room:"cb"},
-  cb_blanca:    {name:"Blanca",           color:"var(--cb-blanco)",   room:"cb"},
+  cb_tapiado:   {name:"Maquinaria",       color:"var(--cb-dorado)",   room:"cb"},
+  cb_blanca:    {name:"Blanco derecha",   color:"var(--cb-blanco)",   room:"cb"},
   cb_blanco:    {name:"Blanco",           color:"var(--cb-blanco)",   room:"cb"},
-  cb_almblanco: {name:"Almacén blanco",   color:"var(--cb-blanco)",   room:"cb"},
-  cb_pq:        {name:"PQ",               color:"var(--cb-menta)",    room:"cb"},
+  cb_almblanco: {name:"Blanco izquierda", color:"var(--cb-blanco)",   room:"cb"},
+  cb_pq:        {name:"Pequeño",          color:"var(--cb-menta)",    room:"cb"},
   cb_e1:        {name:"Estante amarillo",        color:"var(--cb-amarillo)", room:"cb"},
   cb_e2:        {name:"Estante naranja",        color:"var(--cb-naranja)",  room:"cb"},
   cb_e3:        {name:"Estante rosa",        color:"var(--cb-rosa)",     room:"cb"},
@@ -923,9 +923,10 @@ function shelfSvg(sel){
     ${g("marron",r("marron",90,38,28,14),114,68)}
     ${g("azul",r("azul",126,38,28,14),140,22)}
     ${g("rojo",r("rojo",166,38,134,14),233,22)}
-    ${g("celeste",r("celeste",50,122,16,150),74,200,"start")}
-    ${g("verde",r("verde",110.1,206.8,119,16,'transform="rotate(-50.5 169.6 214.8)"'),212,246,"start")}
+    ${g("celeste",r("celeste",44.5,120.5,20,158),74,200,"start")}
+    ${g("verde",r("verde",115.5,200,119,16,'transform="rotate(-50.5 175 208)"'),217,239,"start")}
     ${g("gris",r("gris",194.8,106.1,115.5,16,'transform="rotate(-50.5 252.55 114.1)"'),284,150,"start")}
+    ${g("verdeclaro",r("verdeclaro",109.5,261.5,28,13,'transform="rotate(129 123.5 268)"'),150,272,"start")}
   </svg>`;
 }
 
@@ -942,17 +943,16 @@ function cbSvg(sel){
     <text x="290" y="285" text-anchor="start" style="font-size:9px;fill:var(--muted);font-weight:600">PUERTA</text>
     <rect x="125" y="237" width="83" height="21" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>${note(166,251,"MESA")}
     ${g("cb_bombas",r("cb_bombas",72,42,90,43,'stroke-dasharray="4 3"'),117,64,"BOMBAS")}
-    ${g("cb_cajas",r("cb_cajas",204,66,47,62,'stroke-dasharray="4 3"'),227,97,"CAJAS")}
     ${g("cb_e1",r("cb_e1",34,42,32,38),50,61,"")}
     ${g("cb_e2",r("cb_e2",34,106,31,58),50,135,"NARANJA",{rot:1,size:10})}
-    ${g("cb_e3",r("cb_e3",183,42,79,23),222,54,"ROSA",{size:11})}
-    ${g("cb_tapiado",r("cb_tapiado",298,73,28,62)+'<path d="M302 78 l20 52 M322 78 l-20 52" stroke="var(--fg)" stroke-width="1.5" opacity=".45"/>',312,104,"TAPIADO",{rot:1,size:10})}
+    ${g("cb_e3",r("cb_e3",182,42.5,96,23),230,54,"ROSA",{size:11})}
+    ${g("cb_tapiado",r("cb_tapiado",299.5,41,28,90),313.5,86,"MAQUINARIA",{rot:1,size:10})}
     ${g("cb_e4",r("cb_e4",298,135,28,62),312,166,"LIMA",{rot:1,size:10})}
     ${g("cb_e5",r("cb_e5",298,197,28,35),312,215,"")}
-    ${g("cb_blanca",r("cb_blanca",33,180,66,16)+'<line x1="75" y1="180" x2="75" y2="196" stroke="var(--fg)" stroke-width="1"/>',66,189,"BLANCA",{size:9})}
+    ${g("cb_blanca",r("cb_blanca",33,180,66,16),66,189,"BLANCO DCHA.",{size:7.5})}
     ${g("cb_blanco",r("cb_blanco",33,197,19,43),42.5,218,"BLANCO",{rot:1,size:9})}
-    ${g("cb_almblanco",r("cb_almblanco",33,241,44,17),55,277,"ALMACÉN BLANCO",{size:9})}
-    ${g("cb_pq",r("cb_pq",78,241,35,17),95.5,250,"PQ",{size:10})}
+    ${g("cb_almblanco",r("cb_almblanco",33,241,44,17),55,277,"BLANCO IZQ.",{size:9})}
+    ${g("cb_pq",r("cb_pq",79,241,42,17),100,250,"PEQUEÑO",{size:7.5})}
   </svg>`;
 }
 /* ---------- Altura en el estante (arriba, en medio, abajo) con un dibujo en 3D del estante ---------- */
@@ -1490,7 +1490,7 @@ function viewEdit(){
       if(r.product.familia!==undefined){ if(r.product.familia) S.fam[r.product.codigo]=r.product.familia; else delete S.fam[r.product.codigo]; }
       else if(fields.familia) toast("La familia no se ha guardado: hay que pegar servidor.gs en Apps Script.");
       if(r.product.nivel===undefined&&(fields.nivel||fields.lado)) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
-      if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce el Cuarto blanco: hay que pegar el api.gs nuevo en Apps Script."); go("ficha",{code:r.product.codigo}); return; }
+      if(data.ubicacion&&r.product.ubicacion!==data.ubicacion){ S.busy=false; toast("El servidor aún no conoce ese estante: hay que pegar servidor.gs en Apps Script y publicar una Nueva versión."); go("ficha",{code:r.product.codigo}); return; }
       if(!p){
         if(again&&!(pre&&pre.bar)&&!S.newBar){ toast(`${nombre} guardado. Siguiente producto.`); S.busy=false; go("editar",{editCode:null}); setTimeout(()=>{const n=$("#e_nombre"); if(n) n.focus();},50); return; }
         S.busy=false;
@@ -1651,7 +1651,8 @@ async function altaSave(more){
     }
     if(!r) throw {code:"busy"};
     S.products.set(r.product.codigo, r.product);
-    if(r.product.nivel===undefined) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
+    if(a.ubic&&r.product.ubicacion!==a.ubic) toast("El servidor aún no conoce ese estante: hay que pegar servidor.gs en Apps Script y publicar una Nueva versión.");
+    else if(r.product.nivel===undefined) toast("La altura no se ha guardado: hay que pegar servidor.gs en Apps Script.");
     else { if(r.product.nivel) S.niv[r.product.codigo]=r.product.nivel; if(r.product.lado) S.lados[r.product.codigo]=r.product.lado; }
     if(r.product.familia) S.fam[r.product.codigo]=r.product.familia;
     S.busy=false;
@@ -2533,7 +2534,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-16.4";
+const APP_VERSION="2026-10-19.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

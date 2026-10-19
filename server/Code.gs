@@ -11,7 +11,7 @@ const CARPETA_ID = '19gQiUbNmW33pNP2MildmnEKMecKA0fRw';   // carpeta «Almacén 
 // Huella de cada parte de la página, para avisar si alguna se subió mal.
 const PARTES_MD5 = ['137f3a2d3ef8a56ce63670756a176d57', '25f9264c0c902507cfd2d21dd7081437', 'ca6dcf704ab6890681ec4984244eb066', '8568d491323870afdccc86e1fb650211', '3cd0c3a43401e705061ad23ae95481dd'];
 
-const SHELVES = ['celeste', 'verde', 'gris', 'rojo', 'azul', 'marron', 'negro'];
+const SHELVES = ['celeste', 'verde', 'gris', 'rojo', 'azul', 'marron', 'negro', 'verdeclaro'];
 const COLS = {
   Productos:   ['codigo', 'nombre', 'descripcion', 'ubicacion', 'cantidad', 'minimo', 'prestamo', 'proveedor', 'foto', 'actualizado', 'actualizadoPor', 'creado', 'creadoPor'],
   Movimientos: ['fecha', 'tipo', 'codigo', 'producto', 'delta', 'antes', 'despues', 'tecnico', 'tecnicoId', 'destino', 'empresa', 'comunidad', 'detalle'],
