@@ -434,18 +434,22 @@ const SHELVES = {
   negro:  {name:"Estante negro",  color:"var(--sh-negro)"},
   verdeclaro:{name:"Estante verde claro", color:"var(--sh-verdeclaro)"},
   /* Cuarto blanco: lo eléctrico y las bombas. Colores que no se repiten en el almacén principal. */
-  /* Según el segundo dibujo de Xavi (2026-10-06), retocado por él en el editor del mapa (2026-10-19). */
+  /* Según el segundo dibujo de Xavi (2026-10-06), retocado por él en el editor del mapa (2026-10-19 y 2026-10-22). */
   cb_bombas:    {name:"Zona de bombas",   color:"var(--cb-bombas)",   room:"cb"},
   cb_tapiado:   {name:"Maquinaria",       color:"var(--cb-dorado)",   room:"cb"},
-  cb_blanca:    {name:"Blanco derecha",   color:"var(--cb-blanco)",   room:"cb"},
-  cb_blanco:    {name:"Blanco",           color:"var(--cb-blanco)",   room:"cb"},
-  cb_almblanco: {name:"Blanco izquierda", color:"var(--cb-blanco)",   room:"cb"},
+  cb_maq2:      {name:"Maquinaria 2",     color:"var(--cb-dorado)",   room:"cb"},
+  cb_pulidora:  {name:"Pulidora",         color:"var(--cb-dorado)",   room:"cb"},
+  cb_blanca:    {name:"Eléctrico derecha",   color:"var(--cb-blanco)",   room:"cb"},
+  cb_blanco:    {name:"Eléctrico centro",    color:"var(--cb-blanco)",   room:"cb"},
+  cb_almblanco: {name:"Eléctrico izquierda", color:"var(--cb-blanco)",   room:"cb"},
+  cb_el1:       {name:"Eléctrico estante 1", color:"var(--cb-granate)",  room:"cb"},
+  cb_el2:       {name:"Eléctrico estante 2", color:"var(--cb-granate)",  room:"cb"},
   cb_pq:        {name:"Pequeño",          color:"var(--cb-menta)",    room:"cb"},
-  cb_e1:        {name:"Estante amarillo",        color:"var(--cb-amarillo)", room:"cb"},
+  cb_e1:        {name:"Electrosoldables",        color:"var(--cb-amarillo)", room:"cb"},
   cb_e2:        {name:"Estante naranja",        color:"var(--cb-naranja)",  room:"cb"},
   cb_e3:        {name:"Estante rosa",        color:"var(--cb-rosa)",     room:"cb"},
   cb_e4:        {name:"Estante lima",        color:"var(--cb-lima)",     room:"cb"},
-  cb_e5:        {name:"Estante turquesa",        color:"var(--cb-turquesa)", room:"cb"},
+  cb_e5:        {name:"Azul del cuarto blanco",  color:"var(--cb-turquesa)", room:"cb"},
 };
 const ROOMS = {main:"Almacén principal", cb:"Cuarto blanco"};
 const roomOf = k => (SHELVES[k]&&SHELVES[k].room)||"main";
@@ -930,29 +934,33 @@ function shelfSvg(sel){
   </svg>`;
 }
 
-/* Cuarto blanco, tal como lo dibujó Xavi: puerta abajo a la derecha, junto a la mesa. */
+/* Cuarto blanco, tal como lo dibujó Xavi (editor del mapa, 2026-10-22): puerta abajo a la derecha, junto a la mesa. */
 function cbSvg(sel){
   const g=(key,inner,lx,ly,label,o={})=>`<g class="shelf ${sel===key?'on':''}" data-shelf="${key}" role="button" tabindex="0" aria-label="${SHELVES[key].name}">
-    ${inner}<text ${o.rot?`transform="translate(${lx} ${ly}) rotate(-90)"`:`x="${lx}" y="${ly}"`} text-anchor="middle" dominant-baseline="middle" style="font-size:${o.size||12}px">${label}</text></g>`;
+    ${inner}<text ${o.rot?`transform="translate(${lx} ${ly}) rotate(-90)"`:`x="${lx}" y="${ly}"`} text-anchor="${o.anchor||"middle"}" dominant-baseline="middle" style="font-size:${o.size||12}px${o.fill?`;fill:${o.fill}`:""}">${label}</text></g>`;
   const r=(key,x,y,w,h,extra="")=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${SHELVES[key].color}" ${extra}/>`;
   const note=(x,y,t)=>`<text x="${x}" y="${y}" text-anchor="middle" style="font-size:9px;fill:var(--muted);font-weight:600">${t}</text>`;
   return `<svg viewBox="0 0 360 300" aria-label="Plano del Cuarto blanco">
-    <rect x="30" y="40" width="300" height="219" fill="var(--surface-2)" stroke="var(--fg)" stroke-width="2.5"/>
-    <line x1="240" y1="259" x2="278" y2="259" stroke="var(--surface-2)" stroke-width="5"/>
-    <path d="M259 290 v-20 m-6 6 l6 -6 l6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>
+    <polygon points="7.5,40.5 341,38.5 341,260 10,262.5" fill="var(--surface-2)" stroke="var(--fg)" stroke-width="2.5" stroke-linejoin="round"/>
+    <line x1="243.5" y1="261" x2="281.5" y2="260.7" stroke="var(--surface-2)" stroke-width="5"/>
+    <path d="M262.5 292 v-20 m-6 6 l6 -6 l6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>
     <text x="290" y="285" text-anchor="start" style="font-size:9px;fill:var(--muted);font-weight:600">PUERTA</text>
-    <rect x="125" y="237" width="83" height="21" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>${note(166,251,"MESA")}
-    ${g("cb_bombas",r("cb_bombas",72,42,90,43,'stroke-dasharray="4 3"'),117,64,"BOMBAS")}
-    ${g("cb_e1",r("cb_e1",34,42,32,38),50,61,"")}
-    ${g("cb_e2",r("cb_e2",34,106,31,58),50,135,"NARANJA",{rot:1,size:10})}
-    ${g("cb_e3",r("cb_e3",182,42.5,96,23),230,54,"ROSA",{size:11})}
-    ${g("cb_tapiado",r("cb_tapiado",299.5,41,28,90),313.5,86,"MAQUINARIA",{rot:1,size:10})}
-    ${g("cb_e4",r("cb_e4",298,135,28,62),312,166,"LIMA",{rot:1,size:10})}
-    ${g("cb_e5",r("cb_e5",298,197,28,35),312,215,"")}
-    ${g("cb_blanca",r("cb_blanca",33,180,66,16),66,189,"BLANCO DCHA.",{size:7.5})}
-    ${g("cb_blanco",r("cb_blanco",33,197,19,43),42.5,218,"BLANCO",{rot:1,size:9})}
-    ${g("cb_almblanco",r("cb_almblanco",33,241,44,17),55,277,"BLANCO IZQ.",{size:9})}
-    ${g("cb_pq",r("cb_pq",79,241,42,17),100,250,"PEQUEÑO",{size:7.5})}
+    <rect x="121.5" y="239.5" width="83" height="21" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>${note(163,253,"MESA")}
+    ${g("cb_bombas",r("cb_bombas",11,42.5,130,40,'stroke-dasharray="4 3"'),76,62.5,"BOMBAS")}
+    ${g("cb_pulidora",r("cb_pulidora",9.5,85,30,14),24.5,92,"PULIDORA",{size:4.8})}
+    ${g("cb_e2",r("cb_e2",11,100.5,25,84),23.5,142.5,"NARANJA",{rot:1,size:10})}
+    ${g("cb_e3",r("cb_e3",152,42.5,120,20),212,52.5,"ROSA",{size:11})}
+    ${g("cb_maq2",r("cb_maq2",298.5,39.5,20,20),308.5,49.5,"MAQ.",{size:6.5})}
+    ${g("cb_tapiado",r("cb_tapiado",319.5,40,20,65),329.5,72.5,"MAQUINARIA",{rot:1,size:7.5})}
+    ${g("cb_e4",r("cb_e4",319,106.5,20,65),329,139,"LIMA",{rot:1,size:10})}
+    ${g("cb_e5",r("cb_e5",309,173.5,30,25),324,186,"AZUL",{size:9})}
+    ${g("cb_e1",r("cb_e1",318.5,201,20,40),314,221,"ELECTROSOLD.",{size:8,anchor:"end"})}
+    ${g("cb_el2",r("cb_el2",78.5,173,44,14),100.5,180,"ELÉC. 2",{size:7.5,fill:"#fff"})}
+    ${g("cb_el1",r("cb_el1",78.5,188,44,14),100.5,195,"ELÉC. 1",{size:7.5,fill:"#fff"})}
+    ${g("cb_blanca",r("cb_blanca",10.5,186,67,16),44,194,"ELÉC. DCHA.",{size:7})}
+    ${g("cb_blanco",r("cb_blanco",11,202,20,43),21,223.5,"ELÉC. CEN.",{rot:1,size:6})}
+    ${g("cb_almblanco",r("cb_almblanco",11,245.5,67,16),44.5,253.5,"ELÉC. IZQ.",{size:7})}
+    ${g("cb_pq",r("cb_pq",78.5,245,42,17),99.5,253.5,"PEQUEÑO",{size:6.8})}
   </svg>`;
 }
 /* ---------- Altura en el estante (arriba, en medio, abajo) con un dibujo en 3D del estante ---------- */
@@ -2570,7 +2578,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-19.3";
+const APP_VERSION="2026-10-22.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
