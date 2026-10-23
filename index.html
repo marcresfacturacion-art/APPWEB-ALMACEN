@@ -324,7 +324,7 @@ form.edit .check span{flex:1;min-width:0}
 .pparr{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--line)}.ppsum{display:flex;align-items:center;gap:8px;font-weight:600}.ppsum input[type=checkbox]{width:24px;height:24px}.ppsum input[type=number]{width:84px;min-height:44px;border-radius:8px;border:2px solid var(--line);font-size:18px;text-align:center}
 .ppform{display:grid;grid-template-columns:110px 1fr;gap:8px}.ppform input{width:100%;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 10px}.ppform label{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pptotal{font-size:15px}
-.ppquick{display:flex;flex-direction:column;gap:8px}.ppquick input{width:100%;min-width:0;min-height:50px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 12px}.ppq2{display:grid;grid-template-columns:120px 1fr;gap:8px}.ppquick .note{margin:0}
+.ppquick{display:flex;flex-direction:column;gap:8px}.ppquick input{width:100%;min-width:0;min-height:50px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 12px}.ppline{display:grid;grid-template-columns:1fr 100px auto;gap:8px;margin-bottom:8px}.ppline:last-child{margin-bottom:0}.ppline .ppdel{border:2px solid var(--line);border-radius:8px;width:46px}.ppbase{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:10px 12px 4px;font-weight:800;border-bottom:1px solid var(--line);background:var(--surface-2)}.ppbase b{flex:1;min-width:0}.ppbase span{font-size:12px;font-weight:600;color:var(--muted);text-align:right;max-width:50%}.row.ppsub{padding-left:24px}.ppquick .note{margin:0}
 .ppopt{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}.ppopt:last-child{border-bottom:0}.ppopt.sel{background:var(--surface-2);box-shadow:inset 4px 0 0 var(--brand)}
 .pptap{flex:1;display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:10px 12px;cursor:pointer;min-width:0;color:var(--fg)}.pptap .txt{flex:1;min-width:0}.pptap .name{font-weight:700}
 .ppprice{font-family:var(--f-display);font-weight:700;font-size:20px;white-space:nowrap}.ppprice small{font-size:13px;color:var(--muted);font-weight:600}
@@ -487,7 +487,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLoading:false, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLines:[{v:"",c:""}], ppLoading:false, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -1854,6 +1854,10 @@ const ppCount = () => S.pp ? S.pp.filter(i=>i.estado==="porpedir").length : 0;
 const ppNum = v => Number(String(v??"").replace(",","."))||0;
 const ppDate = t => t ? new Date(t).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"}) : "";
 const PP_EST = {porpedir:"Por pedir", pedido:"Pedido", llego:"Llegó"};
+/* "CINTA AISLANTE · AZUL": the part after " · " is the type (colour, size…) of the same thing. */
+const PP_SEP=" · ";
+const ppBase = n => String(n||"").split(PP_SEP)[0];
+const ppVar = n => String(n||"").split(PP_SEP).slice(1).join(PP_SEP);
 async function loadPP(){
   if(S.ppLoading) return; S.ppLoading=true;
   try{ const r=await api("api_ppList", S.adminToken); S.pp=r.items||[]; }
@@ -1902,14 +1906,30 @@ async function ppAdd(nombre, codigo, cantidad, o={}){
   if(o.stay){ toast("Apuntado en «Por pedir». Todavía no está pedido."); viewPP(); }
   else { S.ppSel=r.id; viewPP(); }
 }
+/* Several types of the same thing at once (cinta aislante azul × 4, blanca × 6…), same supplier and same person. */
+async function ppAddMany(base, codigo, lines, o={}){
+  if(S.busy) return;
+  const pv=String(o.prov||"").trim().toUpperCase();
+  const list=lines.map(l=>{ const it=ppNew((l.v?base+PP_SEP+l.v:base).toUpperCase(), l.v?"":codigo, l.c>0?l.c:1);
+    if(pv){ let i=it.opciones.findIndex(x=>x.p===pv); if(i<0){ it.opciones.push({p:pv,pr:0,n:""}); i=it.opciones.length-1; } it.elegida=i; }
+    if(o.who) it.nota="Lo pide "+String(o.who).trim();
+    return ppBody(it); });
+  S.busy=true;
+  try{
+    const r=await api("api_ppSave", S.adminToken, list); S.pp.push(...r.items);
+    S.ppQ=""; S.ppCode=""; S.ppLines=[{v:"",c:""}]; S.ppTab="porpedir";
+    toast(`Apuntado${r.items.length>1?` (${r.items.length} tipos)`:""} en «Por pedir». Todavía no está pedido.`);
+  }catch(err){ adminError(err); }
+  S.busy=false; viewPP();
+}
 function viewPP(){
   const box=$("#adm"); if(!box||!S.adminOk) return;
   if(!S.pp){ box.innerHTML='<div class="empty">Cargando la lista…</div>'; loadPP(); return; }
   if(S.ppSel) return viewPPItem();
   const tab=S.ppTab||"porpedir", items=S.pp.filter(i=>i.estado===tab);
-  const row=it=>{ const pk=ppPick(it);
-    return `<button class="row" data-pp="${esc(it.id)}"><span class="txt"><div class="name">${esc(it.nombre)}</div>
-      <div class="code">× ${it.cantidad} · ${it.opciones.length} opci${it.opciones.length===1?"ón":"ones"}${it.codigo?` · ${esc(it.codigo)}`:""}</div>${it.nota?`<div class="code">${esc(it.nota)}</div>`:""}
+  const row=(it,sub,noNote)=>{ const pk=ppPick(it);
+    return `<button class="row${sub?" ppsub":""}" data-pp="${esc(it.id)}"><span class="txt"><div class="name">${esc(sub?ppVar(it.nombre)||it.nombre:it.nombre)}</div>
+      <div class="code">× ${it.cantidad} · ${it.opciones.length} opci${it.opciones.length===1?"ón":"ones"}${it.codigo?` · ${esc(it.codigo)}`:""}</div>${it.nota&&!noNote?`<div class="code">${esc(it.nota)}</div>`:""}
       ${tab==="llego"?`<div class="code">${pk?esc(pk.p)+" · ":""}llegó el ${ppDate(it.llego)}${it.llegoPor?" · "+esc(it.llegoPor):""}${it.sumado?` · +${it.sumado} al stock`:""}</div>`
         :pk?`<div class="pppick">→ ${esc(pk.p)} · ${pk.pr?eur(pk.pr):"sin precio"}</div>`:`<div class="pppick none">Falta elegir dónde</div>`}</span>
       ${pk&&pk.pr?`<span class="pptot">${eur(pk.pr*it.cantidad)}</span>`:""}</button>`; };
@@ -1923,14 +1943,19 @@ function viewPP(){
       :'<div class="list"><div class="empty">No hay nada pedido esperando a llegar.</div></div>';
   } else {
     const l=tab==="llego"?items.sort((a,b)=>(b.llego||0)-(a.llego||0)).slice(0,60):items.sort((a,b)=>(a.apuntado||0)-(b.apuntado||0));
-    list=`<div class="list">${l.length?l.map(row).join(""):`<div class="empty">${tab==="porpedir"?"No hay nada apuntado para pedir.":"Todavía no ha llegado nada."}</div>`}</div>`;
+    /* Types of the same thing (same name before " · ") go together under one heading. */
+    const groups=new Map(); l.forEach(it=>{ const k=fold(ppBase(it.nombre)); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(it); });
+    const html=[...groups.values()].map(g=>{ if(!(g.length>1||ppVar(g[0].nombre))) return row(g[0]); const one=g.every(i=>i.nota===g[0].nota)&&g[0].nota;
+      return `<div class="ppbase"><b>${esc(ppBase(g[0].nombre))}</b>${one?`<span>${esc(g[0].nota)}</span>`:""}</div>${g.map(it=>row(it,true,one)).join("")}`; }).join("");
+    list=`<div class="list">${l.length?html:`<div class="empty">${tab==="porpedir"?"No hay nada apuntado para pedir.":"Todavía no ha llegado nada."}</div>`}</div>`;
   }
   box.innerHTML = `
     <form class="ppquick" id="pp_add" novalidate>
       <input id="pp_q" placeholder="Qué hay que pedir" value="${esc(S.ppQ||"")}" autocomplete="off" aria-label="Qué hay que pedir">
       <div id="pp_sug"></div>
-      <div class="ppq2"><input id="pp_c" type="number" inputmode="decimal" min="0" step="any" placeholder="Cantidad" aria-label="Cantidad">
-      <input id="pp_pv" list="pp_provs" placeholder="Proveedor (opcional)" autocomplete="off" aria-label="Proveedor"></div>
+      <div id="pp_lines">${S.ppLines.map((l,i)=>`<div class="ppline"><input data-lv="${i}" value="${esc(l.v)}" placeholder="${i?"Otro tipo (ej. blanca)":"Tipo, color, medida…"}" autocomplete="off" aria-label="Tipo"><input data-lc="${i}" type="number" inputmode="decimal" min="0" step="any" value="${esc(l.c)}" placeholder="Cant." aria-label="Cantidad">${S.ppLines.length>1?`<button type="button" class="ppdel" data-ldel="${i}" aria-label="Quitar este tipo">✕</button>`:""}</div>`).join("")}</div>
+      <button type="button" class="btn block" id="pp_more">＋ Otro tipo</button>
+      <input id="pp_pv" list="pp_provs" placeholder="Proveedor (opcional)" autocomplete="off" aria-label="Proveedor">
       <datalist id="pp_provs">${[...new Set([...S.pp.flatMap(x=>x.opciones.map(o=>o.p)), ...S.proveedores])].map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
       <input id="pp_who" list="pp_tecs" placeholder="¿Quién lo pide? (opcional)" autocomplete="off" aria-label="Quién lo pide">
       <datalist id="pp_tecs">${S.techs.filter(t=>t.activo!==false).map(t=>`<option value="${esc(t.nombre)}">`).join("")}</datalist>
@@ -1945,14 +1970,20 @@ function viewPP(){
     const prods=[...S.products.values()].filter(p=>fold(p.nombre+" "+p.codigo).includes(w)).slice(0,5);
     const prev=[...new Map(S.pp.filter(x=>!x.codigo&&fold(x.nombre).includes(w)).map(x=>[fold(x.nombre),x])).values()].slice(0,3);
     el.innerHTML=prods.length||prev.length?`<div class="sug">${prods.map(p=>`<button type="button" data-ppp="${esc(p.codigo)}">${esc(p.nombre)} <span class="code">${esc(p.codigo)} · hay ${p.cantidad}</span></button>`).join("")}${prev.map(x=>`<button type="button" data-ppn="${esc(x.nombre)}">${esc(x.nombre)} <span class="code">apuntado antes</span></button>`).join("")}</div>`:"";
-    const fill=(name,code,qty)=>{ q.value=name; S.ppQ=name; S.ppCode=code; el.innerHTML=""; const c=$("#pp_c"); if(qty&&!c.value) c.value=qty;
+    const fill=(name,code,qty)=>{ q.value=name; S.ppQ=name; S.ppCode=code; el.innerHTML=""; const c=app.querySelector('[data-lc="0"]'); if(qty&&!c.value) c.value=qty;
       const last=[...S.pp].filter(x=>(code&&x.codigo===code)||fold(x.nombre)===fold(name)).sort((a,b)=>(b.apuntado||0)-(a.apuntado||0)).find(x=>ppPick(x));
       const pv=$("#pp_pv"); if(last&&!pv.value) pv.value=ppPick(last).p; c.focus(); };
     el.querySelectorAll("[data-ppp]").forEach(b=>b.onclick=()=>{ const p=S.products.get(b.dataset.ppp); fill(p.nombre, p.codigo, Number(p.minimo)>p.cantidad?Number(p.minimo)-p.cantidad:""); });
     el.querySelectorAll("[data-ppn]").forEach(b=>b.onclick=()=>fill(b.dataset.ppn,"","")); };
   q.oninput=()=>{ S.ppCode=""; sug(); }; if(q.value) sug();
-  $("#pp_add").onsubmit=e=>{ e.preventDefault(); const n=q.value.trim().replace(/\s+/g," "); if(n.length<2){ toast("Escribe qué hay que pedir."); return; }
-    const c=ppNum($("#pp_c").value); ppAdd(n, S.ppCode||"", c>0?c:1, {prov:$("#pp_pv").value, who:$("#pp_who").value, stay:true}); };
+  const readLines=()=>{ S.ppLines=S.ppLines.map((l,i)=>({v:(app.querySelector(`[data-lv="${i}"]`)?.value||""), c:(app.querySelector(`[data-lc="${i}"]`)?.value||"")})); S.ppQ=q.value; };
+  const keep=()=>({pv:$("#pp_pv").value, who:$("#pp_who").value});
+  const redraw=k=>{ viewPP(); $("#pp_pv").value=k.pv; $("#pp_who").value=k.who; };
+  $("#pp_more").onclick=()=>{ readLines(); const k=keep(); S.ppLines.push({v:"",c:""}); redraw(k); const n=app.querySelector(`[data-lv="${S.ppLines.length-1}"]`); if(n) n.focus(); };
+  box.querySelectorAll("[data-ldel]").forEach(b=>b.onclick=()=>{ readLines(); const k=keep(); S.ppLines.splice(Number(b.dataset.ldel),1); redraw(k); });
+  $("#pp_add").onsubmit=e=>{ e.preventDefault(); readLines(); const n=q.value.trim().replace(/\s+/g," "); if(n.length<2){ toast("Escribe qué hay que pedir."); return; }
+    const lines=S.ppLines.map(l=>({v:l.v.trim().replace(/\s+/g," "), c:ppNum(l.c)})).filter((l,i)=>i===0||l.v||l.c>0);
+    ppAddMany(n, S.ppCode||"", lines, {prov:$("#pp_pv").value, who:$("#pp_who").value}); };
   box.querySelectorAll("[data-ppt]").forEach(b=>b.onclick=()=>{ S.ppTab=b.dataset.ppt; S.ppArr=null; viewPP(); });
   box.querySelectorAll("[data-pp]").forEach(b=>b.onclick=()=>{ S.ppSel=b.dataset.pp; viewPP(); window.scrollTo(0,0); });
   box.querySelectorAll("[data-arr]").forEach(b=>b.onclick=()=>{ S.ppArr=b.dataset.arr; viewPP(); });
@@ -2813,7 +2844,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-23.3";
+const APP_VERSION="2026-10-23.4";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
