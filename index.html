@@ -444,7 +444,7 @@ const SHELVES = {
   cb_almblanco: {name:"Eléctrico izquierda", color:"var(--cb-blanco)",   room:"cb"},
   cb_el1:       {name:"Eléctrico estante 1", color:"var(--cb-granate)",  room:"cb"},
   cb_el2:       {name:"Eléctrico estante 2", color:"var(--cb-granate)",  room:"cb"},
-  cb_pq:        {name:"Pequeño",          color:"var(--cb-menta)",    room:"cb"},
+  cb_pq:        {name:"Eléctrico pequeño", color:"var(--cb-blanco)",   room:"cb"},
   cb_e1:        {name:"Electrosoldables",        color:"var(--cb-amarillo)", room:"cb"},
   cb_e2:        {name:"Estante naranja",        color:"var(--cb-naranja)",  room:"cb"},
   cb_e3:        {name:"Estante rosa",        color:"var(--cb-rosa)",     room:"cb"},
@@ -960,7 +960,7 @@ function cbSvg(sel){
     ${g("cb_blanca",r("cb_blanca",10.5,186,67,16),44,194,"ELÉC. DCHA.",{size:7})}
     ${g("cb_blanco",r("cb_blanco",11,202,20,43),21,223.5,"ELÉC. CEN.",{rot:1,size:6})}
     ${g("cb_almblanco",r("cb_almblanco",11,245.5,67,16),44.5,253.5,"ELÉC. IZQ.",{size:7})}
-    ${g("cb_pq",r("cb_pq",78.5,245,42,17),99.5,253.5,"PEQUEÑO",{size:6.8})}
+    ${g("cb_pq",r("cb_pq",78.5,245,42,17),99.5,253.5,"ELÉC. PEQ.",{size:6.2})}
   </svg>`;
 }
 /* ---------- Altura en el estante (arriba, en medio, abajo) con un dibujo en 3D del estante ---------- */
@@ -2578,7 +2578,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-22.1";
+const APP_VERSION="2026-10-23.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
