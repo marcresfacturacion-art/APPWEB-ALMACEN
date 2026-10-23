@@ -324,6 +324,7 @@ form.edit .check span{flex:1;min-width:0}
 .pparr{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--line)}.ppsum{display:flex;align-items:center;gap:8px;font-weight:600}.ppsum input[type=checkbox]{width:24px;height:24px}.ppsum input[type=number]{width:84px;min-height:44px;border-radius:8px;border:2px solid var(--line);font-size:18px;text-align:center}
 .ppform{display:grid;grid-template-columns:110px 1fr;gap:8px}.ppform input{width:100%;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 10px}.ppform label{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pptotal{font-size:15px}
+.ppquick{display:flex;flex-direction:column;gap:8px}.ppquick input{width:100%;min-width:0;min-height:50px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 12px}.ppq2{display:grid;grid-template-columns:120px 1fr;gap:8px}.ppquick .note{margin:0}
 .ppopt{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}.ppopt:last-child{border-bottom:0}.ppopt.sel{background:var(--surface-2);box-shadow:inset 4px 0 0 var(--brand)}
 .pptap{flex:1;display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:10px 12px;cursor:pointer;min-width:0;color:var(--fg)}.pptap .txt{flex:1;min-width:0}.pptap .name{font-weight:700}
 .ppprice{font-family:var(--f-display);font-weight:700;font-size:20px;white-space:nowrap}.ppprice small{font-size:13px;color:var(--muted);font-weight:600}
@@ -486,7 +487,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppLoading:false, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLoading:false, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -1887,11 +1888,19 @@ function ppNew(nombre, codigo, cantidad){
   if(last){ const i=it.opciones.findIndex(o=>o.p===ppPick(last).p); if(i>=0) it.elegida=i; }
   return it;
 }
-async function ppAdd(nombre, codigo, cantidad){
+/* o.prov: supplier to order from (no price yet); o.who: who asked for it (goes in the note); o.stay: stay on the list. */
+async function ppAdd(nombre, codigo, cantidad, o={}){
   if(S.busy) return; S.busy=true;
-  const r=await ppSave(ppNew(nombre.toUpperCase(), codigo, cantidad));
+  const it=ppNew(nombre.toUpperCase(), codigo, cantidad);
+  const pv=String(o.prov||"").trim().toUpperCase();
+  if(pv){ let i=it.opciones.findIndex(x=>x.p===pv); if(i<0){ it.opciones.push({p:pv,pr:0,n:""}); i=it.opciones.length-1; } it.elegida=i; }
+  if(o.who) it.nota="Lo pide "+String(o.who).trim();
+  const r=await ppSave(it);
   S.busy=false;
-  if(r){ S.ppSel=r.id; S.ppQ=""; viewPP(); }
+  if(!r) return;
+  S.ppQ=""; S.ppCode=""; S.ppTab="porpedir";
+  if(o.stay){ toast("Apuntado en «Por pedir». Todavía no está pedido."); viewPP(); }
+  else { S.ppSel=r.id; viewPP(); }
 }
 function viewPP(){
   const box=$("#adm"); if(!box||!S.adminOk) return;
@@ -1900,7 +1909,7 @@ function viewPP(){
   const tab=S.ppTab||"porpedir", items=S.pp.filter(i=>i.estado===tab);
   const row=it=>{ const pk=ppPick(it);
     return `<button class="row" data-pp="${esc(it.id)}"><span class="txt"><div class="name">${esc(it.nombre)}</div>
-      <div class="code">× ${it.cantidad} · ${it.opciones.length} opci${it.opciones.length===1?"ón":"ones"}${it.codigo?` · ${esc(it.codigo)}`:""}</div>
+      <div class="code">× ${it.cantidad} · ${it.opciones.length} opci${it.opciones.length===1?"ón":"ones"}${it.codigo?` · ${esc(it.codigo)}`:""}</div>${it.nota?`<div class="code">${esc(it.nota)}</div>`:""}
       ${tab==="llego"?`<div class="code">${pk?esc(pk.p)+" · ":""}llegó el ${ppDate(it.llego)}${it.llegoPor?" · "+esc(it.llegoPor):""}${it.sumado?` · +${it.sumado} al stock`:""}</div>`
         :pk?`<div class="pppick">→ ${esc(pk.p)} · ${pk.pr?eur(pk.pr):"sin precio"}</div>`:`<div class="pppick none">Falta elegir dónde</div>`}</span>
       ${pk&&pk.pr?`<span class="pptot">${eur(pk.pr*it.cantidad)}</span>`:""}</button>`; };
@@ -1917,9 +1926,17 @@ function viewPP(){
     list=`<div class="list">${l.length?l.map(row).join(""):`<div class="empty">${tab==="porpedir"?"No hay nada apuntado para pedir.":"Todavía no ha llegado nada."}</div>`}</div>`;
   }
   box.innerHTML = `
-    <p class="note">Apunta lo que hay que pedir. Dentro de cada cosa pones dónde lo venden y a qué precio, y eliges dónde lo pides.</p>
-    <form class="search" id="pp_add" novalidate><input id="pp_q" placeholder="Apuntar algo para pedir…" value="${esc(S.ppQ||"")}" autocomplete="off" aria-label="Qué hay que pedir"><button class="btn primary" type="submit">Apuntar</button></form>
-    <div id="pp_sug"></div>
+    <form class="ppquick" id="pp_add" novalidate>
+      <input id="pp_q" placeholder="Qué hay que pedir" value="${esc(S.ppQ||"")}" autocomplete="off" aria-label="Qué hay que pedir">
+      <div id="pp_sug"></div>
+      <div class="ppq2"><input id="pp_c" type="number" inputmode="decimal" min="0" step="any" placeholder="Cantidad" aria-label="Cantidad">
+      <input id="pp_pv" list="pp_provs" placeholder="Proveedor (opcional)" autocomplete="off" aria-label="Proveedor"></div>
+      <datalist id="pp_provs">${[...new Set([...S.pp.flatMap(x=>x.opciones.map(o=>o.p)), ...S.proveedores])].map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+      <input id="pp_who" list="pp_tecs" placeholder="¿Quién lo pide? (opcional)" autocomplete="off" aria-label="Quién lo pide">
+      <datalist id="pp_tecs">${S.techs.filter(t=>t.activo!==false).map(t=>`<option value="${esc(t.nombre)}">`).join("")}</datalist>
+      <button class="btn primary block" type="submit">Apuntar en «Por pedir»</button>
+      <p class="note">Solo se apunta: no se pide hasta que entres y toques «Ya está pedido».</p>
+    </form>
     <div class="ppseg" role="tablist">${Object.entries(PP_EST).map(([k,v])=>`<button class="btn" role="tab" aria-pressed="${tab===k}" data-ppt="${k}">${v}${k!=="llego"&&S.pp.filter(i=>i.estado===k).length?` (${S.pp.filter(i=>i.estado===k).length})`:""}</button>`).join("")}</div>
     ${list}`;
   const q=$("#pp_q");
@@ -1928,15 +1945,20 @@ function viewPP(){
     const prods=[...S.products.values()].filter(p=>fold(p.nombre+" "+p.codigo).includes(w)).slice(0,5);
     const prev=[...new Map(S.pp.filter(x=>!x.codigo&&fold(x.nombre).includes(w)).map(x=>[fold(x.nombre),x])).values()].slice(0,3);
     el.innerHTML=prods.length||prev.length?`<div class="sug">${prods.map(p=>`<button type="button" data-ppp="${esc(p.codigo)}">${esc(p.nombre)} <span class="code">${esc(p.codigo)} · hay ${p.cantidad}</span></button>`).join("")}${prev.map(x=>`<button type="button" data-ppn="${esc(x.nombre)}">${esc(x.nombre)} <span class="code">apuntado antes</span></button>`).join("")}</div>`:"";
-    el.querySelectorAll("[data-ppp]").forEach(b=>b.onclick=()=>{ const p=S.products.get(b.dataset.ppp); const low=Number(p.minimo)>p.cantidad?Number(p.minimo)-p.cantidad:1; ppAdd(p.nombre, p.codigo, low); });
-    el.querySelectorAll("[data-ppn]").forEach(b=>b.onclick=()=>ppAdd(b.dataset.ppn,"",1)); };
-  q.oninput=sug; if(q.value) sug();
-  $("#pp_add").onsubmit=e=>{ e.preventDefault(); const n=q.value.trim().replace(/\s+/g," "); if(n.length<2){ toast("Escribe qué hay que pedir."); return; } ppAdd(n,"",1); };
+    const fill=(name,code,qty)=>{ q.value=name; S.ppQ=name; S.ppCode=code; el.innerHTML=""; const c=$("#pp_c"); if(qty&&!c.value) c.value=qty;
+      const last=[...S.pp].filter(x=>(code&&x.codigo===code)||fold(x.nombre)===fold(name)).sort((a,b)=>(b.apuntado||0)-(a.apuntado||0)).find(x=>ppPick(x));
+      const pv=$("#pp_pv"); if(last&&!pv.value) pv.value=ppPick(last).p; c.focus(); };
+    el.querySelectorAll("[data-ppp]").forEach(b=>b.onclick=()=>{ const p=S.products.get(b.dataset.ppp); fill(p.nombre, p.codigo, Number(p.minimo)>p.cantidad?Number(p.minimo)-p.cantidad:""); });
+    el.querySelectorAll("[data-ppn]").forEach(b=>b.onclick=()=>fill(b.dataset.ppn,"","")); };
+  q.oninput=()=>{ S.ppCode=""; sug(); }; if(q.value) sug();
+  $("#pp_add").onsubmit=e=>{ e.preventDefault(); const n=q.value.trim().replace(/\s+/g," "); if(n.length<2){ toast("Escribe qué hay que pedir."); return; }
+    const c=ppNum($("#pp_c").value); ppAdd(n, S.ppCode||"", c>0?c:1, {prov:$("#pp_pv").value, who:$("#pp_who").value, stay:true}); };
   box.querySelectorAll("[data-ppt]").forEach(b=>b.onclick=()=>{ S.ppTab=b.dataset.ppt; S.ppArr=null; viewPP(); });
   box.querySelectorAll("[data-pp]").forEach(b=>b.onclick=()=>{ S.ppSel=b.dataset.pp; viewPP(); window.scrollTo(0,0); });
   box.querySelectorAll("[data-arr]").forEach(b=>b.onclick=()=>{ S.ppArr=b.dataset.arr; viewPP(); });
   box.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>ppCopy(items.filter(it=>(ppPick(it)?.p||"Sin proveedor")===b.dataset.copy)));
   bindArrive(items);
+  const t=app.querySelector('[data-tab="pp"]'); if(t) t.textContent="Por pedir"+(ppCount()?` (${ppCount()})`:"");
 }
 function ppArrivePanel(l){
   return `<div class="sheet" id="pp_arr"><h3>¿Ha llegado todo?</h3>
@@ -2791,7 +2813,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-23.2";
+const APP_VERSION="2026-10-23.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
