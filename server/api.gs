@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1, api_albRead: 1, api_albList: 1 };
 
 function doPost(e) {
   var out;
@@ -25,7 +25,8 @@ function doPost(e) {
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
       api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_,
       api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_,
-      api_ppList: ppList_, api_ppSave: ppSave_, api_ppDelete: ppDelete_, api_ppArrive: ppArrive_
+      api_ppList: ppList_, api_ppSave: ppSave_, api_ppDelete: ppDelete_, api_ppArrive: ppArrive_,
+      api_albRead: albRead_, api_albSave: albSave_, api_albList: albList_
     };
     addShelves_();
     mayusculas_();
@@ -645,28 +646,123 @@ function ppDelete_(token, id) {
     });
   });
 }
-/** Ha llegado: [{id, sumar, qty}]. Si es un producto del almacén y sumar es true, suma qty al stock. */
+/** Ha llegado: [{id, sumar, qty, pr}]. Si es un producto del almacén y sumar es true, suma qty al stock.
+ * pr (opcional): el precio que pone el albarán; queda como precio de esa opción para las próximas veces. */
 function ppArrive_(token, list) {
   return guard_(function () {
-    var t = admin_(token); list = Array.isArray(list) ? list.slice(0, 100) : [];
+    var t = admin_(token);
+    return locked_(function () { return ppArriveIn_(t, list, ''); });
+  });
+}
+function ppArriveIn_(t, list, por) {
+  list = Array.isArray(list) ? list.slice(0, 100) : [];
+  var sh = ppSheet_(), all = ppRows_(), items = [], products = [];
+  list.forEach(function (a) {
+    var o = all.filter(function (x) { return String(x.id) === String(a && a.id); })[0];
+    if (!o || String(o.estado) === 'llego') return;
+    o.estado = 'llego'; o.llego = new Date(); o.llegoPor = t.nombre; o.sumado = '';
+    if (!o.pedido) { o.pedido = o.llego; o.pedidoPor = t.nombre; }
+    var opts = ppOpts_(o.opciones), el = o.elegida === '' ? -1 : Number(o.elegida), pick = opts[el];
+    if (pick && ppNum_(a.pr) > 0) { pick.pr = Math.round(ppNum_(a.pr) * 10000) / 10000; o.opciones = opts; }
+    var q = Math.trunc(ppNum_(a.qty)), p = a.sumar && o.codigo ? findProd_(o.codigo) : null;
+    if (p && q > 0) {
+      var cur = Number(p.cantidad) || 0;
+      p.cantidad = cur + q; p.actualizado = new Date(); p.actualizadoPor = t.nombre; write_('Productos', p);
+      logMove_({ tipo: 'entrada', codigo: p.codigo, producto: p.nombre, delta: q, antes: cur, despues: cur + q,
+        detalle: por || ('Llegó el pedido' + (pick ? ' de ' + pick.p : '')) }, t, { destino: 'almacen', empresa: '', comunidad: 'Almacén' });
+      o.sumado = q; products.push({ codigo: p.codigo, cantidad: cur + q });
+    }
+    ppWrite_(sh, o); items.push(ppOut_(o));
+  });
+  return { ok: true, items: items, products: products };
+}
+
+/* Albaranes (pedido de Xavi, 23-10-2026): foto del albarán → la IA gratuita (la misma clave GEMINI_KEY) lee proveedor,
+ * número, fecha y líneas. Xavi lo revisa, lo cuadra con lo pedido (o con productos del almacén) y se guarda:
+ * lo pedido pasa a «Llegó», se suma al stock y el albarán queda en la pestaña «Albaranes» con su foto en Drive. */
+var ALB_SHEET_ = 'Albaranes', ALB_MAX_DIA_ = 12;
+var ALB_HEAD_ = ['Id', 'Fecha albarán', 'Proveedor', 'Número', 'Total', 'Líneas', 'Foto', 'Guardado', 'Por', 'Cuadrado'];
+var ALB_PROMPT_ = 'Es una foto de un albarán (nota de entrega) de un proveedor de material de fontanería, electricidad, riego o bombas. ' +
+  'Lee SOLO lo que pone, sin inventar nada. El cliente es Marcres o Rivagua: el proveedor es la empresa que emite el albarán. ' +
+  'Responde en español con este JSON: {"proveedor":"","numero":"número de albarán","fecha":"AAAA-MM-DD",' +
+  '"lineas":[{"ref":"referencia o código del artículo","descripcion":"","cantidad":0,"precio":0,"importe":0}],"total":0,"legible":true}. ' +
+  'Una entrada en "lineas" por cada artículo. Cantidades y precios como números con punto decimal (0 si no aparecen); "precio" es el precio por unidad sin IVA. ' +
+  'Pon "legible":false si la foto no deja leer el albarán.';
+function albRead_(token, base64) {
+  return guard_(function () {
+    admin_(token);
+    base64 = String(base64 || '').replace(/^data:[^,]+,/, '');
+    if (!base64) return { err: 'bad' };
+    if (base64.length > 7 * 1024 * 1024) return { err: 'too_large' };
+    // Tope diario (Xavi: «que no sea ilimitado, doce albaranes al día»). Solo cuentan las lecturas que salen bien.
+    var props = PropertiesService.getScriptProperties(), max = Number(props.getProperty('ALB_MAX')) || ALB_MAX_DIA_;
+    var hoy = Utilities.formatDate(new Date(), 'Europe/Madrid', 'yyyy-MM-dd'), cnt = String(props.getProperty('ALB_DIA') || '').split('|');
+    var n = cnt[0] === hoy ? Number(cnt[1]) || 0 : 0;
+    if (n >= max) return { err: 'albmax', max: max };
+    var r = callGemini_([{ text: ALB_PROMPT_ }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }], true);
+    if (!r.ok) return r;
+    var data;
+    try { data = JSON.parse(r.text.replace(/^```(?:json)?\s*|\s*```$/g, '')); }
+    catch (e) { return { err: 'gemini', msg: 'respuesta no válida' }; }
+    props.setProperty('ALB_DIA', hoy + '|' + (n + 1));
+    return { ok: true, data: data, usados: n + 1, max: max };
+  });
+}
+function albSheet_() {
+  var ss = ss_(), sh = ss.getSheetByName(ALB_SHEET_);
+  if (!sh) {
+    sh = ss.insertSheet(ALB_SHEET_);
+    sh.getRange(1, 1, 1, ALB_HEAD_.length).setValues([ALB_HEAD_]).setFontWeight('bold');
+    sh.setFrozenRows(1); sh.getRange('A:A').setNumberFormat('@'); sh.getRange('D:D').setNumberFormat('@');
+  }
+  return sh;
+}
+function albLines_(v) {
+  return (Array.isArray(v) ? v : []).slice(0, 80).map(function (l) {
+    return { ref: str_(l && l.ref, 60), descripcion: upper_(str_(l && l.descripcion, 200)), cantidad: ppNum_(l && l.cantidad), precio: ppNum_(l && l.precio), cuadre: str_(l && l.cuadre, 200) };
+  }).filter(function (l) { return l.descripcion || l.ref; });
+}
+/** d = {proveedor, numero, fecha, total, lineas, foto(base64)}; arrivals = lo pedido que llega; adds = [{codigo, qty}] productos del almacén. */
+function albSave_(token, d, arrivals, adds) {
+  return guard_(function () {
+    var t = admin_(token); d = d || {};
+    var prov = upper_(str_(d.proveedor, 120)), num = str_(d.numero, 60), fecha = str_(d.fecha, 20);
+    var foto = '', b64 = String(d.foto || '').replace(/^data:[^,]+,/, '');
+    if (b64) {
+      var bytes = Utilities.base64Decode(b64);
+      if (bytes.length > 6 * 1024 * 1024) return { err: 'too_large' };
+      var name = ('Albarán ' + (prov || 'proveedor') + ' ' + (num || '') + ' ' + (fecha || Utilities.formatDate(new Date(), 'Europe/Madrid', 'yyyy-MM-dd'))).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+      var file = subfolder_('Albaranes').createFile(Utilities.newBlob(bytes, 'image/jpeg', name + '.jpg'));
+      foto = file.getUrl();
+    }
+    var por = 'Albarán' + (prov ? ' de ' + prov : '') + (num ? ' nº ' + num : '');
     return locked_(function () {
-      var sh = ppSheet_(), all = ppRows_(), items = [], products = [];
-      list.forEach(function (a) {
-        var o = all.filter(function (x) { return String(x.id) === String(a && a.id); })[0];
-        if (!o || String(o.estado) === 'llego') return;
-        o.estado = 'llego'; o.llego = new Date(); o.llegoPor = t.nombre; o.sumado = '';
-        if (!o.pedido) { o.pedido = o.llego; o.pedidoPor = t.nombre; }
-        var q = Math.trunc(ppNum_(a.qty)), p = a.sumar && o.codigo ? findProd_(o.codigo) : null;
-        if (p && q > 0) {
-          var cur = Number(p.cantidad) || 0, opts = ppOpts_(o.opciones), pick = opts[Number(o.elegida)];
-          p.cantidad = cur + q; p.actualizado = new Date(); p.actualizadoPor = t.nombre; write_('Productos', p);
-          logMove_({ tipo: 'entrada', codigo: p.codigo, producto: p.nombre, delta: q, antes: cur, despues: cur + q,
-            detalle: 'Llegó el pedido' + (pick && o.elegida !== '' ? ' de ' + pick.p : '') }, t, { destino: 'almacen', empresa: '', comunidad: 'Almacén' });
-          o.sumado = q; products.push({ codigo: p.codigo, cantidad: cur + q });
-        }
-        ppWrite_(sh, o); items.push(ppOut_(o));
+      var r = ppArriveIn_(t, arrivals, por), products = r.products, sumados = 0;
+      (Array.isArray(adds) ? adds.slice(0, 80) : []).forEach(function (a) {
+        var q = Math.trunc(ppNum_(a && a.qty)), p = q > 0 ? findProd_(String(a.codigo || '')) : null;
+        if (!p) return;
+        var cur = Number(p.cantidad) || 0;
+        p.cantidad = cur + q; p.actualizado = new Date(); p.actualizadoPor = t.nombre; write_('Productos', p);
+        logMove_({ tipo: 'entrada', codigo: p.codigo, producto: p.nombre, delta: q, antes: cur, despues: cur + q, detalle: por }, t, { destino: 'almacen', empresa: '', comunidad: 'Almacén' });
+        products.push({ codigo: p.codigo, cantidad: cur + q }); sumados++;
       });
-      return { ok: true, items: items, products: products };
+      var id = 'alb-' + Utilities.getUuid().slice(0, 8), lines = albLines_(d.lineas);
+      albSheet_().appendRow([id, fecha, cell_(prov), cell_(num), ppNum_(d.total) || '', JSON.stringify(lines), foto, new Date(), t.nombre, r.items.length + sumados]);
+      return { ok: true, id: id, foto: foto, items: r.items, products: products };
     });
+  });
+}
+function albList_(token) {
+  return guard_(function () {
+    admin_(token);
+    var sh = sh_(ALB_SHEET_), n = sh ? sh.getLastRow() : 0;
+    if (n < 2) return { items: [] };
+    var from = Math.max(2, n - 59);
+    var rows = sh.getRange(from, 1, n - from + 1, ALB_HEAD_.length).getValues();
+    return { items: rows.reverse().map(function (r) {
+      var lines = []; try { lines = JSON.parse(r[5] || '[]'); } catch (e) { }
+      return { id: String(r[0]), fecha: r[1] instanceof Date ? Utilities.formatDate(r[1], 'Europe/Madrid', 'yyyy-MM-dd') : String(r[1] || ''), proveedor: String(r[2] || ''), numero: String(r[3] || ''),
+        total: Number(r[4]) || 0, lineas: lines, foto: String(r[6] || ''), guardado: plain_(r[7]), por: String(r[8] || '') };
+    }) };
   });
 }

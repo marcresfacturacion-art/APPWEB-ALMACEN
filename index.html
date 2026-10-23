@@ -324,6 +324,7 @@ form.edit .check span{flex:1;min-width:0}
 .pparr{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--line)}.ppsum{display:flex;align-items:center;gap:8px;font-weight:600}.ppsum input[type=checkbox]{width:24px;height:24px}.ppsum input[type=number]{width:84px;min-height:44px;border-radius:8px;border:2px solid var(--line);font-size:18px;text-align:center}
 .ppform{display:grid;grid-template-columns:110px 1fr;gap:8px}.ppform input{width:100%;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 10px}.ppform label{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pptotal{font-size:15px}
+.albbtns{margin:0 0 12px}.albh{margin:12px 0 8px}.albmsg{margin:0 0 10px;border-color:var(--danger)}.albread{text-align:center;padding:12px 0}.albread img{max-width:100%;max-height:50vh;border-radius:8px;border:1px solid var(--line)}.albtop{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:start}.albtop img{width:96px;height:128px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}.albf{display:flex;flex-direction:column;gap:8px;min-width:0}.albf label,.albl2 label{display:flex;flex-direction:column;font-size:12px;font-weight:700;color:var(--muted);gap:3px;min-width:0}.albf input,.albl input,.albl select{width:100%;min-width:0;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 10px;color:var(--fg)}.albl{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px;margin-bottom:8px;display:flex;flex-direction:column;gap:8px}.albl1{display:grid;grid-template-columns:1fr auto;gap:8px}.albl1 .ppdel{border:2px solid var(--line);border-radius:8px;width:46px}.albl2{display:grid;grid-template-columns:90px 110px 1fr;gap:8px;align-items:end}.albl2 .code{align-self:center}.albl select{font-size:14px}.albl select.ok{border-color:var(--ok,#2D6A4F)}.albl .ppsum{display:flex;gap:8px;align-items:flex-start;font-weight:700}.albl .ppsum input{width:22px;min-height:22px;flex-shrink:0}.albmiss{margin:10px 0}.albmiss div{font-size:14px}.albrow{align-items:flex-start}.albside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}.albside .btn{min-height:38px;padding:0 10px;font-size:14px}
 .ppquick{display:flex;flex-direction:column;gap:8px}.ppquick input{width:100%;min-width:0;min-height:50px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 12px}.ppline{display:grid;grid-template-columns:1fr 100px auto;gap:8px;margin-bottom:8px}.ppline:last-child{margin-bottom:0}.ppline .ppdel{border:2px solid var(--line);border-radius:8px;width:46px}.ppbase{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:10px 12px 4px;font-weight:800;border-bottom:1px solid var(--line);background:var(--surface-2)}.ppbase b{flex:1;min-width:0}.ppbase span{font-size:12px;font-weight:600;color:var(--muted);text-align:right;max-width:50%}.row.ppsub{padding-left:24px}.ppquick .note{margin:0}
 .ppopt{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}.ppopt:last-child{border-bottom:0}.ppopt.sel{background:var(--surface-2);box-shadow:inset 4px 0 0 var(--brand)}
 .pptap{flex:1;display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:10px 12px;cursor:pointer;min-width:0;color:var(--fg)}.pptap .txt{flex:1;min-width:0}.pptap .name{font-weight:700}
@@ -402,7 +403,7 @@ const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
 if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
 /* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
 /* Every write is counted, so a refresh that was already on its way can't bring back what was just changed. */
-const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barSearch","api_barIA","api_ppList"]);
+const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barSearch","api_barIA","api_ppList","api_albList"]);
 let WSEQ=0, WBUSY=0;
 function api(fn, ...args){
   if(READ_FNS.has(fn)) return apiRaw(fn, ...args);
@@ -487,7 +488,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLines:[{v:"",c:""}], ppLoading:false, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLines:[{v:"",c:""}], ppLoading:false, alb:null, albs:null, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -1925,6 +1926,7 @@ async function ppAddMany(base, codigo, lines, o={}){
 function viewPP(){
   const box=$("#adm"); if(!box||!S.adminOk) return;
   if(!S.pp){ box.innerHTML='<div class="empty">Cargando la lista…</div>'; loadPP(); return; }
+  if(S.alb) return viewAlb();
   if(S.ppSel) return viewPPItem();
   const tab=S.ppTab||"porpedir", items=S.pp.filter(i=>i.estado===tab);
   const row=(it,sub,noNote)=>{ const pk=ppPick(it);
@@ -1950,6 +1952,7 @@ function viewPP(){
     list=`<div class="list">${l.length?html:`<div class="empty">${tab==="porpedir"?"No hay nada apuntado para pedir.":"Todavía no ha llegado nada."}</div>`}</div>`;
   }
   box.innerHTML = `
+    <div class="twobtn ppbtns albbtns"><button class="btn primary" id="pp_alb">📷 Escanear albarán</button><button class="btn" id="pp_albs">Albaranes</button></div>
     <form class="ppquick" id="pp_add" novalidate>
       <input id="pp_q" placeholder="Qué hay que pedir" value="${esc(S.ppQ||"")}" autocomplete="off" aria-label="Qué hay que pedir">
       <div id="pp_sug"></div>
@@ -1964,6 +1967,8 @@ function viewPP(){
     </form>
     <div class="ppseg" role="tablist">${Object.entries(PP_EST).map(([k,v])=>`<button class="btn" role="tab" aria-pressed="${tab===k}" data-ppt="${k}">${v}${k!=="llego"&&S.pp.filter(i=>i.estado===k).length?` (${S.pp.filter(i=>i.estado===k).length})`:""}</button>`).join("")}</div>
     ${list}`;
+  $("#pp_alb").onclick=albStart;
+  $("#pp_albs").onclick=()=>{ S.alb={step:"list"}; viewPP(); window.scrollTo(0,0); };
   const q=$("#pp_q");
   const sug=()=>{ S.ppQ=q.value; const el=$("#pp_sug"), w=fold(q.value);
     if(w.length<2){ el.innerHTML=""; return; }
@@ -2098,6 +2103,158 @@ async function lowToPP(){
   try{ const r=await api("api_ppSave", S.adminToken, add); S.pp.push(...r.items); toast(`${r.items.length} cosa${r.items.length===1?"":"s"} pasada${r.items.length===1?"":"s"} a «Por pedir».`); S.adminTab="pp"; S.ppTab="porpedir"; S.ppSel=null; }
   catch(err){ adminError(err); }
   S.busy=false; if(S.view==="admin") viewAdmin();
+}
+/* ---------- Albaranes (Xavi, 2026-10-23): a photo of the delivery note → the free AI (same GEMINI_KEY) reads
+   supplier, number, date and lines. Each line is matched with what was ordered (or a warehouse product);
+   «Guardar y cuadrar» marks it arrived, adds to stock and keeps the albarán with its photo. At most 12 AI reads a day. ---------- */
+const ALB_ERR={
+  albmax:m=>`Hoy ya se han leído ${m||12} albaranes con la IA (es el tope que pediste). Puedes apuntar este a mano.`,
+  quota:()=>"La IA gratuita de Google no deja leer más por hoy. Puedes apuntar este a mano; mañana vuelve a funcionar. No se paga nada.",
+  nokey:()=>"La IA no tiene clave: falta GEMINI_KEY en Apps Script (la misma de la foto de placa).",
+  badkey:()=>PLATE_ERR.badkey,
+  old:()=>PLATE_ERR.old,
+};
+/* Words to compare: "200x4.8" → 200, 4, 8; plurals count as the singular (bridas negras = brida negra). */
+const albWords = t => fold(t).replace(/(\d)([a-zñ])/g,"$1 $2").replace(/([a-zñ])(\d)/g,"$1 $2").replace(/[^a-z0-9ñ]+/g," ").split(" ")
+  .map(w=>/\d/.test(w)?w:w.length>4&&/[^aeiou]es$/.test(w)?w.slice(0,-2):w.length>3&&/s$/.test(w)?w.slice(0,-1):w).filter(w=>w.length>=3||/\d/.test(w));
+const ALB_STOP=new Set(["para","con","sin","los","las","del","unidad","unidades","und","uds","pza","caja"]);
+/* How alike two texts are (0..1): shared words over the shorter text. */
+function albScore(a,b){
+  if(fold(a).replace(/\W+/g,"")===fold(b).replace(/\W+/g,"")) return 1.01;
+  const A=new Set(albWords(a).filter(w=>!ALB_STOP.has(w))), B=new Set(albWords(b).filter(w=>!ALB_STOP.has(w)));
+  if(!A.size||!B.size) return 0;
+  /* Numbers (sizes) only help when a word matches too: "Portes 9" is not "SYSTEM VE 121 9". */
+  let n=0, words=0; A.forEach(w=>{ if(B.has(w)){ if(/\d/.test(w)) n+=1.5; else { n++; words++; } } });
+  return words ? Math.min(1, n/Math.min(A.size,B.size)) : 0;
+}
+const albSameProv = (a,b) => { const x=albWords(a).filter(w=>!["sl","sa","slu","sociedad","limitada"].includes(w)), y=new Set(albWords(b)); return x.length>0&&x.some(w=>y.has(w)); };
+/* Ordered things not yet arrived; those from the albarán's supplier first. */
+function albOpen(prov){ return (S.pp||[]).filter(i=>i.estado!=="llego").map(i=>({it:i, same:albSameProv(prov, ppPick(i)?.p||"")})).sort((a,b)=>b.same-a.same); }
+function albAuto(d){
+  const used=new Set(), open=albOpen(d.proveedor), prods=[...S.products.values()];
+  d.lineas.forEach(l=>{
+    const txt=l.descripcion||l.ref||"";
+    let best=null, bs=0;
+    open.forEach(o=>{ if(used.has(o.it.id)) return; const s=albScore(txt,o.it.nombre)+(o.same?0.25:0); if(s>bs){ bs=s; best="pp:"+o.it.id; } });
+    if(bs<0.6){ best=null; bs=0;
+      prods.forEach(p=>{ const s=(l.ref&&fold(l.ref)===fold(p.codigo))?1.1:albScore(txt,p.nombre); if(s>bs){ bs=s; best="p:"+p.codigo; } });
+      if(bs<0.6) best=""; }
+    if(best&&best.startsWith("pp:")) used.add(best.slice(3));
+    l.m=best||""; l.sum=true;
+  });
+}
+const albNum = v => Math.round(ppNum(v)*10000)/10000;
+function albFromAI(x){
+  x=x||{};
+  const d={proveedor:String(x.proveedor||"").toUpperCase().trim(), numero:String(x.numero||"").trim(), fecha:/^\d{4}-\d{2}-\d{2}$/.test(String(x.fecha||""))?x.fecha:new Date().toISOString().slice(0,10), total:albNum(x.total)||"",
+    lineas:(Array.isArray(x.lineas)?x.lineas:[]).map(l=>({ref:String(l.ref||"").trim(), descripcion:String(l.descripcion||"").toUpperCase().trim(), cantidad:albNum(l.cantidad)||1, precio:albNum(l.precio)||(albNum(l.importe)&&albNum(l.cantidad)?albNum(albNum(l.importe)/albNum(l.cantidad)):"")})).filter(l=>l.descripcion||l.ref)};
+  albAuto(d); return d;
+}
+async function albStart(){
+  const blob=await takePhoto(1600); if(!blob) return;
+  const b64=await blobToBase64(blob);
+  S.alb={step:"read", b64, img:URL.createObjectURL(blob)}; viewPP();
+  try{
+    const r=await api("api_albRead", S.adminToken, b64);
+    if(!S.alb) return;
+    if(r.data&&r.data.legible===false){ S.alb.msg="La IA no consigue leer el albarán. Haz otra foto con más luz y de frente, o apúntalo a mano."; S.alb.d=albFromAI({}); }
+    else { S.alb.d=albFromAI(r.data); if(!S.alb.d.lineas.length) S.alb.msg="La IA no ha encontrado líneas. Revisa la foto o añádelas a mano."; }
+    S.alb.usados=r.usados; S.alb.max=r.max;
+  }catch(err){
+    if(!S.alb) return;
+    if(err&&err.code==="auth") return adminError(err);
+    const f=ALB_ERR[err&&err.code]; S.alb.msg=f?f(err.max):"No se ha podido leer con la IA ("+(err&&err.code==="network"?netMsg():"error de Gemini")+"). Puedes apuntarlo a mano.";
+    S.alb.d=albFromAI({});
+  }
+  S.alb.step="edit"; viewPP();
+}
+function albOptions(l){
+  const d=S.alb.d, open=albOpen(d.proveedor);
+  const txt=l.descripcion||l.ref||"";
+  const prods=[...S.products.values()].map(p=>({p,s:albScore(txt,p.nombre)})).sort((a,b)=>b.s-a.s).slice(0,8);
+  if(l.m&&l.m.startsWith("p:")&&!prods.some(x=>"p:"+x.p.codigo===l.m)){ const p=S.products.get(l.m.slice(2)); if(p) prods.unshift({p}); }
+  const o=(v,t)=>`<option value="${esc(v)}"${l.m===v?" selected":""}>${esc(t)}</option>`;
+  return o("","— No estaba pedido (solo se apunta) —")
+    +(open.length?`<optgroup label="Lo que está pedido o por pedir">${open.map(x=>o("pp:"+x.it.id,`${x.it.nombre} × ${x.it.cantidad}${ppPick(x.it)?" · "+ppPick(x.it).p:""}`)).join("")}</optgroup>`:"")
+    +`<optgroup label="Productos del almacén">${prods.map(x=>o("p:"+x.p.codigo,`${x.p.nombre} · ${x.p.codigo}`)).join("")}</optgroup>`;
+}
+/* Which warehouse product a line ends up adding to (directly, or through the ordered thing). */
+function albProd(l){ if(!l.m) return null; if(l.m.startsWith("p:")) return S.products.get(l.m.slice(2))||null; const it=S.pp.find(x=>x.id===l.m.slice(3)); return it&&it.codigo?S.products.get(it.codigo)||null:null; }
+function viewAlb(){
+  const box=$("#adm"), A=S.alb;
+  if(A.step==="list") return viewAlbList();
+  if(A.step==="read"){ box.innerHTML=`<div class="albread"><img src="${A.img}" alt="Foto del albarán"><p><b>Leyendo el albarán…</b><br>La IA tarda unos segundos.</p><button class="btn" id="al_cancel">Cancelar</button></div>`;
+    $("#al_cancel").onclick=()=>{ S.alb=null; viewPP(); }; return; }
+  const d=A.d, missing=albOpen(d.proveedor).filter(x=>x.same&&x.it.estado==="pedido"&&!d.lineas.some(l=>l.m==="pp:"+x.it.id));
+  const tot=d.lineas.reduce((s,l)=>s+ppNum(l.precio)*ppNum(l.cantidad),0);
+  box.innerHTML=`
+    <button class="btn" id="al_back">← Volver a «Por pedir»</button>
+    <h3 class="albh">Albarán</h3>
+    ${A.msg?`<div class="sheet albmsg">${esc(A.msg)}</div>`:""}
+    <div class="albtop">${A.img?`<a href="${A.img}" target="_blank" rel="noopener"><img src="${A.img}" alt="Foto del albarán"></a>`:""}
+      <div class="albf"><label>Proveedor<input id="al_prov" list="pp_provs" value="${esc(d.proveedor)}" autocomplete="off"></label>
+      <datalist id="pp_provs">${[...new Set([...S.pp.flatMap(x=>x.opciones.map(o=>o.p)), ...S.proveedores])].map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+      <label>Nº albarán<input id="al_num" value="${esc(d.numero)}" autocomplete="off"></label><label>Fecha<input id="al_fecha" type="date" value="${esc(d.fecha)}"></label>
+      <label>Total (sin IVA)<input id="al_tot" type="number" inputmode="decimal" step="any" value="${esc(d.total)}"></label></div></div>
+    <div class="label" style="margin:12px 0 6px">${d.lineas.length} línea${d.lineas.length===1?"":"s"} · elige con qué cuadra cada una</div>
+    ${d.lineas.map((l,i)=>{ const p=albProd(l);
+      return `<div class="albl" data-al="${i}">
+        <div class="albl1"><input data-ad="${i}" value="${esc(l.descripcion)}" placeholder="Descripción" aria-label="Descripción"><button type="button" class="ppdel" data-ax="${i}" aria-label="Quitar esta línea">✕</button></div>
+        <div class="albl2"><label>Cant.<input data-ac="${i}" type="number" inputmode="decimal" step="any" value="${esc(l.cantidad)}"></label><label>Precio<input data-ap="${i}" type="number" inputmode="decimal" step="any" value="${esc(l.precio)}"></label>${l.ref?`<span class="code">Ref. ${esc(l.ref)}</span>`:""}</div>
+        <select data-am="${i}" aria-label="Con qué cuadra" class="${l.m?"ok":""}">${albOptions(l)}</select>
+        ${p?`<label class="ppsum"><input type="checkbox" data-as="${i}"${l.sum?" checked":""}> <span>Sumar <span data-asn="${i}">${Math.trunc(ppNum(l.cantidad))}</span> al stock de ${esc(p.nombre)} (hay ${p.cantidad})</span></label>`:""}
+      </div>`; }).join("")}
+    <button class="btn block" id="al_add">＋ Añadir línea</button>
+    ${tot?`<div class="ppgrp"><span>Suma de las líneas</span><span>${eur(tot)}</span></div>`:""}
+    ${missing.length?`<div class="sheet albmiss"><b>Pedido a ${esc(ppPick(missing[0].it).p)} y no viene en este albarán:</b>${missing.map(x=>`<div>· ${esc(x.it.nombre)} × ${x.it.cantidad}</div>`).join("")}<div class="code">Siguen en «Pedido» hasta que lleguen.</div></div>`:""}
+    <button class="btn primary block" id="al_save">✓ Guardar albarán y cuadrar</button>
+    <p class="note">Lo que cuadre con algo pedido pasa a «Llegó». El albarán y su foto se guardan en la hoja (pestaña Albaranes) y en el Drive.${A.max?` Hoy llevas ${A.usados} de ${A.max} lecturas con la IA.`:""}</p>`;
+  const read=()=>{ d.proveedor=$("#al_prov").value.toUpperCase().trim(); d.numero=$("#al_num").value.trim(); d.fecha=$("#al_fecha").value; d.total=$("#al_tot").value;
+    d.lineas.forEach((l,i)=>{ l.descripcion=app.querySelector(`[data-ad="${i}"]`).value.toUpperCase().trim(); l.cantidad=app.querySelector(`[data-ac="${i}"]`).value; l.precio=app.querySelector(`[data-ap="${i}"]`).value;
+      l.m=app.querySelector(`[data-am="${i}"]`).value; const c=app.querySelector(`[data-as="${i}"]`); if(c) l.sum=c.checked; }); };
+  const redraw=()=>{ const y=window.scrollY; read(); viewAlb(); window.scrollTo(0,y); };
+  $("#al_back").onclick=()=>{ S.alb=null; viewPP(); };
+  $("#al_prov").oninput=()=>{ d.proveedor=$("#al_prov").value.toUpperCase().trim(); };
+  box.querySelectorAll("[data-am]").forEach(s=>s.onchange=()=>{ const i=Number(s.dataset.am); d.lineas[i].sum=true; redraw(); });
+  box.querySelectorAll("[data-ac]").forEach(s=>s.oninput=()=>{ const n=app.querySelector(`[data-asn="${s.dataset.ac}"]`); if(n) n.textContent=Math.trunc(ppNum(s.value)); });
+  box.querySelectorAll("[data-ax]").forEach(b=>b.onclick=()=>{ read(); d.lineas.splice(Number(b.dataset.ax),1); redraw(); });
+  $("#al_add").onclick=()=>{ read(); d.lineas.push({ref:"",descripcion:"",cantidad:1,precio:"",m:"",sum:true}); viewAlb(); const n=app.querySelector(`[data-ad="${d.lineas.length-1}"]`); if(n) n.focus(); };
+  $("#al_save").onclick=()=>{ read(); albSave(); };
+}
+async function albSave(){
+  const A=S.alb, d=A.d;
+  if(S.busy) return;
+  if(!d.proveedor){ toast("Escribe el proveedor del albarán."); $("#al_prov").focus(); return; }
+  const lines=d.lineas.filter(l=>l.descripcion||l.ref);
+  const arr=new Map(), adds=new Map();
+  lines.forEach(l=>{ const q=Math.trunc(ppNum(l.cantidad));
+    if(l.m.startsWith("pp:")){ const id=l.m.slice(3), o=arr.get(id)||{id, sumar:false, qty:0, pr:albNum(l.precio)}; o.sumar=o.sumar||(!!albProd(l)&&l.sum); o.qty+=q; arr.set(id,o); }
+    else if(l.m.startsWith("p:")&&l.sum&&q>0){ const c=l.m.slice(2); adds.set(c,(adds.get(c)||0)+q); } });
+  const nombre=l=>{ if(!l.m) return ""; if(l.m.startsWith("p:")) return l.m.slice(2); const it=S.pp.find(x=>x.id===l.m.slice(3)); return it?"Pedido: "+it.nombre:""; };
+  const body={proveedor:d.proveedor, numero:d.numero, fecha:d.fecha, total:albNum(d.total), foto:A.b64||"",
+    lineas:lines.map(l=>({ref:l.ref, descripcion:l.descripcion, cantidad:albNum(l.cantidad), precio:albNum(l.precio), cuadre:nombre(l)}))};
+  S.busy=true; const btn=$("#al_save"); if(btn){ btn.disabled=true; btn.textContent="Guardando…"; }
+  try{
+    const r=await api("api_albSave", S.adminToken, body, [...arr.values()], [...adds.entries()].map(([codigo,qty])=>({codigo,qty})));
+    r.items.forEach(n=>{ const it=S.pp.find(x=>x.id===n.id); if(it) Object.assign(it,n); });
+    r.products.forEach(n=>{ const p=S.products.get(n.codigo); if(p){ p.cantidad=n.cantidad; remember("qty",n.codigo,n.cantidad); } });
+    toast(`Albarán guardado.${r.items.length?` ${r.items.length} cosa${r.items.length===1?"":"s"} pasada${r.items.length===1?"":"s"} a «Llegó».`:""}${r.products.length?` Stock sumado en ${r.products.length} producto${r.products.length===1?"":"s"}.`:""}`);
+    if(A.img) URL.revokeObjectURL(A.img);
+    S.alb=null; S.albs=null; S.ppTab="llego";
+  }catch(err){ adminError(err); if(btn){ btn.disabled=false; btn.textContent="✓ Guardar albarán y cuadrar"; } }
+  S.busy=false; if(!S.alb) viewPP();
+}
+async function viewAlbList(){
+  const box=$("#adm");
+  const draw=()=>{ if(!S.alb||S.alb.step!=="list") return;
+    box.innerHTML=`<button class="btn" id="al_back">← Volver a «Por pedir»</button><h3 class="albh">Albaranes guardados</h3>
+    <div class="list">${!S.albs?'<div class="empty">Cargando…</div>':S.albs.length?S.albs.map(a=>`<div class="row albrow"><span class="txt"><div class="name">${esc(a.proveedor||"Sin proveedor")}${a.numero?` · nº ${esc(a.numero)}`:""}</div>
+      <div class="code">${esc(a.fecha?new Date(a.fecha+"T12:00").toLocaleDateString("es-ES"):"")} · ${a.lineas.length} línea${a.lineas.length===1?"":"s"}${a.por?" · "+esc(a.por):""}</div>
+      <div class="code">${a.lineas.slice(0,4).map(l=>esc(`${l.cantidad} × ${l.descripcion}`)).join("<br>")}${a.lineas.length>4?"<br>…":""}</div></span>
+      <span class="albside">${a.total?`<b>${eur(a.total)}</b>`:""}${/^https:\/\/(drive|docs)\.google\.com\//.test(a.foto)?`<a class="btn" href="${esc(a.foto)}" target="_blank" rel="noopener">Ver foto</a>`:""}</span></div>`).join(""):'<div class="empty">Todavía no hay albaranes guardados.</div>'}</div>`;
+    $("#al_back").onclick=()=>{ S.alb=null; viewPP(); }; };
+  draw();
+  if(!S.albs){ try{ const r=await api("api_albList", S.adminToken); S.albs=r.items||[]; }catch(err){ adminError(err); S.albs=[]; } draw(); }
 }
 function viewOrder(){
   $("#adm").innerHTML = `
@@ -2848,7 +3005,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-23.5";
+const APP_VERSION="2026-10-23.6";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
@@ -2856,7 +3013,7 @@ async function checkUpdate(){
     const m=/const APP_VERSION="([^"]+)"/.exec(txt); if(!m||m[1]===APP_VERSION) return;
     let tried=""; try{ tried=sessionStorage.getItem("almacen_upd")||""; }catch(e){}
     if(tried===m[1]) return;
-    if(S.busy||PEND.size||WBUSY||typing()||S.view==="editar"||S.view==="alta"||!$("#scanner").hidden||!$("#cam").hidden) return;
+    if(S.busy||PEND.size||WBUSY||typing()||S.view==="editar"||S.view==="alta"||(S.alb&&S.alb.step!=="list")||!$("#scanner").hidden||!$("#cam").hidden) return;
     try{ sessionStorage.setItem("almacen_upd",m[1]); }catch(e){}
     await fetch(url,{cache:"reload"}).catch(()=>{});
     location.reload();
