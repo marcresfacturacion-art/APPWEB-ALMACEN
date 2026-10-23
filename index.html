@@ -2065,16 +2065,20 @@ function viewPPItem(){
   box.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ const i=Number(b.dataset.pick); if(it.elegida===i) return; it.elegida=i; viewPPItem(); save(); });
   box.querySelectorAll("[data-delopt]").forEach(b=>b.onclick=()=>{ const i=Number(b.dataset.delopt);
     it.opciones.splice(i,1); if(it.elegida===i) it.elegida=-1; else if(it.elegida>i) it.elegida--; viewPPItem(); save(); });
-  $("#pi_add").onsubmit=e=>{ e.preventDefault();
-    const pv=$("#pi_prov").value.trim().toUpperCase(), pr=ppNum($("#pi_pr").value), n=$("#pi_n").value.trim();
-    if(!pv){ toast("Escribe el proveedor."); return; }
-    if($("#pi_pr").value.trim()&&!(pr>0)){ toast("El precio no es un número."); return; }
-    const old=it.opciones.findIndex(o=>o.p===pv);
-    if(old>=0) it.opciones[old]={p:pv,pr,n}; else { it.opciones.push({p:pv,pr,n}); if(it.elegida<0&&it.opciones.length===1) it.elegida=0; }
-    viewPPItem(); save(); };
+  /* The supplier typed in the boxes becomes an option (also when «Ya está pedido» is tapped without «Añadir opción»). */
+  const takeTyped=pick=>{ const pv=$("#pi_prov").value.trim().toUpperCase(), raw=$("#pi_pr").value.trim(), pr=ppNum(raw), n=$("#pi_n").value.trim();
+    if(!pv) return null;
+    if(raw&&!(pr>0)){ toast("El precio no es un número."); return false; }
+    let i=it.opciones.findIndex(o=>o.p===pv);
+    if(i>=0) it.opciones[i]={p:pv,pr,n}; else { it.opciones.push({p:pv,pr,n}); i=it.opciones.length-1; }
+    if(pick||it.elegida<0&&it.opciones.length===1) it.elegida=i;
+    return true; };
+  $("#pi_add").onsubmit=e=>{ e.preventDefault(); const r=takeTyped(false); if(r===null){ toast("Escribe el proveedor."); return; } if(r){ viewPPItem(); save(); } };
   box.querySelectorAll("[data-mem]").forEach(b=>b.onclick=()=>{ const o=mem[Number(b.dataset.mem)]; it.opciones.push({p:o.p,pr:o.pr,n:o.n}); viewPPItem(); save(); });
   const ord=$("#pi_order"); if(ord) ord.onclick=async()=>{
-    if(!ppPick(it)){ toast("Toca primero la opción donde lo pides."); return; }
+    if(takeTyped(true)===false) return;
+    if(!ppPick(it)&&it.opciones.length===1) it.elegida=0;
+    if(!ppPick(it)){ toast(it.opciones.length?"Toca primero la opción donde lo pides.":"Escribe abajo el proveedor donde lo pides."); return; }
     it.estado="pedido"; const r=await ppSave(it); if(r){ toast(`Apuntado como pedido a ${ppPick(it).p}.`); back(); } else it.estado="porpedir"; };
   const del=$("#pi_del"); if(del) del.onclick=()=>{ const c=$("#pi_confirm");
     c.innerHTML=`<div class="stock"><span>¿Quitar <b>${esc(it.nombre)}</b> de la lista?</span><div class="twobtn"><button class="btn" id="pd_no">Cancelar</button><button class="btn out" id="pd_yes">Quitar</button></div></div>`;
@@ -2844,7 +2848,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-23.4";
+const APP_VERSION="2026-10-23.5";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
