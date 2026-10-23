@@ -318,6 +318,18 @@ form.edit .check span{flex:1;min-width:0}
 .rcrow .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rcrow input{width:84px;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:18px;text-align:center;flex:none}
 .rcrow input.diff{border-color:var(--danger)}
+.ppseg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ppseg .btn{min-height:44px;font-size:13px;letter-spacing:.02em;white-space:nowrap;padding:0 4px}.ppbtns .btn{font-size:15px;letter-spacing:.02em;padding:0 6px;min-height:52px}.ppseg .btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-fg);border-color:var(--brand)}
+.pppick{font-size:14px;font-weight:700;color:var(--brand)}.pppick.none{color:var(--danger)}.pptot{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ppgrp{display:flex;justify-content:space-between;font-family:var(--f-display);font-weight:700;font-size:18px;margin-top:6px}
+.pparr{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--line)}.ppsum{display:flex;align-items:center;gap:8px;font-weight:600}.ppsum input[type=checkbox]{width:24px;height:24px}.ppsum input[type=number]{width:84px;min-height:44px;border-radius:8px;border:2px solid var(--line);font-size:18px;text-align:center}
+.ppform{display:grid;grid-template-columns:110px 1fr;gap:8px}.ppform input{width:100%;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 10px}.ppform label{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pptotal{font-size:15px}
+.ppopt{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}.ppopt:last-child{border-bottom:0}.ppopt.sel{background:var(--surface-2);box-shadow:inset 4px 0 0 var(--brand)}
+.pptap{flex:1;display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:10px 12px;cursor:pointer;min-width:0;color:var(--fg)}.pptap .txt{flex:1;min-width:0}.pptap .name{font-weight:700}
+.ppprice{font-family:var(--f-display);font-weight:700;font-size:20px;white-space:nowrap}.ppprice small{font-size:13px;color:var(--muted);font-weight:600}
+.ppstar{display:inline-block;margin-top:4px;background:var(--brand);color:var(--brand-fg);font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px}.ppcheap{font-size:12px;font-weight:700;color:var(--ok);margin-top:2px}
+.ppdel{border:0;border-left:1px solid var(--line);background:none;color:var(--danger);font-size:18px;width:46px;cursor:pointer}
+.ppadd{display:grid;grid-template-columns:1fr 110px;gap:8px}.ppadd input{min-width:0;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 10px}.ppadd #pi_n,.ppadd .btn{grid-column:1/-1}
 .rcok{color:var(--brand);font-weight:700}
 .cnt{background:var(--surface);border:2px solid var(--brand);border-radius:12px;padding:14px;display:grid;gap:12px}
 .cnt .ctop{display:flex;gap:12px;align-items:center}
@@ -389,7 +401,7 @@ const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
 if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
 /* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
 /* Every write is counted, so a refresh that was already on its way can't bring back what was just changed. */
-const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barSearch","api_barIA"]);
+const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barSearch","api_barIA","api_ppList"]);
 let WSEQ=0, WBUSY=0;
 function api(fn, ...args){
   if(READ_FNS.has(fn)) return apiRaw(fn, ...args);
@@ -474,7 +486,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppLoading:false, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -1718,6 +1730,7 @@ function viewAdmin(){
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="${S.adminTab==="hist"}" data-tab="hist">Historial</button>
       <button role="tab" aria-selected="${S.adminTab==="ped"}" data-tab="ped">Pedir${lowList().length?` (${lowList().length})`:""}</button>
+      <button role="tab" aria-selected="${S.adminTab==="pp"}" data-tab="pp">Por pedir${ppCount()?` (${ppCount()})`:""}</button>
       <button role="tab" aria-selected="${S.adminTab==="rec"}" data-tab="rec">Recuento</button>
       <button role="tab" aria-selected="${S.adminTab==="tec"}" data-tab="tec">Técnicos</button>
       <button role="tab" aria-selected="${S.adminTab==="pre"}" data-tab="pre">Préstamos${S.loans.length?` (${S.loans.length})`:""}</button>
@@ -1726,8 +1739,8 @@ function viewAdmin(){
       <button role="tab" aria-selected="${S.adminTab==="plate"}" data-tab="plate">IA</button>
     </div>
     <div id="adm"></div>`;
-  app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="hist") loadHist(); viewAdmin(); });
-  ({hist:viewHist, ped:viewOrder, rec:viewRecount, tec:viewTechs, pre:viewLoans, qr:viewQR, cat:viewCatAdmin, plate:viewPlate})[S.adminTab]();
+  app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="hist") loadHist(); if(S.adminTab==="pp"){ S.ppSel=null; S.ppArr=null; if(S.pp) loadPP(); } viewAdmin(); });
+  ({hist:viewHist, ped:viewOrder, pp:viewPP, rec:viewRecount, tec:viewTechs, pre:viewLoans, qr:viewQR, cat:viewCatAdmin, plate:viewPlate})[S.adminTab]();
 }
 
 function viewAdminLock(){
@@ -1831,10 +1844,209 @@ async function exportCsv(){
 }
 
 function lowList(){ return [...S.products.values()].filter(isLow).sort((a,b)=>(a.proveedor||LAST_CHAR).localeCompare(b.proveedor||LAST_CHAR,"es")||a.nombre.localeCompare(b.nombre,"es")); }
+/* ---------- Por pedir (Xavi, 2026-10-23): what has to be ordered, with several supplier options per item.
+   He picks where to order it (not always the cheapest). Por pedir → Pedido → Llegó; on arrival a warehouse
+   product can be added to stock. Only administrativos (Acceso restringido). ---------- */
+const eur = n => (Number(n)||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+const ppPick = it => it.elegida>=0 ? it.opciones[it.elegida]||null : null;
+const ppCount = () => S.pp ? S.pp.filter(i=>i.estado==="porpedir").length : 0;
+const ppNum = v => Number(String(v??"").replace(",","."))||0;
+const ppDate = t => t ? new Date(t).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"}) : "";
+const PP_EST = {porpedir:"Por pedir", pedido:"Pedido", llego:"Llegó"};
+async function loadPP(){
+  if(S.ppLoading) return; S.ppLoading=true;
+  try{ const r=await api("api_ppList", S.adminToken); S.pp=r.items||[]; }
+  catch(err){ adminError(err); }
+  S.ppLoading=false;
+  if(S.view==="admin"&&S.adminTab==="pp") viewPP();
+  const t=app.querySelector('[data-tab="pp"]'); if(t) t.textContent="Por pedir"+(ppCount()?` (${ppCount()})`:"");
+}
+function ppBody(it){ return {id:it.id, nombre:it.nombre, codigo:it.codigo, cantidad:it.cantidad, opciones:it.opciones, elegida:it.elegida, nota:it.nota, estado:it.estado}; }
+async function ppSave(it){
+  try{
+    const r=await api("api_ppSave", S.adminToken, ppBody(it));
+    if(!it.id) S.pp.push(r.item); else Object.assign(it, r.item);
+    return r.item;
+  }catch(err){ adminError(err); return null; }
+}
+/* Prices noted before for the same thing (same product code or same name), newest first, one per supplier. */
+function ppMemory(it){
+  const k=fold(it.nombre), seen=new Set((it.opciones||[]).map(o=>o.p)), out=[];
+  [...S.pp].filter(x=>x.id!==it.id&&((it.codigo&&x.codigo===it.codigo)||fold(x.nombre)===k)).sort((a,b)=>(b.apuntado||0)-(a.apuntado||0))
+    .forEach(x=>x.opciones.forEach(o=>{ if(!seen.has(o.p)){ seen.add(o.p); out.push({...o, when:x.apuntado}); } }));
+  return out;
+}
+function ppNew(nombre, codigo, cantidad){
+  const it={id:"", nombre, codigo:codigo||"", cantidad:cantidad||1, opciones:[], elegida:-1, nota:"", estado:"porpedir"};
+  const mem=ppMemory(it).slice(0,6).map(({p,pr,n})=>({p,pr,n}));
+  const p=codigo&&S.products.get(codigo);
+  if(!mem.length&&p&&p.proveedor) mem.push({p:p.proveedor.toUpperCase(), pr:0, n:""});
+  it.opciones=mem;
+  /* Same choice as last time, if there was one. */
+  const last=[...S.pp].filter(x=>(codigo&&x.codigo===codigo)||fold(x.nombre)===fold(nombre)).sort((a,b)=>(b.apuntado||0)-(a.apuntado||0)).find(x=>ppPick(x));
+  if(last){ const i=it.opciones.findIndex(o=>o.p===ppPick(last).p); if(i>=0) it.elegida=i; }
+  return it;
+}
+async function ppAdd(nombre, codigo, cantidad){
+  if(S.busy) return; S.busy=true;
+  const r=await ppSave(ppNew(nombre.toUpperCase(), codigo, cantidad));
+  S.busy=false;
+  if(r){ S.ppSel=r.id; S.ppQ=""; viewPP(); }
+}
+function viewPP(){
+  const box=$("#adm"); if(!box||!S.adminOk) return;
+  if(!S.pp){ box.innerHTML='<div class="empty">Cargando la lista…</div>'; loadPP(); return; }
+  if(S.ppSel) return viewPPItem();
+  const tab=S.ppTab||"porpedir", items=S.pp.filter(i=>i.estado===tab);
+  const row=it=>{ const pk=ppPick(it);
+    return `<button class="row" data-pp="${esc(it.id)}"><span class="txt"><div class="name">${esc(it.nombre)}</div>
+      <div class="code">× ${it.cantidad} · ${it.opciones.length} opci${it.opciones.length===1?"ón":"ones"}${it.codigo?` · ${esc(it.codigo)}`:""}</div>
+      ${tab==="llego"?`<div class="code">${pk?esc(pk.p)+" · ":""}llegó el ${ppDate(it.llego)}${it.llegoPor?" · "+esc(it.llegoPor):""}${it.sumado?` · +${it.sumado} al stock`:""}</div>`
+        :pk?`<div class="pppick">→ ${esc(pk.p)} · ${pk.pr?eur(pk.pr):"sin precio"}</div>`:`<div class="pppick none">Falta elegir dónde</div>`}</span>
+      ${pk&&pk.pr?`<span class="pptot">${eur(pk.pr*it.cantidad)}</span>`:""}</button>`; };
+  let list;
+  if(tab==="pedido"){
+    const groups=new Map(); items.forEach(it=>{ const k=ppPick(it)?.p||"Sin proveedor"; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(it); });
+    list=groups.size?[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0],"es")).map(([prov,l])=>`
+      <div class="ppgrp"><span>${esc(prov)}</span><span>${eur(l.reduce((s,it)=>s+(ppPick(it)?.pr||0)*it.cantidad,0))}</span></div>
+      <div class="list">${l.map(row).join("")}</div>
+      ${S.ppArr===prov?ppArrivePanel(l):`<div class="twobtn ppbtns"><button class="btn primary" data-arr="${esc(prov)}">Ha llegado</button><button class="btn" data-copy="${esc(prov)}">Copiar la lista</button></div>`}`).join("")
+      :'<div class="list"><div class="empty">No hay nada pedido esperando a llegar.</div></div>';
+  } else {
+    const l=tab==="llego"?items.sort((a,b)=>(b.llego||0)-(a.llego||0)).slice(0,60):items.sort((a,b)=>(a.apuntado||0)-(b.apuntado||0));
+    list=`<div class="list">${l.length?l.map(row).join(""):`<div class="empty">${tab==="porpedir"?"No hay nada apuntado para pedir.":"Todavía no ha llegado nada."}</div>`}</div>`;
+  }
+  box.innerHTML = `
+    <p class="note">Apunta lo que hay que pedir. Dentro de cada cosa pones dónde lo venden y a qué precio, y eliges dónde lo pides.</p>
+    <form class="search" id="pp_add" novalidate><input id="pp_q" placeholder="Apuntar algo para pedir…" value="${esc(S.ppQ||"")}" autocomplete="off" aria-label="Qué hay que pedir"><button class="btn primary" type="submit">Apuntar</button></form>
+    <div id="pp_sug"></div>
+    <div class="ppseg" role="tablist">${Object.entries(PP_EST).map(([k,v])=>`<button class="btn" role="tab" aria-pressed="${tab===k}" data-ppt="${k}">${v}${k!=="llego"&&S.pp.filter(i=>i.estado===k).length?` (${S.pp.filter(i=>i.estado===k).length})`:""}</button>`).join("")}</div>
+    ${list}`;
+  const q=$("#pp_q");
+  const sug=()=>{ S.ppQ=q.value; const el=$("#pp_sug"), w=fold(q.value);
+    if(w.length<2){ el.innerHTML=""; return; }
+    const prods=[...S.products.values()].filter(p=>fold(p.nombre+" "+p.codigo).includes(w)).slice(0,5);
+    const prev=[...new Map(S.pp.filter(x=>!x.codigo&&fold(x.nombre).includes(w)).map(x=>[fold(x.nombre),x])).values()].slice(0,3);
+    el.innerHTML=prods.length||prev.length?`<div class="sug">${prods.map(p=>`<button type="button" data-ppp="${esc(p.codigo)}">${esc(p.nombre)} <span class="code">${esc(p.codigo)} · hay ${p.cantidad}</span></button>`).join("")}${prev.map(x=>`<button type="button" data-ppn="${esc(x.nombre)}">${esc(x.nombre)} <span class="code">apuntado antes</span></button>`).join("")}</div>`:"";
+    el.querySelectorAll("[data-ppp]").forEach(b=>b.onclick=()=>{ const p=S.products.get(b.dataset.ppp); const low=Number(p.minimo)>p.cantidad?Number(p.minimo)-p.cantidad:1; ppAdd(p.nombre, p.codigo, low); });
+    el.querySelectorAll("[data-ppn]").forEach(b=>b.onclick=()=>ppAdd(b.dataset.ppn,"",1)); };
+  q.oninput=sug; if(q.value) sug();
+  $("#pp_add").onsubmit=e=>{ e.preventDefault(); const n=q.value.trim().replace(/\s+/g," "); if(n.length<2){ toast("Escribe qué hay que pedir."); return; } ppAdd(n,"",1); };
+  box.querySelectorAll("[data-ppt]").forEach(b=>b.onclick=()=>{ S.ppTab=b.dataset.ppt; S.ppArr=null; viewPP(); });
+  box.querySelectorAll("[data-pp]").forEach(b=>b.onclick=()=>{ S.ppSel=b.dataset.pp; viewPP(); window.scrollTo(0,0); });
+  box.querySelectorAll("[data-arr]").forEach(b=>b.onclick=()=>{ S.ppArr=b.dataset.arr; viewPP(); });
+  box.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>ppCopy(items.filter(it=>(ppPick(it)?.p||"Sin proveedor")===b.dataset.copy)));
+  bindArrive(items);
+}
+function ppArrivePanel(l){
+  return `<div class="sheet" id="pp_arr"><h3>¿Ha llegado todo?</h3>
+    ${l.map(it=>{ const p=it.codigo&&S.products.get(it.codigo);
+      return `<div class="pparr"><div><b>${esc(it.nombre)}</b><div class="code">pedido × ${it.cantidad}</div></div>
+      ${p?`<label class="ppsum"><input type="checkbox" data-sum="${esc(it.id)}" checked> Sumar al stock <input type="number" inputmode="numeric" min="0" step="1" data-sq="${esc(it.id)}" value="${Math.trunc(it.cantidad)}" aria-label="Cantidad que ha llegado"></label>`:`<div class="code">No es un producto del almacén</div>`}</div>`; }).join("")}
+    <div class="twobtn ppbtns"><button class="btn" id="pa_no">Cancelar</button><button class="btn primary" id="pa_yes">Ha llegado</button></div></div>`;
+}
+function bindArrive(items){
+  const yes=$("#pa_yes"); if(!yes) return;
+  $("#pa_no").onclick=()=>{ S.ppArr=null; viewPP(); };
+  yes.onclick=()=>ppArrive(items.filter(it=>(ppPick(it)?.p||"Sin proveedor")===S.ppArr).map(it=>{
+    const c=app.querySelector(`[data-sum="${CSS.escape(it.id)}"]`), q=app.querySelector(`[data-sq="${CSS.escape(it.id)}"]`);
+    return {id:it.id, sumar:!!(c&&c.checked), qty:q?Math.trunc(ppNum(q.value)):0}; }));
+}
+async function ppArrive(list){
+  if(S.busy||!list.length) return; S.busy=true;
+  try{
+    const r=await api("api_ppArrive", S.adminToken, list);
+    r.items.forEach(n=>{ const it=S.pp.find(x=>x.id===n.id); if(it) Object.assign(it,n); });
+    r.products.forEach(n=>{ const p=S.products.get(n.codigo); if(p){ p.cantidad=n.cantidad; remember("qty",n.codigo,n.cantidad); } });
+    const sum=r.products.length;
+    toast(`Apuntado como llegado${sum?`. Sumado al stock en ${sum} producto${sum===1?"":"s"}`:""}.`);
+    S.ppArr=null; S.ppSel=null;
+  }catch(err){ adminError(err); }
+  S.busy=false; viewPP();
+}
+async function ppCopy(l){
+  const txt="Hola, os paso el pedido:\n"+l.map(it=>`- ${it.cantidad} × ${it.nombre}`).join("\n")+"\nGracias.";
+  try{ await navigator.clipboard.writeText(txt); toast("Lista copiada. Pégala en WhatsApp o en un correo."); }
+  catch(e){ if(navigator.share){ try{ await navigator.share({text:txt}); }catch(_){} } else toast("No se ha podido copiar en este móvil."); }
+}
+function viewPPItem(){
+  const box=$("#adm"), it=S.pp.find(x=>x.id===S.ppSel);
+  if(!it){ S.ppSel=null; return viewPP(); }
+  const ro=it.estado==="llego", p=it.codigo&&S.products.get(it.codigo), pk=ppPick(it);
+  const priced=it.opciones.map((o,i)=>({...o,i})).filter(o=>o.pr>0);
+  const cheap=priced.length>1?priced.reduce((a,b)=>b.pr<a.pr?b:a).i:-1;
+  const order=it.opciones.map((o,i)=>({...o,i})).sort((a,b)=>(a.pr>0?a.pr:1e12)-(b.pr>0?b.pr:1e12));
+  const mem=ro?[]:ppMemory(it);
+  const provs=[...new Set([...S.pp.flatMap(x=>x.opciones.map(o=>o.p)), ...S.proveedores])];
+  box.innerHTML = `
+    <button class="linkbtn" id="pi_back">‹ Volver a la lista</button>
+    <div class="sheet"><h3>${esc(it.nombre)}</h3>
+      <div class="code">${PP_EST[it.estado]} · apuntado el ${ppDate(it.apuntado)}${it.apuntadoPor?" por "+esc(it.apuntadoPor):""}${it.pedido?` · pedido el ${ppDate(it.pedido)}${it.pedidoPor?" por "+esc(it.pedidoPor):""}`:""}${it.llego?` · llegó el ${ppDate(it.llego)}`:""}</div>
+      ${p?`<div class="code">${esc(p.codigo)} · hay ${p.cantidad} en el almacén${Number(p.minimo)?` · mínimo ${Number(p.minimo)}`:""}</div>`:""}
+      <div class="ppform"><label><span class="label">Cantidad</span><input id="pi_qty" type="number" inputmode="decimal" min="0" step="any" value="${it.cantidad}" ${ro?"disabled":""}></label>
+      <label><span class="label">Nota</span><input id="pi_nota" value="${esc(it.nota)}" placeholder="Opcional" maxlength="300" ${ro?"disabled":""}></label></div>
+      ${pk&&pk.pr?`<div class="pptotal">Total con ${esc(pk.p)}: <b>${eur(pk.pr*it.cantidad)}</b></div>`:""}
+    </div>
+    <div class="label">Opciones${ro?"":" · toca la que vas a pedir"}</div>
+    <div class="list">${order.length?order.map(o=>`<div class="ppopt ${o.i===it.elegida?"sel":""}">
+      <button class="pptap" data-pick="${o.i}" ${ro?"disabled":""}><span class="txt"><div class="name">${esc(o.p)}</div>${o.n?`<div class="code">${esc(o.n)}</div>`:""}
+        ${o.i===it.elegida?'<span class="ppstar">★ La pido aquí</span>':""}${o.i===cheap?'<div class="ppcheap">✓ La más barata</div>':""}</span>
+        <span class="ppprice">${o.pr?eur(o.pr):'<small>sin precio</small>'}</span></button>
+      ${ro?"":`<button class="ppdel" data-delopt="${o.i}" aria-label="Quitar ${esc(o.p)}">✕</button>`}</div>`).join(""):'<div class="empty">Todavía no hay opciones. Añade dónde lo venden.</div>'}</div>
+    ${ro?"":`<form class="ppadd" id="pi_add" novalidate>
+      <input id="pi_prov" list="pplist" placeholder="Proveedor" autocomplete="off" aria-label="Proveedor"><datalist id="pplist">${provs.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+      <input id="pi_pr" inputmode="decimal" placeholder="Precio €" autocomplete="off" aria-label="Precio en euros">
+      <input id="pi_n" placeholder="Nota (formato, envío, plazo…)" maxlength="200" autocomplete="off" aria-label="Nota">
+      <button class="btn block" type="submit">＋ Añadir opción</button></form>
+    ${mem.length?`<div class="label">Precios de otras veces</div><div class="chips">${mem.slice(0,8).map((o,j)=>`<button class="chip" data-mem="${j}">${esc(o.p)} · ${o.pr?eur(o.pr):"sin precio"}${o.when?` (${ppDate(o.when)})`:""}</button>`).join("")}</div>`:""}`}
+    ${it.estado==="porpedir"?`<button class="btn primary block" id="pi_order">✓ Ya está pedido</button><button class="linkbtn danger" id="pi_del">Quitar de la lista</button>`:""}
+    ${it.estado==="pedido"?`<button class="btn primary block" id="pi_arr">Ha llegado</button><button class="btn block" id="pi_back2">Volver a «Por pedir»</button>`:""}
+    ${ro?`<button class="btn block" id="pi_again">Pedir otra vez</button>`:""}
+    <div id="pi_confirm"></div>`;
+  const back=()=>{ S.ppSel=null; viewPP(); };
+  $("#pi_back").onclick=back;
+  if(ro){ $("#pi_again").onclick=()=>ppAdd(it.nombre,it.codigo,it.cantidad); return; }
+  const save=async()=>{ const r=await ppSave(it); if(r) viewPPItem(); };
+  $("#pi_qty").onchange=e=>{ it.cantidad=Math.max(0,ppNum(e.target.value)); save(); };
+  $("#pi_nota").onchange=e=>{ it.nota=e.target.value.trim(); save(); };
+  box.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ const i=Number(b.dataset.pick); if(it.elegida===i) return; it.elegida=i; viewPPItem(); save(); });
+  box.querySelectorAll("[data-delopt]").forEach(b=>b.onclick=()=>{ const i=Number(b.dataset.delopt);
+    it.opciones.splice(i,1); if(it.elegida===i) it.elegida=-1; else if(it.elegida>i) it.elegida--; viewPPItem(); save(); });
+  $("#pi_add").onsubmit=e=>{ e.preventDefault();
+    const pv=$("#pi_prov").value.trim().toUpperCase(), pr=ppNum($("#pi_pr").value), n=$("#pi_n").value.trim();
+    if(!pv){ toast("Escribe el proveedor."); return; }
+    if($("#pi_pr").value.trim()&&!(pr>0)){ toast("El precio no es un número."); return; }
+    const old=it.opciones.findIndex(o=>o.p===pv);
+    if(old>=0) it.opciones[old]={p:pv,pr,n}; else { it.opciones.push({p:pv,pr,n}); if(it.elegida<0&&it.opciones.length===1) it.elegida=0; }
+    viewPPItem(); save(); };
+  box.querySelectorAll("[data-mem]").forEach(b=>b.onclick=()=>{ const o=mem[Number(b.dataset.mem)]; it.opciones.push({p:o.p,pr:o.pr,n:o.n}); viewPPItem(); save(); });
+  const ord=$("#pi_order"); if(ord) ord.onclick=async()=>{
+    if(!ppPick(it)){ toast("Toca primero la opción donde lo pides."); return; }
+    it.estado="pedido"; const r=await ppSave(it); if(r){ toast(`Apuntado como pedido a ${ppPick(it).p}.`); back(); } else it.estado="porpedir"; };
+  const del=$("#pi_del"); if(del) del.onclick=()=>{ const c=$("#pi_confirm");
+    c.innerHTML=`<div class="stock"><span>¿Quitar <b>${esc(it.nombre)}</b> de la lista?</span><div class="twobtn"><button class="btn" id="pd_no">Cancelar</button><button class="btn out" id="pd_yes">Quitar</button></div></div>`;
+    $("#pd_no").onclick=()=>{ c.innerHTML=""; };
+    $("#pd_yes").onclick=async()=>{ try{ await api("api_ppDelete", S.adminToken, it.id); S.pp=S.pp.filter(x=>x.id!==it.id); toast("Quitado de la lista."); back(); }catch(err){ adminError(err); } }; };
+  const arr=$("#pi_arr"); if(arr) arr.onclick=()=>{ S.ppArr=ppPick(it)?.p||"Sin proveedor"; S.ppSel=null; S.ppTab="pedido"; viewPP(); };
+  const b2=$("#pi_back2"); if(b2) b2.onclick=async()=>{ it.estado="porpedir"; const r=await ppSave(it); if(r) back(); };
+}
+/* From «Pedir»: everything below its minimum goes to «Por pedir» in one go (what is not there already). */
+async function lowToPP(){
+  if(S.busy) return;
+  if(!S.pp){ try{ S.pp=(await api("api_ppList", S.adminToken)).items||[]; }catch(err){ adminError(err); return; } }
+  const open=new Set(S.pp.filter(i=>i.estado!=="llego"&&i.codigo).map(i=>i.codigo));
+  const add=lowList().filter(p=>!open.has(p.codigo)).map(p=>ppBody(ppNew(p.nombre.toUpperCase(), p.codigo, Number(p.minimo)-p.cantidad)));
+  if(!add.length){ toast("Todo lo que falta ya está en «Por pedir»."); return; }
+  S.busy=true;
+  try{ const r=await api("api_ppSave", S.adminToken, add); S.pp.push(...r.items); toast(`${r.items.length} cosa${r.items.length===1?"":"s"} pasada${r.items.length===1?"":"s"} a «Por pedir».`); S.adminTab="pp"; S.ppTab="porpedir"; S.ppSel=null; }
+  catch(err){ adminError(err); }
+  S.busy=false; if(S.view==="admin") viewAdmin();
+}
 function viewOrder(){
   $("#adm").innerHTML = `
     <div class="label">Por debajo del mínimo</div>
     <div class="list" id="o_low"></div>
+    ${lowList().length?`<button class="btn primary block" id="o_pp">Pasar lo que falta a «Por pedir»</button>`:""}
     <button class="btn block" id="o_csv">Descargar lista para pedir (CSV)</button>
     <div class="label" style="margin-top:8px">Fijar stock mínimo</div>
     <p class="note">Pon el mínimo solo en lo que quieras vigilar. Por ejemplo, 2 en una bomba. Déjalo vacío en lo que no quieras que avise. Se guarda solo al salir de la casilla.</p>
@@ -1842,6 +2054,7 @@ function viewOrder(){
     <div class="list" id="o_all"></div>`;
   $("#o_q").oninput=e=>{ S.minQ=e.target.value; drawMinList(); };
   const c=$("#o_csv"); if(c) c.onclick=exportOrderCsv;
+  const pb=$("#o_pp"); if(pb) pb.onclick=lowToPP;
   drawLowList(); drawMinList();
 }
 function drawLowList(){
@@ -2578,7 +2791,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-23.1";
+const APP_VERSION="2026-10-23.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

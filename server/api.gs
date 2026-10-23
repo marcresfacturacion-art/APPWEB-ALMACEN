@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1 };
 
 function doPost(e) {
   var out;
@@ -24,7 +24,8 @@ function doPost(e) {
       api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
       api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_,
-      api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_
+      api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_,
+      api_ppList: ppList_, api_ppSave: ppSave_, api_ppDelete: ppDelete_, api_ppArrive: ppArrive_
     };
     addShelves_();
     mayusculas_();
@@ -553,4 +554,119 @@ function probarGemini() {
   if (r.err === 'quota') throw new Error('La clave funciona, pero hoy se ha pasado el uso gratuito.');
   if (r.err) throw new Error('Gemini no responde: ' + r.err + ' ' + (r.msg || ''));
   Logger.log('Clave de Gemini correcta. La foto de placa ya funciona.');
+}
+
+/* «Por pedir» (pedido de Xavi, 23-10-2026): la lista de lo que hay que pedir. Cada cosa lleva varias opciones
+ * (proveedor, precio y una nota) y él elige dónde la pide, que no tiene por qué ser la más barata.
+ * Por pedir → Pedido → Llegó; al llegar, si es un producto del almacén, puede sumarse al stock. Solo administrativos. */
+var PP_SHEET_ = 'PorPedir';
+var PP_COLS_ = ['id', 'nombre', 'codigo', 'cantidad', 'opciones', 'elegida', 'estado', 'nota', 'apuntado', 'apuntadoPor', 'pedido', 'pedidoPor', 'llego', 'llegoPor', 'sumado'];
+var PP_HEAD_ = ['Id', 'Qué', 'Código', 'Cantidad', 'Opciones (proveedor y precio)', 'Elegida', 'Estado', 'Nota', 'Apuntado', 'Apuntado por', 'Pedido', 'Pedido por', 'Llegó', 'Llegó por', 'Sumado al stock'];
+function ppSheet_() {
+  var ss = ss_(), sh = ss.getSheetByName(PP_SHEET_);
+  if (!sh) {
+    sh = ss.insertSheet(PP_SHEET_);
+    sh.getRange(1, 1, 1, PP_HEAD_.length).setValues([PP_HEAD_]).setFontWeight('bold');
+    sh.setFrozenRows(1); sh.getRange('A:C').setNumberFormat('@');
+  }
+  return sh;
+}
+function ppRows_() {
+  var sh = sh_(PP_SHEET_), n = sh ? sh.getLastRow() : 0;
+  if (n < 2) return [];
+  return sh.getRange(2, 1, n - 1, PP_COLS_.length).getValues().map(function (r, i) {
+    var o = { _row: i + 2 };
+    PP_COLS_.forEach(function (k, j) { o[k] = plain_(r[j]); });
+    return o;
+  }).filter(function (o) { return o.id; });
+}
+function ppNum_(v) { return Number(String(v == null ? '' : v).replace(',', '.')) || 0; }
+function ppOpts_(v) {
+  var a;
+  try { a = typeof v === 'string' ? JSON.parse(v || '[]') : v; } catch (e) { a = []; }
+  return (Array.isArray(a) ? a : []).slice(0, 12).map(function (o) {
+    return { p: upper_(str_(o && o.p, 80)), pr: Math.max(0, Math.round(ppNum_(o && o.pr) * 10000) / 10000), n: str_(o && o.n, 200) };
+  }).filter(function (o) { return o.p; });
+}
+function ppOut_(o) {
+  var el = o.elegida === '' || o.elegida == null ? -1 : Number(o.elegida);
+  return {
+    id: String(o.id), nombre: String(o.nombre || ''), codigo: String(o.codigo || ''), cantidad: Number(o.cantidad) || 0,
+    opciones: ppOpts_(o.opciones), elegida: isNaN(el) ? -1 : el, estado: String(o.estado || 'porpedir'), nota: String(o.nota || ''),
+    apuntado: Number(o.apuntado) || 0, apuntadoPor: String(o.apuntadoPor || ''), pedido: Number(o.pedido) || 0, pedidoPor: String(o.pedidoPor || ''),
+    llego: Number(o.llego) || 0, llegoPor: String(o.llegoPor || ''), sumado: Number(o.sumado) || 0
+  };
+}
+function ppWrite_(sh, o) {
+  var row = PP_COLS_.map(function (k) { return cell_(k === 'opciones' ? JSON.stringify(ppOpts_(o.opciones)) : o[k]); });
+  if (o._row) sh.getRange(o._row, 1, 1, row.length).setValues([row]);
+  else { sh.appendRow(row); o._row = sh.getLastRow(); }
+}
+function ppList_(token) {
+  return guard_(function () { admin_(token); return { items: ppRows_().map(ppOut_) }; });
+}
+/** Apunta o cambia una cosa (o varias, si llega una lista). Sin id es nueva. */
+function ppSave_(token, data) {
+  return guard_(function () {
+    var t = admin_(token), list = Array.isArray(data) ? data.slice(0, 100) : [data || {}];
+    return locked_(function () {
+      var sh = ppSheet_(), all = ppRows_(), out = [];
+      for (var i = 0; i < list.length; i++) {
+        var d = list[i] || {}, nombre = upper_(str_(d.nombre, 200)), id = str_(d.id, 40);
+        if (!nombre) return { err: 'bad' };
+        var o = id ? all.filter(function (x) { return String(x.id) === id; })[0] : null;
+        if (id && !o) return { err: 'gone' };
+        if (o && String(o.estado) === 'llego') return { err: 'done' };
+        if (!o) o = { id: 'pp-' + Utilities.getUuid().slice(0, 8), estado: 'porpedir', apuntado: new Date(), apuntadoPor: t.nombre, pedido: '', pedidoPor: '', llego: '', llegoPor: '', sumado: '' };
+        o.nombre = nombre; o.codigo = str_(d.codigo, 40); o.cantidad = Math.max(0, ppNum_(d.cantidad));
+        o.opciones = ppOpts_(d.opciones);
+        var el = Math.trunc(Number(d.elegida));
+        o.elegida = el >= 0 && el < o.opciones.length ? el : '';
+        o.nota = str_(d.nota, 300);
+        var est = d.estado === 'pedido' ? 'pedido' : 'porpedir';
+        if (est === 'pedido' && String(o.estado) !== 'pedido') { o.pedido = new Date(); o.pedidoPor = t.nombre; }
+        if (est === 'porpedir') { o.pedido = ''; o.pedidoPor = ''; }
+        o.estado = est;
+        ppWrite_(sh, o); all.push(o);
+        out.push(ppOut_(o));
+      }
+      return { ok: true, item: out[0], items: out };
+    });
+  });
+}
+function ppDelete_(token, id) {
+  return guard_(function () {
+    admin_(token);
+    return locked_(function () {
+      var o = ppRows_().filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!o) return { ok: true };
+      sh_(PP_SHEET_).deleteRow(o._row);
+      return { ok: true };
+    });
+  });
+}
+/** Ha llegado: [{id, sumar, qty}]. Si es un producto del almacén y sumar es true, suma qty al stock. */
+function ppArrive_(token, list) {
+  return guard_(function () {
+    var t = admin_(token); list = Array.isArray(list) ? list.slice(0, 100) : [];
+    return locked_(function () {
+      var sh = ppSheet_(), all = ppRows_(), items = [], products = [];
+      list.forEach(function (a) {
+        var o = all.filter(function (x) { return String(x.id) === String(a && a.id); })[0];
+        if (!o || String(o.estado) === 'llego') return;
+        o.estado = 'llego'; o.llego = new Date(); o.llegoPor = t.nombre; o.sumado = '';
+        if (!o.pedido) { o.pedido = o.llego; o.pedidoPor = t.nombre; }
+        var q = Math.trunc(ppNum_(a.qty)), p = a.sumar && o.codigo ? findProd_(o.codigo) : null;
+        if (p && q > 0) {
+          var cur = Number(p.cantidad) || 0, opts = ppOpts_(o.opciones), pick = opts[Number(o.elegida)];
+          p.cantidad = cur + q; p.actualizado = new Date(); p.actualizadoPor = t.nombre; write_('Productos', p);
+          logMove_({ tipo: 'entrada', codigo: p.codigo, producto: p.nombre, delta: q, antes: cur, despues: cur + q,
+            detalle: 'Llegó el pedido' + (pick && o.elegida !== '' ? ' de ' + pick.p : '') }, t, { destino: 'almacen', empresa: '', comunidad: 'Almacén' });
+          o.sumado = q; products.push({ codigo: p.codigo, cantidad: cur + q });
+        }
+        ppWrite_(sh, o); items.push(ppOut_(o));
+      });
+      return { ok: true, items: items, products: products };
+    });
+  });
 }
