@@ -324,6 +324,7 @@ form.edit .check span{flex:1;min-width:0}
 .pparr{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--line)}.ppsum{display:flex;align-items:center;gap:8px;font-weight:600}.ppsum input[type=checkbox]{width:24px;height:24px}.ppsum input[type=number]{width:84px;min-height:44px;border-radius:8px;border:2px solid var(--line);font-size:18px;text-align:center}
 .ppform{display:grid;grid-template-columns:110px 1fr;gap:8px}.ppform input{width:100%;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 10px}.ppform label{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pptotal{font-size:15px}
+.ppck{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}.ppck:last-child{border-bottom:0}.ppck .row{border-bottom:0;flex:1;min-width:0}.ppbox{display:flex;align-items:center;justify-content:center;padding:0 2px 0 12px;cursor:pointer}.ppbox input{width:26px;height:26px;accent-color:var(--accent)}.ppbase .ppbox{padding:0 4px 0 0}div.ppbase{align-items:center}.ppck.sub{padding-left:14px}.ppck .row.ppsub{padding-left:12px}.ppall{display:flex;justify-content:flex-end;margin:8px 0 4px}.ppbar{position:sticky;bottom:8px;margin-top:12px;background:var(--surface);border:2px solid var(--accent);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 18px rgba(15,17,21,.18);z-index:5}.ppbar input{width:100%;min-height:48px;border-radius:8px;border:2px solid var(--line);font-size:16px;padding:0 12px;background:var(--surface)}
 .albgo{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}.albgo .note{margin:0}.ppquick{margin-top:12px}.albh{margin:12px 0 8px}.albmsg{margin:0 0 10px;border-color:var(--danger)}.albread{text-align:center;padding:12px 0}.albread img{max-width:100%;max-height:50vh;border-radius:8px;border:1px solid var(--line)}.albtop{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:start}.albtop img{width:96px;height:128px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}.albf{display:flex;flex-direction:column;gap:8px;min-width:0}.albf label,.albl2 label{display:flex;flex-direction:column;font-size:12px;font-weight:700;color:var(--muted);gap:3px;min-width:0}.albf input,.albl input,.albl select{width:100%;min-width:0;min-height:46px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 10px;color:var(--fg)}.albl{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px;margin-bottom:8px;display:flex;flex-direction:column;gap:8px}.albl1{display:grid;grid-template-columns:1fr auto;gap:8px}.albl1 .ppdel{border:2px solid var(--line);border-radius:8px;width:46px}.albl2{display:grid;grid-template-columns:90px 110px 1fr;gap:8px;align-items:end}.albl2 .code{align-self:center}.albl select{font-size:14px}.albl select.ok{border-color:var(--ok,#2D6A4F)}.albl .ppsum{display:flex;gap:8px;align-items:flex-start;font-weight:700}.albl .ppsum input{width:22px;min-height:22px;flex-shrink:0}.albmiss{margin:10px 0}.albmiss div{font-size:14px}.albrow{align-items:flex-start}.albside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}.albside .btn{min-height:38px;padding:0 10px;font-size:14px}
 .ppquick{display:flex;flex-direction:column;gap:8px}.ppquick input{width:100%;min-width:0;min-height:50px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:16px;padding:0 12px}.ppline{display:grid;grid-template-columns:1fr 100px auto;gap:8px;margin-bottom:8px}.ppline:last-child{margin-bottom:0}.ppline .ppdel{border:2px solid var(--line);border-radius:8px;width:46px}.ppbase{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:10px 12px 4px;font-weight:800;border-bottom:1px solid var(--line);background:var(--surface-2)}.ppbase b{flex:1;min-width:0}.ppbase span{font-size:12px;font-weight:600;color:var(--muted);text-align:right;max-width:50%}.row.ppsub{padding-left:24px}.ppquick .note{margin:0}
 .ppopt{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}.ppopt:last-child{border-bottom:0}.ppopt.sel{background:var(--surface-2);box-shadow:inset 4px 0 0 var(--brand)}
@@ -488,7 +489,7 @@ const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolu
 const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
-  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLines:[{v:"",c:""}], ppLoading:false, alb:null, albs:null, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
+  hf:{tec:"", tipo:"", q:""}, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLines:[{v:"",c:""}], ppLoading:false, ppMark:new Set(), alb:null, albs:null, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
 
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -1935,6 +1936,8 @@ function viewPP(){
       ${tab==="llego"?`<div class="code">${pk?esc(pk.p)+" · ":""}llegó el ${ppDate(it.llego)}${it.llegoPor?" · "+esc(it.llegoPor):""}${it.sumado?` · +${it.sumado} al stock`:""}</div>`
         :pk?`<div class="pppick">→ ${esc(pk.p)} · ${pk.pr?eur(pk.pr):"sin precio"}</div>`:`<div class="pppick none">Falta elegir dónde</div>`}</span>
       ${pk&&pk.pr?`<span class="pptot">${eur(pk.pr*it.cantidad)}</span>`:""}</button>`; };
+  /* In «Por pedir» each row has a box, so several things can be marked as ordered at once (Xavi, 2026-10-23). */
+  const rowOf=(it,sub,noNote)=>tab==="porpedir"?`<div class="ppck${sub?" sub":""}"><label class="ppbox"><input type="checkbox" data-mk="${esc(it.id)}"${S.ppMark.has(it.id)?" checked":""} aria-label="Marcar ${esc(it.nombre)}"></label>${row(it,sub,noNote)}</div>`:row(it,sub,noNote);
   let list;
   if(tab==="pedido"){
     const groups=new Map(); items.forEach(it=>{ const k=ppPick(it)?.p||"Sin proveedor"; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(it); });
@@ -1947,8 +1950,9 @@ function viewPP(){
     const l=tab==="llego"?items.sort((a,b)=>(b.llego||0)-(a.llego||0)).slice(0,60):items.sort((a,b)=>(a.apuntado||0)-(b.apuntado||0));
     /* Types of the same thing (same name before " · ") go together under one heading. */
     const groups=new Map(); l.forEach(it=>{ const k=fold(ppBase(it.nombre)); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(it); });
-    const html=[...groups.values()].map(g=>{ if(!(g.length>1||ppVar(g[0].nombre))) return row(g[0]); const one=g.every(i=>i.nota===g[0].nota)&&g[0].nota;
-      return `<div class="ppbase"><b>${esc(ppBase(g[0].nombre))}</b>${one?`<span>${esc(g[0].nota)}</span>`:""}</div>${g.map(it=>row(it,true,one)).join("")}`; }).join("");
+    const html=[...groups.values()].map(g=>{ if(!(g.length>1||ppVar(g[0].nombre))) return rowOf(g[0]); const one=g.every(i=>i.nota===g[0].nota)&&g[0].nota;
+      const all=g.every(i=>S.ppMark.has(i.id));
+      return `<div class="ppbase">${tab==="porpedir"?`<label class="ppbox"><input type="checkbox" data-mkg="${esc(g.map(i=>i.id).join(","))}"${all?" checked":""} aria-label="Marcar todos"></label>`:""}<b>${esc(ppBase(g[0].nombre))}</b>${one?`<span>${esc(g[0].nota)}</span>`:""}</div>${g.map(it=>rowOf(it,true,one)).join("")}`; }).join("");
     list=`<div class="list">${l.length?html:`<div class="empty">${tab==="porpedir"?"No hay nada apuntado para pedir.":"Todavía no ha llegado nada."}</div>`}</div>`;
   }
   const seg=`<div class="ppseg" role="tablist">${Object.entries(PP_EST).map(([k,v])=>`<button class="btn" role="tab" aria-pressed="${tab===k}" data-ppt="${k}">${v}${k!=="llego"&&S.pp.filter(i=>i.estado===k).length?` (${S.pp.filter(i=>i.estado===k).length})`:""}</button>`).join("")}</div>`;
@@ -1978,9 +1982,11 @@ function viewPP(){
       <input id="pp_who" list="pp_tecs" placeholder="¿Quién lo pide? (opcional)" autocomplete="off" aria-label="Quién lo pide">
       <datalist id="pp_tecs">${S.techs.filter(t=>t.activo!==false).map(t=>`<option value="${esc(t.nombre)}">`).join("")}</datalist>
       <button class="btn primary block" type="submit">Apuntar en «Por pedir»</button>
-      <p class="note">Solo se apunta: no se pide hasta que entres y toques «Ya está pedido».</p>
+      <p class="note">Solo se apunta: no se pide hasta que marques las casillas y toques «Ya está pedido».</p>
     </form>
-    ${list}`;
+    ${items.length?`<div class="ppall"><button type="button" class="linkbtn" id="pp_all">${items.every(i=>S.ppMark.has(i.id))?"Desmarcar todo":"Marcar todo"}</button></div>`:""}
+    ${list}
+    <div id="pp_bar"></div>`;
   const q=$("#pp_q");
   const sug=()=>{ S.ppQ=q.value; const el=$("#pp_sug"), w=fold(q.value);
     if(w.length<2){ el.innerHTML=""; return; }
@@ -1993,6 +1999,13 @@ function viewPP(){
     el.querySelectorAll("[data-ppp]").forEach(b=>b.onclick=()=>{ const p=S.products.get(b.dataset.ppp); fill(p.nombre, p.codigo, Number(p.minimo)>p.cantidad?Number(p.minimo)-p.cantidad:""); });
     el.querySelectorAll("[data-ppn]").forEach(b=>b.onclick=()=>fill(b.dataset.ppn,"","")); };
   q.oninput=()=>{ S.ppCode=""; sug(); }; if(q.value) sug();
+  S.ppMark=new Set([...S.ppMark].filter(id=>items.some(i=>i.id===id)));
+  const keepForm=()=>({pv:$("#pp_pv").value, who:$("#pp_who").value});
+  const remark=()=>{ readLines(); const k=keepForm(), y=window.scrollY; viewPP(); $("#pp_pv").value=k.pv; $("#pp_who").value=k.who; window.scrollTo(0,y); };
+  box.querySelectorAll("[data-mk]").forEach(c=>c.onchange=()=>{ if(c.checked) S.ppMark.add(c.dataset.mk); else S.ppMark.delete(c.dataset.mk); remark(); });
+  box.querySelectorAll("[data-mkg]").forEach(c=>c.onchange=()=>{ c.dataset.mkg.split(",").forEach(id=>c.checked?S.ppMark.add(id):S.ppMark.delete(id)); remark(); });
+  const all=$("#pp_all"); if(all) all.onclick=()=>{ const on=!items.every(i=>S.ppMark.has(i.id)); items.forEach(i=>on?S.ppMark.add(i.id):S.ppMark.delete(i.id)); remark(); };
+  ppBar(items);
   const readLines=()=>{ S.ppLines=S.ppLines.map((l,i)=>({v:(app.querySelector(`[data-lv="${i}"]`)?.value||""), c:(app.querySelector(`[data-lc="${i}"]`)?.value||"")})); S.ppQ=q.value; };
   const keep=()=>({pv:$("#pp_pv").value, who:$("#pp_who").value});
   const redraw=k=>{ viewPP(); $("#pp_pv").value=k.pv; $("#pp_who").value=k.who; };
@@ -2038,6 +2051,40 @@ async function ppCopy(l){
   const txt="Hola, os paso el pedido:\n"+l.map(it=>`- ${it.cantidad} × ${it.nombre}`).join("\n")+"\nGracias.";
   try{ await navigator.clipboard.writeText(txt); toast("Lista copiada. Pégala en WhatsApp o en un correo."); }
   catch(e){ if(navigator.share){ try{ await navigator.share({text:txt}); }catch(_){} } else toast("No se ha podido copiar en este móvil."); }
+}
+/* Bottom bar while something is marked: one supplier for all (optional if each one already has its choice). */
+function ppBar(items){
+  const el=$("#pp_bar"); if(!el) return;
+  const sel=items.filter(i=>S.ppMark.has(i.id));
+  if(!sel.length){ el.innerHTML=""; return; }
+  const provs=[...new Set(sel.map(i=>ppPick(i)?.p||(i.opciones.length===1?i.opciones[0].p:"")))];
+  const same=provs.length===1?provs[0]:"", lack=sel.filter(i=>!ppPick(i)&&i.opciones.length!==1).length;
+  el.innerHTML=`<div class="ppbar"><b>${sel.length} marcado${sel.length===1?"":"s"}</b>
+    <input id="pb_pv" list="pp_provs" value="${esc(same)}" placeholder="${lack?"¿Dónde lo pides? (falta en "+lack+")":"Proveedor (si es otro)"}" autocomplete="off" aria-label="Proveedor">
+    <div class="twobtn ppbtns"><button class="btn" id="pb_no">Desmarcar</button><button class="btn primary" id="pb_yes">✓ Ya está pedido</button></div></div>`;
+  $("#pb_no").onclick=()=>{ S.ppMark.clear(); viewPP(); };
+  $("#pb_yes").onclick=()=>ppOrderMany(sel, $("#pb_pv").value);
+}
+async function ppOrderMany(sel, prov){
+  if(S.busy) return;
+  const pv=String(prov||"").trim().toUpperCase();
+  const list=[];
+  for(const it of sel){
+    const c={...it, opciones:it.opciones.map(o=>({...o}))};
+    if(pv&&ppPick(c)?.p!==pv){ let i=c.opciones.findIndex(o=>o.p===pv); if(i<0){ c.opciones.push({p:pv,pr:0,n:""}); i=c.opciones.length-1; } c.elegida=i; }
+    if(!ppPick(c)&&c.opciones.length===1) c.elegida=0;
+    if(!ppPick(c)){ toast(`Escribe dónde lo pides: a ${c.nombre} le falta el proveedor.`); $("#pb_pv").focus(); return; }
+    c.estado="pedido"; list.push(ppBody(c));
+  }
+  S.busy=true;
+  try{
+    const r=await api("api_ppSave", S.adminToken, list);
+    r.items.forEach(n=>{ const it=S.pp.find(x=>x.id===n.id); if(it) Object.assign(it,n); });
+    const ps=[...new Set(r.items.map(n=>ppPick(n)?.p).filter(Boolean))];
+    toast(`${r.items.length} apuntado${r.items.length===1?"":"s"} como pedido${ps.length===1?" a "+ps[0]:""}.`);
+    S.ppMark.clear();
+  }catch(err){ adminError(err); }
+  S.busy=false; viewPP();
 }
 function viewPPItem(){
   const box=$("#adm"), it=S.pp.find(x=>x.id===S.ppSel);
@@ -3019,7 +3066,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-23.7";
+const APP_VERSION="2026-10-23.8";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
