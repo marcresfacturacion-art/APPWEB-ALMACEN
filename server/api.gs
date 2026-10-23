@@ -680,7 +680,7 @@ function ppArriveIn_(t, list, por) {
 /* Albaranes (pedido de Xavi, 23-10-2026): foto del albarán → la IA gratuita (la misma clave GEMINI_KEY) lee proveedor,
  * número, fecha y líneas. Xavi lo revisa, lo cuadra con lo pedido (o con productos del almacén) y se guarda:
  * lo pedido pasa a «Llegó», se suma al stock y el albarán queda en la pestaña «Albaranes» con su foto en Drive. */
-var ALB_SHEET_ = 'Albaranes', ALB_MAX_DIA_ = 12;
+var ALB_SHEET_ = 'Albaranes';
 var ALB_HEAD_ = ['Id', 'Fecha albarán', 'Proveedor', 'Número', 'Total', 'Líneas', 'Foto', 'Guardado', 'Por', 'Cuadrado'];
 var ALB_PROMPT_ = 'Es una foto de un albarán (nota de entrega) de un proveedor de material de fontanería, electricidad, riego o bombas. ' +
   'Lee SOLO lo que pone, sin inventar nada. El cliente es Marcres o Rivagua: el proveedor es la empresa que emite el albarán. ' +
@@ -694,11 +694,12 @@ function albRead_(token, base64) {
     base64 = String(base64 || '').replace(/^data:[^,]+,/, '');
     if (!base64) return { err: 'bad' };
     if (base64.length > 7 * 1024 * 1024) return { err: 'too_large' };
-    // Tope diario (Xavi: «que no sea ilimitado, doce albaranes al día»). Solo cuentan las lecturas que salen bien.
-    var props = PropertiesService.getScriptProperties(), max = Number(props.getProperty('ALB_MAX')) || ALB_MAX_DIA_;
+    // Sin tope propio (Xavi, 23-10-2026: «si un día me llegan 15, que pueda»); el límite es el gratuito de Google, que no cobra.
+    // Si algún día hace falta, la propiedad ALB_MAX pone un máximo de lecturas al día.
+    var props = PropertiesService.getScriptProperties(), max = Number(props.getProperty('ALB_MAX')) || 0;
     var hoy = Utilities.formatDate(new Date(), 'Europe/Madrid', 'yyyy-MM-dd'), cnt = String(props.getProperty('ALB_DIA') || '').split('|');
     var n = cnt[0] === hoy ? Number(cnt[1]) || 0 : 0;
-    if (n >= max) return { err: 'albmax', max: max };
+    if (max && n >= max) return { err: 'albmax', max: max };
     var r = callGemini_([{ text: ALB_PROMPT_ }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }], true);
     if (!r.ok) return r;
     var data;
