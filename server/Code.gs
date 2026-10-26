@@ -114,7 +114,7 @@ function guard_(fn) {
   try { return fn(); }
   catch (e) {
     const m = String(e && e.message || e);
-    if (m === 'busy' || m === 'auth' || m === 'tecnico' || m === 'no_instalado') return { err: m };
+    if (m === 'busy' || m === 'auth' || m === 'tecnico' || m === 'no_instalado' || m === 'pin') return { err: m };
     console.error(e);
     return { err: 'server', msg: m };
   }
@@ -125,9 +125,21 @@ function locked_(fn) {
   try { const r = fn(); SpreadsheetApp.flush(); return r; }
   finally { l.releaseLock(); }
 }
-function tech_(id) {
+function techRow_(id) {
   const t = rows_('Tecnicos').filter(function (x) { return String(x.id) === String(id) && bool_(x.activo); })[0];
   if (!t) throw new Error('tecnico');
+  return t;
+}
+/* PIN por técnico (Xavi, 26-10-2026). El móvil manda «id~sesión»; la sesión se da al escribir el PIN (pinLogin_ en api.gs).
+ * Quien todavía no tiene PIN entra solo con el nombre, como antes, hasta que Xavi o Nicusor se lo pongan. */
+function plainId_(id) { return String(id || '').split('~')[0]; }
+function tech_(id) {
+  var raw = String(id || ''), tid = plainId_(raw), tk = raw.indexOf('~') > 0 ? raw.slice(raw.indexOf('~') + 1) : '';
+  var t = techRow_(tid), rec = pins_()[tid];
+  if (!rec) return t;
+  var c = CacheService.getScriptCache(), v = tk && c.get('tk_' + tk);
+  if (!v || v !== tid + '|' + rec.split('|')[0]) throw new Error('pin');
+  c.put('tk_' + tk, v, 21600);
   return t;
 }
 function dest_(d) {
@@ -161,7 +173,8 @@ function loansOut_() {
   });
 }
 function techsOut_() {
-  return rows_('Tecnicos').map(function (t) { return { id: String(t.id), nombre: String(t.nombre), activo: bool_(t.activo), restringido: bool_(t.restringido) }; })
+  var pins = pins_(), ges = gestores_();
+  return rows_('Tecnicos').map(function (t) { return { id: String(t.id), nombre: String(t.nombre), activo: bool_(t.activo), restringido: bool_(t.restringido), pin: !!pins[String(t.id)], gestor: gestor_(t, ges) }; })
     .filter(function (t) { return t.nombre; });
 }
 
@@ -323,11 +336,12 @@ function hash_(pw, salt) {
     .map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
 }
 function restricted_(tecId) { const t = tech_(tecId); if (!bool_(t.restringido)) throw new Error('auth'); return t; }
-function token_(tecId) { const tk = Utilities.getUuid(); CacheService.getScriptCache().put('adm_' + tk, String(tecId), 3600); return tk; }
+function restrictedRow_(id) { const t = techRow_(id); if (!bool_(t.restringido)) throw new Error('auth'); return t; }
+function token_(tecId) { const tk = Utilities.getUuid(); CacheService.getScriptCache().put('adm_' + tk, plainId_(tecId), 3600); return tk; }
 function admin_(token) {
   const id = token && CacheService.getScriptCache().get('adm_' + token);
   if (!id) throw new Error('auth');
-  return restricted_(id);
+  return restrictedRow_(id);
 }
 function api_adminSetup(tecId, pw) {
   return guard_(function () {
@@ -395,7 +409,7 @@ function api_recount(token, counts) {
 }
 function api_addTech(token, nombre) {
   return guard_(function () {
-    admin_(token); nombre = str_(nombre, 100);
+    gestorTok_(token); nombre = str_(nombre, 100);
     if (!nombre) return { err: 'bad' };
     return locked_(function () {
       const all = rows_('Tecnicos');
@@ -409,7 +423,7 @@ function api_addTech(token, nombre) {
 }
 function api_removeTech(token, id) {
   return guard_(function () {
-    admin_(token);
+    gestorTok_(token);
     return locked_(function () {
       const t = rows_('Tecnicos').filter(function (x) { return String(x.id) === String(id); })[0];
       if (!t) return { err: 'gone' };

@@ -121,7 +121,7 @@ function guard_(fn) {
   try { return fn(); }
   catch (e) {
     const m = String(e && e.message || e);
-    if (m === 'busy' || m === 'auth' || m === 'tecnico' || m === 'no_instalado') return { err: m };
+    if (m === 'busy' || m === 'auth' || m === 'tecnico' || m === 'no_instalado' || m === 'pin') return { err: m };
     console.error(e);
     return { err: 'server', msg: m };
   }
@@ -132,9 +132,21 @@ function locked_(fn) {
   try { const r = fn(); SpreadsheetApp.flush(); return r; }
   finally { l.releaseLock(); }
 }
-function tech_(id) {
+function techRow_(id) {
   const t = rows_('Tecnicos').filter(function (x) { return String(x.id) === String(id) && bool_(x.activo); })[0];
   if (!t) throw new Error('tecnico');
+  return t;
+}
+/* PIN por técnico (Xavi, 26-10-2026). El móvil manda «id~sesión»; la sesión se da al escribir el PIN (pinLogin_ en api.gs).
+ * Quien todavía no tiene PIN entra solo con el nombre, como antes, hasta que Xavi o Nicusor se lo pongan. */
+function plainId_(id) { return String(id || '').split('~')[0]; }
+function tech_(id) {
+  var raw = String(id || ''), tid = plainId_(raw), tk = raw.indexOf('~') > 0 ? raw.slice(raw.indexOf('~') + 1) : '';
+  var t = techRow_(tid), rec = pins_()[tid];
+  if (!rec) return t;
+  var c = CacheService.getScriptCache(), v = tk && c.get('tk_' + tk);
+  if (!v || v !== tid + '|' + rec.split('|')[0]) throw new Error('pin');
+  c.put('tk_' + tk, v, 21600);
   return t;
 }
 function dest_(d) {
@@ -168,7 +180,8 @@ function loansOut_() {
   });
 }
 function techsOut_() {
-  return rows_('Tecnicos').map(function (t) { return { id: String(t.id), nombre: String(t.nombre), activo: bool_(t.activo), restringido: bool_(t.restringido) }; })
+  var pins = pins_(), ges = gestores_();
+  return rows_('Tecnicos').map(function (t) { return { id: String(t.id), nombre: String(t.nombre), activo: bool_(t.activo), restringido: bool_(t.restringido), pin: !!pins[String(t.id)], gestor: gestor_(t, ges) }; })
     .filter(function (t) { return t.nombre; });
 }
 
@@ -330,11 +343,12 @@ function hash_(pw, salt) {
     .map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
 }
 function restricted_(tecId) { const t = tech_(tecId); if (!bool_(t.restringido)) throw new Error('auth'); return t; }
-function token_(tecId) { const tk = Utilities.getUuid(); CacheService.getScriptCache().put('adm_' + tk, String(tecId), 3600); return tk; }
+function restrictedRow_(id) { const t = techRow_(id); if (!bool_(t.restringido)) throw new Error('auth'); return t; }
+function token_(tecId) { const tk = Utilities.getUuid(); CacheService.getScriptCache().put('adm_' + tk, plainId_(tecId), 3600); return tk; }
 function admin_(token) {
   const id = token && CacheService.getScriptCache().get('adm_' + token);
   if (!id) throw new Error('auth');
-  return restricted_(id);
+  return restrictedRow_(id);
 }
 function api_adminSetup(tecId, pw) {
   return guard_(function () {
@@ -402,7 +416,7 @@ function api_recount(token, counts) {
 }
 function api_addTech(token, nombre) {
   return guard_(function () {
-    admin_(token); nombre = str_(nombre, 100);
+    gestorTok_(token); nombre = str_(nombre, 100);
     if (!nombre) return { err: 'bad' };
     return locked_(function () {
       const all = rows_('Tecnicos');
@@ -416,7 +430,7 @@ function api_addTech(token, nombre) {
 }
 function api_removeTech(token, id) {
   return guard_(function () {
-    admin_(token);
+    gestorTok_(token);
     return locked_(function () {
       const t = rows_('Tecnicos').filter(function (x) { return String(x.id) === String(id); })[0];
       if (!t) return { err: 'gone' };
@@ -500,7 +514,7 @@ function instalar() {
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1, api_albRead: 1, api_albList: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1, api_albRead: 1, api_albList: 1, api_pinLogin: 1 };
 
 function doPost(e) {
   var out;
@@ -516,7 +530,8 @@ function doPost(e) {
       api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_,
       api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_,
       api_ppList: ppList_, api_ppSave: ppSave_, api_ppDelete: ppDelete_, api_ppArrive: ppArrive_,
-      api_albRead: albRead_, api_albSave: albSave_, api_albList: albList_
+      api_albRead: albRead_, api_albSave: albSave_, api_albList: albList_,
+      api_pinLogin: pinLogin_, api_setPin: setPin_
     };
     addShelves_();
     mayusculas_();
@@ -1255,5 +1270,68 @@ function albList_(token) {
       return { id: String(r[0]), fecha: r[1] instanceof Date ? Utilities.formatDate(r[1], 'Europe/Madrid', 'yyyy-MM-dd') : String(r[1] || ''), proveedor: String(r[2] || ''), numero: String(r[3] || ''),
         total: Number(r[4]) || 0, lineas: lines, foto: String(r[6] || ''), guardado: plain_(r[7]), por: String(r[8] || '') };
     }) };
+  });
+}
+
+/* ---------- PIN de cada persona (Xavi, 26-10-2026) ----------
+ * Solo Xavi Alvarado y Nicusor Roman ponen, cambian o quitan PIN y dan de alta o de baja técnicos.
+ * Los PIN se guardan cifrados en las propiedades del script (PINS), no en la hoja; nadie puede verlos, solo cambiarlos.
+ * Cambiar el PIN de alguien cierra las sesiones que tenía abiertas. 5 fallos seguidos bloquean a esa persona 10 minutos. */
+var GESTORES_ = ['xavi alvarado', 'nicusor roman'];
+function foldName_(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function gestores_() {
+  var list = String(PropertiesService.getScriptProperties().getProperty('GESTORES') || '').split(',').map(foldName_).filter(String);
+  return list.length ? list : GESTORES_;
+}
+function gestor_(t, list) {
+  list = list || gestores_();
+  var n = foldName_(t && t.nombre);
+  return list.some(function (g) { return n === g || n.indexOf(g + ' ') === 0; });
+}
+function gestorTok_(token) { var t = admin_(token); if (!gestor_(t)) throw new Error('auth'); return t; }
+function pins_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('PINS') || '{}'); } catch (e) { return {}; } }
+function pinLogin_(tecId, pin) {
+  return guard_(function () {
+    var tid = plainId_(tecId), t = techRow_(tid), rec = pins_()[tid], c = CacheService.getScriptCache();
+    if (!rec) { var tk0 = Utilities.getUuid(); c.put('tk_' + tk0, tid + '|', 21600); return { ok: true, tk: tk0, nopin: true }; }
+    var fails = Number(c.get('pinf_' + tid)) || 0;
+    if (fails >= 5) return { err: 'pinlock' };
+    var salt = rec.split('|')[0];
+    Utilities.sleep(300);
+    if (hash_(String(pin || '').trim(), salt) !== rec.split('|')[1]) {
+      c.put('pinf_' + tid, String(fails + 1), 600);
+      return { err: 'pinwrong', left: 4 - fails };
+    }
+    c.remove('pinf_' + tid);
+    var tk = Utilities.getUuid(); c.put('tk_' + tk, tid + '|' + salt, 21600);
+    return { ok: true, tk: tk, nombre: t.nombre };
+  });
+}
+function pinOk_(pin) { return /^\d{4}$/.test(pin); }
+/** pin vacío = quitar el PIN. */
+function setPin_(token, tecId, pin) {
+  return guard_(function () {
+    var g = gestorTok_(token), tid = plainId_(tecId), t = techRow_(tid);
+    pin = String(pin || '').trim();
+    if (pin && !pinOk_(pin)) return { err: 'pinbad' };
+    return locked_(function () {
+      var props = PropertiesService.getScriptProperties(), all = pins_();
+      // Cada PIN es de una sola persona (Xavi: «que no se pueda repetir»).
+      if (pin) for (var k in all) {
+        if (k === tid || !all[k]) continue;
+        var pr = all[k].split('|');
+        if (hash_(pin, pr[0]) === pr[1]) {
+          var o = rows_('Tecnicos').filter(function (x) { return String(x.id) === k; })[0];
+          if (o && bool_(o.activo)) return { err: 'pindup', quien: String(o.nombre) };
+        }
+      }
+      if (pin) { var salt = Utilities.getUuid().slice(0, 8); all[tid] = salt + '|' + hash_(pin, salt); }
+      else delete all[tid];
+      props.setProperty('PINS', JSON.stringify(all));
+      CacheService.getScriptCache().remove('pinf_' + tid);
+      dropCache_();
+      console.log((pin ? 'PIN puesto a ' : 'PIN quitado a ') + t.nombre + ' por ' + g.nombre);
+      return { ok: true, techs: techsOut_() };
+    });
   });
 }
