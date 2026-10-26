@@ -180,8 +180,8 @@ function loansOut_() {
   });
 }
 function techsOut_() {
-  var pins = pins_(), ges = gestores_();
-  return rows_('Tecnicos').map(function (t) { return { id: String(t.id), nombre: String(t.nombre), activo: bool_(t.activo), restringido: bool_(t.restringido), pin: !!pins[String(t.id)], gestor: gestor_(t, ges) }; })
+  var pins = pins_(), ges = gestores_(), nm = normasHechas_();
+  return rows_('Tecnicos').map(function (t) { return { id: String(t.id), nombre: String(t.nombre), activo: bool_(t.activo), restringido: bool_(t.restringido), pin: !!pins[String(t.id)], gestor: gestor_(t, ges), normas: nm[String(t.id)] || null }; })
     .filter(function (t) { return t.nombre; });
 }
 
@@ -531,7 +531,7 @@ function doPost(e) {
       api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_,
       api_ppList: ppList_, api_ppSave: ppSave_, api_ppDelete: ppDelete_, api_ppArrive: ppArrive_,
       api_albRead: albRead_, api_albSave: albSave_, api_albList: albList_,
-      api_pinLogin: pinLogin_, api_setPin: setPin_
+      api_pinLogin: pinLogin_, api_setPin: setPin_, api_acceptNormas: acceptNormas_
     };
     addShelves_();
     mayusculas_();
@@ -1331,6 +1331,34 @@ function setPin_(token, tecId, pin) {
       CacheService.getScriptCache().remove('pinf_' + tid);
       dropCache_();
       console.log((pin ? 'PIN puesto a ' : 'PIN quitado a ') + t.nombre + ' por ' + g.nombre);
+      return { ok: true, techs: techsOut_() };
+    });
+  });
+}
+
+/* ---------- Normas del almacén (Xavi, 26-10-2026) ----------
+ * Cada técnico las lee y acepta en su primera entrada con PIN; queda una fila en la pestaña «Aceptaciones»
+ * (fecha, persona y versión) como prueba. Si cambia la versión de las normas, se vuelven a pedir. */
+var NORMAS_SHEET_ = 'Aceptaciones';
+function normasHechas_() {
+  var sh = sh_(NORMAS_SHEET_), out = {};
+  if (!sh || sh.getLastRow() < 2) return out;
+  sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues().forEach(function (r) {
+    var id = String(r[1] || ''); if (!id) return;
+    out[id] = { v: String(r[3] || ''), fecha: r[0] instanceof Date ? r[0].getTime() : r[0] };
+  });
+  return out;
+}
+function acceptNormas_(tecId, version) {
+  return guard_(function () {
+    var t = tech_(tecId);
+    version = str_(version, 20);
+    if (!version) return { err: 'bad' };
+    return locked_(function () {
+      var ss = ss_(), sh = ss.getSheetByName(NORMAS_SHEET_);
+      if (!sh) { sh = ss.insertSheet(NORMAS_SHEET_); sh.getRange(1, 1, 1, 4).setValues([['Fecha', 'Id', 'Nombre', 'Versión de las normas']]).setFontWeight('bold'); sh.setFrozenRows(1); sh.getRange('D:D').setNumberFormat('@'); }
+      sh.appendRow([new Date(), String(t.id), cell_(String(t.nombre)), version]);
+      dropCache_();
       return { ok: true, techs: techsOut_() };
     });
   });

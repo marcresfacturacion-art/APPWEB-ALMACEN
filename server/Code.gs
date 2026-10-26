@@ -173,8 +173,8 @@ function loansOut_() {
   });
 }
 function techsOut_() {
-  var pins = pins_(), ges = gestores_();
-  return rows_('Tecnicos').map(function (t) { return { id: String(t.id), nombre: String(t.nombre), activo: bool_(t.activo), restringido: bool_(t.restringido), pin: !!pins[String(t.id)], gestor: gestor_(t, ges) }; })
+  var pins = pins_(), ges = gestores_(), nm = normasHechas_();
+  return rows_('Tecnicos').map(function (t) { return { id: String(t.id), nombre: String(t.nombre), activo: bool_(t.activo), restringido: bool_(t.restringido), pin: !!pins[String(t.id)], gestor: gestor_(t, ges), normas: nm[String(t.id)] || null }; })
     .filter(function (t) { return t.nombre; });
 }
 
