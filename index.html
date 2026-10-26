@@ -645,7 +645,7 @@ function viewNormas(){
     }catch(err){
       S.busy=false; yes.disabled=false; yes.textContent="Acepto y entro";
       if(err&&err.code==="pin"){ S.normasFor=null; S.pinFor=A.t; S.pinVal=""; S.pinMsg="Vuelve a escribir tu PIN."; return viewPin(); }
-      toast(err&&err.code==="network"?netMsg():"No se ha podido guardar. Inténtalo otra vez.");
+      toast(err&&err.code==="network"?netMsg():oldServer(err)?OLD_SERVER_MSG:"No se ha podido guardar. Inténtalo otra vez.");
     }
   };
 }
@@ -2809,9 +2809,13 @@ function printList(title,prods){
 }
 
 /* ---------- Data ---------- */
+/* The page is newer than the code pasted in Apps Script: it asks for a function the server does not have yet. */
+const OLD_SERVER_MSG="Falta pegar el servidor nuevo: abre arreglar.html, copia, pégalo entero en Código.gs y haz Nueva versión.";
+const oldServer = err => !!(err&&err.code==="bad"&&/desconocida/.test(err.msg||""));
 function handleWriteError(err){
   const c=err&&err.code;
-  if(c==="busy") toast("Otra persona está cambiando el inventario ahora mismo. Inténtalo en unos segundos.");
+  if(oldServer(err)) toast(OLD_SERVER_MSG);
+  else if(c==="busy") toast("Otra persona está cambiando el inventario ahora mismo. Inténtalo en unos segundos.");
   else if(c==="tecnico"){ logout("Tu nombre ya no está en la lista de técnicos. Habla con Xavi."); }
   else if(c==="pin"){ logout("Vuelve a entrar con tu PIN."); }
   else if(c==="network"||c==="offline") toast(netMsg());
@@ -3229,7 +3233,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-26.2";
+const APP_VERSION="2026-10-26.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
