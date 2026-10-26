@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1, api_albRead: 1, api_albList: 1, api_pinLogin: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1, api_albRead: 1, api_albList: 1, api_pinLogin: 1, api_pinList: 1 };
 
 function doPost(e) {
   var out;
@@ -27,7 +27,7 @@ function doPost(e) {
       api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_,
       api_ppList: ppList_, api_ppSave: ppSave_, api_ppDelete: ppDelete_, api_ppArrive: ppArrive_,
       api_albRead: albRead_, api_albSave: albSave_, api_albList: albList_,
-      api_pinLogin: pinLogin_, api_setPin: setPin_, api_acceptNormas: acceptNormas_
+      api_pinLogin: pinLogin_, api_setPin: setPin_, api_acceptNormas: acceptNormas_, api_pinList: pinList_
     };
     addShelves_();
     mayusculas_();
@@ -771,7 +771,8 @@ function albList_(token) {
 
 /* ---------- PIN de cada persona (Xavi, 26-10-2026) ----------
  * Solo Xavi Alvarado y Nicusor Roman ponen, cambian o quitan PIN y dan de alta o de baja técnicos.
- * Los PIN se guardan cifrados en las propiedades del script (PINS), no en la hoja; nadie puede verlos, solo cambiarlos.
+ * Los PIN se guardan cifrados en las propiedades del script (PINS), no en la hoja. Desde el 26-10-2026 (pedido de Xavi)
+ * se guarda también una copia legible en PINS_VER para que Xavi y Nicusor puedan verlos en Técnicos (api_pinList).
  * Cambiar el PIN de alguien cierra las sesiones que tenía abiertas. 4 fallos seguidos bloquean a esa persona 15 minutos. */
 var GESTORES_ = ['xavi alvarado', 'nicusor roman'];
 function foldName_(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
@@ -803,6 +804,16 @@ function pinLogin_(tecId, pin) {
     return { ok: true, tk: tk, nombre: t.nombre };
   });
 }
+function pinsVer_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('PINS_VER') || '{}'); } catch (e) { return {}; } }
+/** Solo Xavi y Nicusor: los PIN de cada persona. Los puestos antes de guardar la copia legible salen vacíos. */
+function pinList_(token) {
+  return guard_(function () {
+    gestorTok_(token);
+    var all = pins_(), ver = pinsVer_(), out = {};
+    Object.keys(all).forEach(function (k) { out[k] = ver[k] || ''; });
+    return { pins: out };
+  });
+}
 function pinOk_(pin) { return /^\d{4}$/.test(pin); }
 /** pin vacío = quitar el PIN. */
 function setPin_(token, tecId, pin) {
@@ -821,9 +832,10 @@ function setPin_(token, tecId, pin) {
           if (o && bool_(o.activo)) return { err: 'pindup', quien: String(o.nombre) };
         }
       }
-      if (pin) { var salt = Utilities.getUuid().slice(0, 8); all[tid] = salt + '|' + hash_(pin, salt); }
-      else delete all[tid];
-      props.setProperty('PINS', JSON.stringify(all));
+      var ver = pinsVer_();
+      if (pin) { var salt = Utilities.getUuid().slice(0, 8); all[tid] = salt + '|' + hash_(pin, salt); ver[tid] = pin; }
+      else { delete all[tid]; delete ver[tid]; }
+      props.setProperties({ PINS: JSON.stringify(all), PINS_VER: JSON.stringify(ver) });
       CacheService.getScriptCache().remove('pinf_' + tid);
       dropCache_();
       console.log((pin ? 'PIN puesto a ' : 'PIN quitado a ') + t.nombre + ' por ' + g.nombre);
