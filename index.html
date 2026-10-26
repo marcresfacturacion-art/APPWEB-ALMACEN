@@ -2811,7 +2811,6 @@ function printList(title,prods){
 /* ---------- Data ---------- */
 /* The page is newer than the code pasted in Apps Script: it asks for a function the server does not have yet. */
 const OLD_SERVER_MSG="Falta pegar el servidor nuevo: abre arreglar.html, copia, pégalo entero en Código.gs y haz Nueva versión.";
-const oldServer = err => !!(err&&err.code==="bad"&&/desconocida/.test(err.msg||""));
 function handleWriteError(err){
   const c=err&&err.code;
   if(oldServer(err)) toast(OLD_SERVER_MSG);
@@ -3233,7 +3232,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-26.3";
+const APP_VERSION="2026-10-26.4";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
