@@ -564,14 +564,14 @@ function viewPin(){
     <p class="note">Escribe tu PIN de 4 números.</p>
     <div class="pindots" aria-live="polite">${[0,1,2,3].map(i=>`<span class="${i<S.pinVal.length?"on":""}"></span>`).join("")}</div>
     <p class="pinmsg" id="pin_msg">${esc(S.pinMsg||"")}</p>
-    <div class="pinpad">${["1","2","3","4","5","6","7","8","9","x","0","<"].map(k=>k==="x"?`<button class="pinkey small" data-pk="x">Otra<br>persona</button>`:k==="<"?`<button class="pinkey small" data-pk="<" aria-label="Borrar">⌫</button>`:`<button class="pinkey" data-pk="${k}">${k}</button>`).join("")}</div>
-    <p class="note">¿No te acuerdas? Pide a Xavi o a Nicusor que te pongan uno nuevo.</p>
+    <div class="pinpad">${["1","2","3","4","5","6","7","8","9","","0","<"].map(k=>k===""?`<span></span>`:k==="<"?`<button class="pinkey small" data-pk="<" aria-label="Borrar">⌫</button>`:`<button class="pinkey" data-pk="${k}">${k}</button>`).join("")}</div>
+    <p class="note">¿No te acuerdas? Pide a Xavi o a Nicusor que te pongan uno nuevo.<br>¿No eres tú? Cierra la app y vuelve a entrar.</p>
   </section>`;
   app.querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>pinKey(b.dataset.pk));
 }
 async function pinKey(k){
   if(S.pinBusy) return;
-  if(k==="x"){ S.pinFor=null; S.pinVal=""; S.pinMsg=""; return viewLogin(); }
+  /* No way back to the name list from here (Xavi): nobody can try a colleague's PIN and lock them out. */
   if(k==="<"){ S.pinVal=S.pinVal.slice(0,-1); S.pinMsg=""; return viewPin(); }
   if(S.pinVal.length>=4) return;
   S.pinVal+=k; S.pinMsg=""; viewPin();
@@ -584,7 +584,7 @@ async function pinKey(k){
   }catch(err){
     S.pinBusy=false; S.pinVal="";
     const c=err&&err.code;
-    S.pinMsg=c==="pinwrong"?(err.left>0?`PIN incorrecto. Te quedan ${err.left} intento${err.left===1?"":"s"}.`:"PIN incorrecto. Espera 10 minutos o pide a Xavi o Nicusor un PIN nuevo."):c==="pinlock"?"Demasiados intentos. Espera 10 minutos o pide a Xavi o Nicusor un PIN nuevo.":c==="network"?netMsg():"No se ha podido comprobar el PIN. Inténtalo otra vez.";
+    S.pinMsg=c==="pinwrong"?(err.left>0?`PIN incorrecto. ${err.left===1?"Te queda 1 intento":`Te quedan ${err.left} intentos`}.`:"PIN incorrecto. Espera 15 minutos o pide a Xavi o Nicusor un PIN nuevo."):c==="pinlock"?"Demasiados intentos. Espera 15 minutos o pide a Xavi o Nicusor un PIN nuevo.":c==="network"?netMsg():"No se ha podido comprobar el PIN. Inténtalo otra vez.";
     if(S.view==="login"&&S.pinFor) viewPin();
     if(navigator.vibrate) navigator.vibrate(120);
   }

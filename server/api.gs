@@ -772,7 +772,7 @@ function albList_(token) {
 /* ---------- PIN de cada persona (Xavi, 26-10-2026) ----------
  * Solo Xavi Alvarado y Nicusor Roman ponen, cambian o quitan PIN y dan de alta o de baja técnicos.
  * Los PIN se guardan cifrados en las propiedades del script (PINS), no en la hoja; nadie puede verlos, solo cambiarlos.
- * Cambiar el PIN de alguien cierra las sesiones que tenía abiertas. 5 fallos seguidos bloquean a esa persona 10 minutos. */
+ * Cambiar el PIN de alguien cierra las sesiones que tenía abiertas. 4 fallos seguidos bloquean a esa persona 15 minutos. */
 var GESTORES_ = ['xavi alvarado', 'nicusor roman'];
 function foldName_(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function gestores_() {
@@ -791,12 +791,12 @@ function pinLogin_(tecId, pin) {
     var tid = plainId_(tecId), t = techRow_(tid), rec = pins_()[tid], c = CacheService.getScriptCache();
     if (!rec) { var tk0 = Utilities.getUuid(); c.put('tk_' + tk0, tid + '|', 21600); return { ok: true, tk: tk0, nopin: true }; }
     var fails = Number(c.get('pinf_' + tid)) || 0;
-    if (fails >= 5) return { err: 'pinlock' };
+    if (fails >= 4) return { err: 'pinlock' };
     var salt = rec.split('|')[0];
     Utilities.sleep(300);
     if (hash_(String(pin || '').trim(), salt) !== rec.split('|')[1]) {
-      c.put('pinf_' + tid, String(fails + 1), 600);
-      return { err: 'pinwrong', left: 4 - fails };
+      c.put('pinf_' + tid, String(fails + 1), 900);
+      return { err: 'pinwrong', left: 3 - fails };
     }
     c.remove('pinf_' + tid);
     var tk = Utilities.getUuid(); c.put('tk_' + tk, tid + '|' + salt, 21600);
