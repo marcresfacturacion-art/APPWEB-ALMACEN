@@ -126,14 +126,21 @@ function guard_(fn) {
     return { err: 'server', msg: m };
   }
 }
+/* Un alta guarda producto, movimiento, altura y familia: todo bajo un solo candado y un solo flush (más rápido, 4-11-2026). */
+var LOCK_DEPTH_ = 0;
 function locked_(fn) {
+  if (LOCK_DEPTH_ > 0) return fn();
   const l = LockService.getScriptLock();
   if (!l.tryLock(20000)) throw new Error('busy');
+  LOCK_DEPTH_++;
   try { const r = fn(); SpreadsheetApp.flush(); return r; }
-  finally { l.releaseLock(); }
+  finally { LOCK_DEPTH_--; l.releaseLock(); }
 }
+/* La lista de técnicos se lee una vez por llamada (antes, un alta la leía dos veces). */
+var TEC_ROWS_ = null;
 function techRow_(id) {
-  const t = rows_('Tecnicos').filter(function (x) { return String(x.id) === String(id) && bool_(x.activo); })[0];
+  if (!TEC_ROWS_) TEC_ROWS_ = rows_('Tecnicos');
+  const t = TEC_ROWS_.filter(function (x) { return String(x.id) === String(id) && bool_(x.activo); })[0];
   if (!t) throw new Error('tecnico');
   return t;
 }
@@ -555,6 +562,10 @@ function addShelves_() {
  * Lo nuevo se guarda ya en mayúsculas; lo que había se pasa una sola vez, la primera vez que alguien usa la app. */
 function upper_(v) { return String(v == null ? '' : v).toLocaleUpperCase('es-ES'); }
 function saveProductUpper_(tecId, data, isNew) {
+  try { return locked_(function () { return saveProductIn_(tecId, data, isNew); }); }
+  catch (e) { return guard_(function () { throw e; }); }
+}
+function saveProductIn_(tecId, data, isNew) {
   data = Object.assign({}, data || {});
   /* Dar de alta productos nuevos: solo administrativos (decisión 13-10-2026, por si los técnicos se equivocan). */
   if (isNew) { var who = guard_(function () { return { r: bool_(tech_(tecId).restringido) }; }); if (who.err) return who; if (!who.r) return { err: 'auth' }; }
@@ -585,8 +596,7 @@ function famRows_() {
 function famMap_() { var o = {}; famRows_().forEach(function (r) { if (FAMILIAS_.indexOf(r[1]) >= 0) o[r[0]] = r[1]; }); return o; }
 function setFamilia_(code, fam) {
   var ss = ss_(), sh = ss.getSheetByName(FAM_SHEET_);
-  if (!sh) { if (!fam) return; sh = ss.insertSheet(FAM_SHEET_); sh.setFrozenRows(1); }
-  sh.getRange(1, 1, 1, 2).setValues([['Producto', 'Familia']]).setFontWeight('bold');
+  if (!sh) { if (!fam) return; sh = ss.insertSheet(FAM_SHEET_); sh.setFrozenRows(1); sh.getRange(1, 1, 1, 2).setValues([['Producto', 'Familia']]).setFontWeight('bold'); }
   var cur = famRows_().filter(function (r) { return r[0] === code; })[0];
   if (cur && fam) sh.getRange(cur[2], 2).setValue(fam);
   else if (cur) sh.deleteRow(cur[2]);
@@ -621,8 +631,8 @@ function setNivel_(code, nivel, lado) {
   if (!sh) {
     if (!any) return;
     sh = ss.insertSheet(NIV_SHEET_); sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, 3).setValues([['Producto', 'Balda (1 = abajo)', 'Lado']]).setFontWeight('bold');
   }
-  sh.getRange(1, 1, 1, 3).setValues([['Producto', 'Balda (1 = abajo)', 'Lado']]).setFontWeight('bold');
   var cur = nivRows_().filter(function (r) { return r[0] === code; })[0];
   if (cur && any) sh.getRange(cur[2], 2, 1, 2).setValues([[nivel, lado]]);
   else if (cur) sh.deleteRow(cur[2]);

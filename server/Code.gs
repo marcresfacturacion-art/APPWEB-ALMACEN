@@ -119,14 +119,21 @@ function guard_(fn) {
     return { err: 'server', msg: m };
   }
 }
+/* Un alta guarda producto, movimiento, altura y familia: todo bajo un solo candado y un solo flush (más rápido, 4-11-2026). */
+var LOCK_DEPTH_ = 0;
 function locked_(fn) {
+  if (LOCK_DEPTH_ > 0) return fn();
   const l = LockService.getScriptLock();
   if (!l.tryLock(20000)) throw new Error('busy');
+  LOCK_DEPTH_++;
   try { const r = fn(); SpreadsheetApp.flush(); return r; }
-  finally { l.releaseLock(); }
+  finally { LOCK_DEPTH_--; l.releaseLock(); }
 }
+/* La lista de técnicos se lee una vez por llamada (antes, un alta la leía dos veces). */
+var TEC_ROWS_ = null;
 function techRow_(id) {
-  const t = rows_('Tecnicos').filter(function (x) { return String(x.id) === String(id) && bool_(x.activo); })[0];
+  if (!TEC_ROWS_) TEC_ROWS_ = rows_('Tecnicos');
+  const t = TEC_ROWS_.filter(function (x) { return String(x.id) === String(id) && bool_(x.activo); })[0];
   if (!t) throw new Error('tecnico');
   return t;
 }
