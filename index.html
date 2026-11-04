@@ -21,7 +21,7 @@
 :root{
   --bg:#F1F4F9; --surface:#FFFFFF; --surface-2:#EEF2F8; --fg:#0F1115; --muted:#59616E; --line:#D5DDE9;
   --accent:#184595; --accent-fg:#ffffff; --brand:#184595; --brand-fg:#ffffff; --danger:#8B1A1A; --ok:#2D6A4F; color-scheme:light;
-  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-verdeclaro:#a5d6a7; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff; --cb-lavanda:#c3b1f0; --cb-granate:#8e1b45;
+  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-verdeclaro:#a5d6a7; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff; --cb-lavanda:#c3b1f0; --cb-fitting:#d2392f; --cb-granate:#8e1b45;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -454,16 +454,17 @@ const SHELVES = {
   /* Según el segundo dibujo de Xavi (2026-10-06), retocado por él en el editor del mapa (2026-10-19 y 2026-10-22). */
   cb_bombas:    {name:"Zona de bombas",   color:"var(--cb-bombas)",   room:"cb"},
   cb_tapiado:   {name:"Maquinaria",       color:"var(--cb-dorado)",   room:"cb"},
-  cb_maq2:      {name:"Maquinaria 2",     color:"var(--cb-dorado)",   room:"cb"},
-  cb_pulidora:  {name:"Pulidora",         color:"var(--cb-dorado)",   room:"cb"},
   cb_blanca:    {name:"Eléctrico derecha",   color:"var(--cb-blanco)",   room:"cb"},
   cb_blanco:    {name:"Eléctrico centro",    color:"var(--cb-blanco)",   room:"cb"},
   cb_almblanco: {name:"Eléctrico izquierda", color:"var(--cb-blanco)",   room:"cb"},
-  cb_el1:       {name:"Eléctrico estante 1", color:"var(--cb-granate)",  room:"cb"},
-  cb_el2:       {name:"Eléctrico estante 2", color:"var(--cb-granate)",  room:"cb"},
+  cb_el1:       {name:"Eléctrico estante 1", color:"var(--cb-blanco)",   room:"cb"},
+  cb_el2:       {name:"Galvanizado e inox",  color:"var(--cb-granate)",  room:"cb"},
+  cb_galv2:     {name:"Galvanizado e inox 2", color:"var(--cb-granate)", room:"cb"},
   cb_pq:        {name:"Eléctrico pequeño", color:"var(--cb-blanco)",   room:"cb"},
   cb_e1:        {name:"Electrosoldables",        color:"var(--cb-amarillo)", room:"cb"},
-  cb_e2:        {name:"Estante naranja",        color:"var(--cb-naranja)",  room:"cb"},
+  cb_e2:        {name:"Latón",               color:"var(--cb-naranja)",  room:"cb"},
+  cb_laton2:    {name:"Latón 2",             color:"var(--cb-lavanda)",  room:"cb"},
+  cb_fitting:   {name:"Fitting",             color:"var(--cb-fitting)",  room:"cb"},
   cb_e3:        {name:"Estante rosa",        color:"var(--cb-rosa)",     room:"cb"},
   cb_e4:        {name:"Estante lima",        color:"var(--cb-lima)",     room:"cb"},
   cb_e5:        {name:"Azul del cuarto blanco",  color:"var(--cb-turquesa)", room:"cb"},
@@ -1073,33 +1074,34 @@ function shelfSvg(sel){
   </svg>`;
 }
 
-/* Cuarto blanco, tal como lo dibujó Xavi (editor del mapa, 2026-10-22): puerta abajo a la derecha, junto a la mesa. */
+/* Cuarto blanco, tal como lo dibujó Xavi (editor del mapa, 2026-11-04): puerta abajo a la derecha. */
 function cbSvg(sel){
   const g=(key,inner,lx,ly,label,o={})=>`<g class="shelf ${sel===key?'on':''}" data-shelf="${key}" role="button" tabindex="0" aria-label="${SHELVES[key].name}">
     ${inner}<text ${o.rot?`transform="translate(${lx} ${ly}) rotate(-90)"`:`x="${lx}" y="${ly}"`} text-anchor="${o.anchor||"middle"}" dominant-baseline="middle" style="font-size:${o.size||12}px${o.fill?`;fill:${o.fill}`:""}">${label}</text></g>`;
   const r=(key,x,y,w,h,extra="")=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${SHELVES[key].color}" ${extra}/>`;
-  const note=(x,y,t)=>`<text x="${x}" y="${y}" text-anchor="middle" style="font-size:9px;fill:var(--muted);font-weight:600">${t}</text>`;
   return `<svg viewBox="0 0 360 300" aria-label="Plano del Cuarto blanco">
     <polygon points="7.5,40.5 341,38.5 341,260 10,262.5" fill="var(--surface-2)" stroke="var(--fg)" stroke-width="2.5" stroke-linejoin="round"/>
-    <line x1="243.5" y1="261" x2="281.5" y2="260.7" stroke="var(--surface-2)" stroke-width="5"/>
-    <path d="M262.5 292 v-20 m-6 6 l6 -6 l6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>
-    <text x="290" y="285" text-anchor="start" style="font-size:9px;fill:var(--muted);font-weight:600">PUERTA</text>
-    <rect x="121.5" y="239.5" width="83" height="21" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>${note(163,253,"MESA")}
-    ${g("cb_bombas",r("cb_bombas",11,42.5,130,40,'stroke-dasharray="4 3"'),76,62.5,"BOMBAS")}
-    ${g("cb_pulidora",r("cb_pulidora",9.5,85,30,14),24.5,92,"PULIDORA",{size:4.8})}
-    ${g("cb_e2",r("cb_e2",11,100.5,25,84),23.5,142.5,"NARANJA",{rot:1,size:10})}
-    ${g("cb_e3",r("cb_e3",152,42.5,120,20),212,52.5,"ROSA",{size:11})}
-    ${g("cb_maq2",r("cb_maq2",298.5,39.5,20,20),308.5,49.5,"MAQ.",{size:6.5})}
+    <line x1="221.5" y1="260.8" x2="259.5" y2="260.6" stroke="var(--surface-2)" stroke-width="5"/>
+    <path d="M240.5 292 v-20 m-6 6 l6 -6 l6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>
+    <text x="268" y="285" text-anchor="start" style="font-size:9px;fill:var(--muted);font-weight:600">PUERTA</text>
+    <rect x="125" y="103" width="21" height="83" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text transform="translate(135.5 144.5) rotate(-90)" text-anchor="middle" dominant-baseline="middle" style="font-size:9px;fill:var(--muted);font-weight:600">MESA</text>
+    ${g("cb_bombas",r("cb_bombas",36.5,41.75,132,29.5,'stroke-dasharray="4 3"'),102.5,56.5,"BOMBAS",{size:11})}
+    ${g("cb_laton2",r("cb_laton2",10.75,41,24.5,59),23,70.5,"LATÓN 2",{rot:1,size:8})}
+    ${g("cb_e2",r("cb_e2",9.5,98,25,48),22,122,"LATÓN",{rot:1,size:9})}
+    ${g("cb_fitting",r("cb_fitting",10.5,145.75,25,39.5),23,165.5,"FITTING",{rot:1,size:7.5,fill:"#fff"})}
+    ${g("cb_e3",r("cb_e3",168.5,41.5,151,20),244,51.5,"ROSA",{size:11})}
     ${g("cb_tapiado",r("cb_tapiado",319.5,40,20,65),329.5,72.5,"MAQUINARIA",{rot:1,size:7.5})}
-    ${g("cb_e4",r("cb_e4",319,106.5,20,65),329,139,"LIMA",{rot:1,size:10})}
-    ${g("cb_e5",r("cb_e5",309,173.5,30,25),324,186,"AZUL",{size:9})}
-    ${g("cb_e1",r("cb_e1",318.5,201,20,40),314,221,"ELECTROSOLD.",{size:8,anchor:"end"})}
-    ${g("cb_el2",r("cb_el2",78.5,173,44,14),100.5,180,"ELÉC. 2",{size:7.5,fill:"#fff"})}
-    ${g("cb_el1",r("cb_el1",78.5,188,44,14),100.5,195,"ELÉC. 1",{size:7.5,fill:"#fff"})}
+    ${g("cb_e4",r("cb_e4",323,106.25,16,71.5),331,142,"LIMA",{rot:1,size:9})}
+    ${g("cb_e1",r("cb_e1",318,215.75,21,42.5),314,237,"ELECTROSOLD.",{size:8,anchor:"end"})}
+    ${g("cb_e5",r("cb_e5",159.5,229.5,25,30),172,244.5,"AZUL",{size:7})}
+    ${g("cb_galv2",r("cb_galv2",109,104.5,16,36),117,122.5,"GALV/INOX 2",{rot:1,size:4.6,fill:"#fff"})}
+    ${g("cb_el2",r("cb_el2",109,142,14,44),116,164,"GALV/INOX",{rot:1,size:5.5,fill:"#fff"})}
+    ${g("cb_el1",r("cb_el1",78.5,186.25,44,14.5),100.5,193.5,"ELÉC. 1",{size:7.5})}
     ${g("cb_blanca",r("cb_blanca",10.5,186,67,16),44,194,"ELÉC. DCHA.",{size:7})}
     ${g("cb_blanco",r("cb_blanco",11,202,20,43),21,223.5,"ELÉC. CEN.",{rot:1,size:6})}
-    ${g("cb_almblanco",r("cb_almblanco",11,245.5,67,16),44.5,253.5,"ELÉC. IZQ.",{size:7})}
-    ${g("cb_pq",r("cb_pq",78.5,245,42,17),99.5,253.5,"ELÉC. PEQ.",{size:6.2})}
+    ${g("cb_almblanco",r("cb_almblanco",11.5,245.5,75,15),49,253,"ELÉC. IZQ.",{size:7})}
+    ${g("cb_pq",r("cb_pq",88,245,57,15),116.5,252.5,"ELÉC. PEQ.",{size:7})}
   </svg>`;
 }
 /* ---------- Altura en el estante (arriba, en medio, abajo) con un dibujo en 3D del estante ---------- */
@@ -3240,7 +3242,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-10-26.5";
+const APP_VERSION="2026-11-04.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
