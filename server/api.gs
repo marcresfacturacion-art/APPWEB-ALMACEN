@@ -31,6 +31,7 @@ function doPost(e) {
     };
     addShelves_();
     mayusculas_();
+    fechas_();
     tecnicos13_();
     var fn = fns[req.fn];
     out = fn ? fn.apply(null, Array.isArray(req.args) ? req.args : []) : { err: 'bad', msg: 'función desconocida' };
@@ -146,6 +147,28 @@ function mayusculas_() {
     }
     props.setProperty('MAYUS_V', '1');
     dropCache_(false);
+  } finally { l.releaseLock(); }
+}
+
+/* Una sola vez: las fechas que se guardaron como número (milisegundos) vuelven a ser fechas en la hoja. */
+function fechas_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('FECHAS_V') === '1') return;
+  var l = LockService.getScriptLock();
+  if (!l.tryLock(20000)) return;
+  try {
+    if (props.getProperty('FECHAS_V') === '1') return;
+    Object.keys(COLS).forEach(function (name) {
+      var sh = sh_(name), n = sh ? sh.getLastRow() : 0; if (n < 2) return;
+      COLS[name].forEach(function (k, j) {
+        if (!DATE_KEYS_[k]) return;
+        var r = sh.getRange(2, j + 1, n - 1, 1), v = r.getValues(), changed = false;
+        v.forEach(function (row) { if (typeof row[0] === 'number' && row[0] > 1e11) { row[0] = new Date(row[0]); changed = true; } });
+        if (changed) r.setValues(v);
+      });
+    });
+    SpreadsheetApp.flush();
+    props.setProperty('FECHAS_V', '1');
   } finally { l.releaseLock(); }
 }
 

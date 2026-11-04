@@ -104,7 +104,10 @@ function lastRows_(name, max) {
   });
 }
 function cell_(v) { return (typeof v === 'string' && /^[=+@]/.test(v)) ? "'" + v : (v === undefined || v === null ? '' : v); }
-function toRow_(name, o) { return COLS[name].map(function (k) { return cell_(o[k]); }); }
+/* Las fechas se leen como milisegundos (plain_); al volver a escribir la fila se guardan otra vez como fecha.
+ * Antes se escribían como número y la hoja enseñaba «#VALUE!» en «Creado» (arreglado 4-11-2026). */
+var DATE_KEYS_ = { fecha: 1, actualizado: 1, creado: 1, alta: 1, salida: 1, devuelto: 1 };
+function toRow_(name, o) { return COLS[name].map(function (k) { var v = o[k]; if (DATE_KEYS_[k] && typeof v === 'number' && v > 1e11) v = new Date(v); return cell_(v); }); }
 function append_(name, o) { sh_(name).appendRow(toRow_(name, o)); }
 function write_(name, o) { sh_(name).getRange(o._row, 1, 1, COLS[name].length).setValues([toRow_(name, o)]); }
 function bool_(v) { return v === true || v === 'TRUE' || v === 'true'; }
