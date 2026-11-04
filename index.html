@@ -1835,7 +1835,7 @@ async function altaSave(more){
   const nombre=String(a.nombre||"").trim().toLocaleUpperCase("es-ES"); if(!nombre){ a.step=2; viewAlta(); return; }
   const miss=!a.fam?"Elige la familia.":!SHELVES[a.ubic]?"Elige el estante.":!a.niv?"Elige la altura: en qué balda está.":!a.lado?"Elige el lado: izquierda, centro o derecha.":"";
   if(miss){ toast(miss); const box=$(!a.fam?".famgrid":SHELVES[a.ubic]?"#a_pos":".shgrid"); if(box) box.scrollIntoView({behavior:"smooth",block:"center"}); return; }
-  S.busy=true; app.querySelectorAll("#a_save,#a_more").forEach(b=>b.disabled=true);
+  S.busy=true; app.querySelectorAll("#a_save,#a_more").forEach(b=>{ b.disabled=true; b.dataset.txt=b.textContent; b.textContent="Guardando… (espera a Google)"; });
   let r=null;
   try{
     for(let i=0;i<3&&!r;i++){
@@ -1856,7 +1856,7 @@ async function altaSave(more){
   }catch(err){
     if(err&&err.code==="auth") toast("Solo los administrativos pueden dar de alta productos.");
     else handleWriteError(err);
-  }finally{ S.busy=false; app.querySelectorAll("#a_save,#a_more").forEach(b=>b.disabled=false); }
+  }finally{ S.busy=false; app.querySelectorAll("#a_save,#a_more").forEach(b=>{ b.disabled=false; if(b.dataset.txt) b.textContent=b.dataset.txt; }); }
 }
 
 /* ---------- Responsable: historial y técnicos ---------- */
@@ -3251,7 +3251,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-04.2";
+const APP_VERSION="2026-11-04.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
