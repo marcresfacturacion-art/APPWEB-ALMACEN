@@ -1980,7 +1980,9 @@ function pcForm(){
       <label class="pclab">Balda<select id="pc_niv" class="pcin">${nivOptions(ubic,niv)}</select></label>
       <label class="pclab">Lado<select id="pc_lado" class="pcin"><option value="">Sin indicar</option>${Object.entries(LADOS).map(([k,v])=>`<option value="${k}" ${lado===k?"selected":""}>${v}</option>`).join("")}</select></label></div>
     <div class="pcqty"><label class="pclab">${P.isNew?"Cantidad":"He contado"}<input id="pc_cnt" class="pcin" type="number" inputmode="numeric" min="0" step="1" placeholder="${P.isNew?"0":"?"}"></label>
-      <div class="no" id="pc_cmp">${p?`En la app pone <b>${p.cantidad}</b>${d?` · Último recuento: ${d.n} (${pcWhen(d.t)})`:""}`:"Lo que hay ahora en el almacén."}</div></div>
+      <div class="no" id="pc_cmp" style="flex:1">${p?`En la app pone <b>${p.cantidad}</b>${d?` · Último recuento: ${d.n} (${pcWhen(d.t)})`:""}`:"Lo que hay ahora en el almacén."}</div>
+      <label class="pclab">Stock mínimo<input id="pc_min" class="pcin" type="number" inputmode="numeric" min="0" step="1" value="${Number(p&&p.minimo)||""}" placeholder="Sin mínimo" style="font:600 20px var(--f-mono);max-width:140px"></label></div>
+    <label class="check"><input type="checkbox" id="pc_prest" ${p&&p.prestamo?"checked":""}> <span>Herramienta o maquinaria de préstamo (se presta y se devuelve)</span></label>
     <label class="pclab">Código de barras${bars.length?` · ya tiene ${bars.map(esc).join(", ")}`:""}<span class="pcbar" style="margin:0"><input id="pc_bar" class="pcin mono" autocomplete="off" value="${esc(P.bar||"")}" placeholder="${bars.length?"Añadir otro (opcional)":"Escríbelo o léelo con el lector"}">
       <button type="button" class="btn" id="pc_web">🔎 Internet</button><a class="btn" id="pc_g" target="_blank" rel="noopener" href="#">↗ Google</a></span></label>
     <div id="pc_webbox"></div>
@@ -2069,6 +2071,8 @@ async function pcSave(){
   const UP=x=>String(x||"").trim().toLocaleUpperCase("es-ES");
   const nombre=UP($("#pc_nombre").value), cntRaw=$("#pc_cnt").value, cnt=cntRaw===""?null:Math.max(0,Math.floor(Number(cntRaw)||0));
   const f={nombre,descripcion:UP($("#pc_desc").value),ubicacion:$("#pc_ubic").value,nivel:$("#pc_niv").value,lado:$("#pc_lado").value,familia:$("#pc_fam").value,proveedor:UP($("#pc_prov").value)};
+  const minimo=Math.max(0,Math.floor(Number($("#pc_min").value)||0)), prestamo=$("#pc_prest").checked;
+  if(prestamo&&!SHELVES[f.ubicacion]){ toast("Ponle su estante: ahí vuelve cuando la devuelvan."); $("#pc_ubic").focus(); return; }
   const bar=$("#pc_bar").value.trim();
   if(!nombre){ toast("Escribe el nombre."); $("#pc_nombre").focus(); return; }
   if(!p){
@@ -2076,13 +2080,12 @@ async function pcSave(){
     if(miss){ toast(miss[1]); $(miss[0]).focus(); return; }
   }
   if(bar){ const o=prodByBar(bar); if(o&&o.codigo!==P.code){ toast(`Ese código de barras ya es de ${o.nombre} (${o.codigo}).`); $("#pc_bar").focus(); return; } }
-  const changed=!p||P.foto||["nombre","descripcion","ubicacion","proveedor"].some(k=>String(p[k]||"")!==String(f[k]||""))||String(nivOf(p)||"")!==String(f.nivel||"")||ladoOf(p)!==f.lado||famOf(p)!==f.familia;
+  const changed=!p||P.foto||minimo!==(Number(p.minimo)||0)||prestamo!==!!p.prestamo||["nombre","descripcion","ubicacion","proveedor"].some(k=>String(p[k]||"")!==String(f[k]||""))||String(nivOf(p)||"")!==String(f.nivel||"")||ladoOf(p)!==f.lado||famOf(p)!==f.familia;
   S.busy=true; const sb=$("#pc_save"); if(sb){ sb.disabled=true; sb.textContent="Guardando… (espera a Google)"; }
   const code=P.code;
   try{
     if(changed){
-      const data={codigo:code,...f,foto:P.foto||(p?p.foto||"":""),prestamo:p?!!p.prestamo:false,cantidad:p?p.cantidad:(cnt||0)};
-      if(p&&p.minimo!==undefined) data.minimo=Number(p.minimo)||0;
+      const data={codigo:code,...f,foto:P.foto||(p?p.foto||"":""),prestamo,minimo,cantidad:p?p.cantidad:(cnt||0)};
       const r=await api("api_saveProduct", tecAuth(), data, !p);
       S.products.set(r.product.codigo, r.product);
       if(r.product.nivel) S.niv[code]=r.product.nivel; else delete S.niv[code];
@@ -3505,7 +3508,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-05.1";
+const APP_VERSION="2026-11-05.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
