@@ -408,7 +408,8 @@ function api_recount(token, counts) {
       Object.keys(counts || {}).forEach(function (code) {
         const p = prods.filter(function (x) { return String(x.codigo) === code; })[0]; if (!p) return;
         const n = Math.max(0, Math.floor(Number(counts[code]) || 0)), cur = Number(p.cantidad) || 0;
-        if (n === cur) { same++; return; }
+        // También se apunta lo que coincide: así queda constancia de que se contó (Xavi, 5-11-2026).
+        if (n === cur) { same++; logMove_({ tipo: 'recuento', codigo: p.codigo, producto: p.nombre, delta: 0, antes: cur, despues: n, detalle: 'Contado: coincide' }, t); return; }
         p.cantidad = n; p.actualizado = new Date(); p.actualizadoPor = t.nombre; write_('Productos', p);
         logMove_({ tipo: 'recuento', codigo: p.codigo, producto: p.nombre, delta: n - cur, antes: cur, despues: n }, t);
         fixed++;
