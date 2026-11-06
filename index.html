@@ -1804,6 +1804,7 @@ function drawAltaWeb(){
     toast("Nombre puesto. Puedes corregirlo o pulsar Siguiente.");
   });
 }
+let ALTA_UP=null;   // photo of the alta still uploading
 function viewAlta(){
   const a=S.alta; if(!a||!canAlta()){ go("buscar"); return; }
   resumeSave();
@@ -1811,14 +1812,18 @@ function viewAlta(){
   if(a.step===1){
     app.innerHTML=`<section class="alta">${bar}<h2>1. Haz una foto</h2>
       <div class="photo${a.fotoB64?"":" nophoto"}">${a.fotoB64?`<img src="data:image/jpeg;base64,${a.fotoB64}" alt="">`:'<span style="font-size:56px">📷</span>'}</div>
-      <button class="btn primary block" id="a_photo">${a.fotoB64?"Repetir la foto":"Hacer foto"}</button>
+      <button class="btn primary block" id="a_photo" ${ALTA_UP?"disabled":""}>${ALTA_UP?"Subiendo la foto… (puedes seguir)":a.fotoB64?"Repetir la foto":"Hacer foto"}</button>
       ${a.bar?`<p class="catnote" style="margin:0">Código de barras: <b style="font-family:var(--f-mono)">${esc(a.bar)}</b></p>`:`<button class="btn block" id="a_bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14"/></svg>Escanear su código de barras</button>`}
       <button class="btn primary block" id="a_next">${a.fotoB64||a.bar?"Siguiente":"Saltar este paso"}</button></section>`;
+    /* The photo uploads in the background: the next steps can be filled meanwhile. When it finishes, only step 1
+       is redrawn; redrawing step 2 closed the keyboard while typing the name (Xavi's video, 6-11-2026). */
     $("#a_photo").onclick=async()=>{ const blob=await takePhoto(1000); if(!blob) return;
-      const b=$("#a_photo"); if(b){ b.disabled=true; b.textContent="Subiendo…"; }
-      try{ const b64=await blobToBase64(blob); const r=await api("api_uploadPhoto", tecAuth(), b64); a.foto=r.id; a.fotoB64=b64; }
-      catch(e){ toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Inténtalo de nuevo."); }
-      if(S.view==="alta") viewAlta(); };
+      let b64=""; try{ b64=await blobToBase64(blob); }catch(e){ toast("No se pudo leer la foto. Inténtalo de nuevo."); return; }
+      a.fotoB64=b64; a.foto="";
+      const up=ALTA_UP=api("api_uploadPhoto", tecAuth(), b64).then(r=>{ if(S.alta===a&&a.fotoB64===b64) a.foto=r.id; })
+        .catch(e=>{ if(S.alta===a&&a.fotoB64===b64) a.fotoB64=""; toast(e&&e.code==="too_large"?"La foto es demasiado grande.":"No se pudo subir la foto. Repítela."); })
+        .finally(()=>{ if(ALTA_UP===up) ALTA_UP=null; if(S.view==="alta"&&S.alta===a&&a.step===1) viewAlta(); });
+      viewAlta(); };
     const ab=$("#a_bar"); if(ab) ab.onclick=()=>{ S.scanFor="altabar"; openScanner(); };
     $("#a_next").onclick=()=>{ a.step=2; viewAlta(); if(!a.bar) setTimeout(()=>{ const n=$("#a_name"); if(n) n.focus(); },50); };   // with a barcode, leave the keyboard closed so the internet names show
     return;
@@ -1886,6 +1891,7 @@ async function altaSave(more){
   S.busy=true; app.querySelectorAll("#a_save,#a_more").forEach(b=>{ b.disabled=true; b.dataset.txt=b.textContent; b.textContent="Guardando… (espera a Google)"; });
   let r=null;
   try{
+    if(ALTA_UP) await ALTA_UP;   // the photo goes with the product
     const mv=a.move&&S.products.get(a.move);
     if(mv) r=await api("api_saveProduct", tecAuth(), {codigo:mv.codigo, nombre:mv.nombre, descripcion:mv.descripcion||"", ubicacion:a.ubic, foto:a.foto||mv.foto||"", prestamo:!!mv.prestamo, proveedor:mv.proveedor||"", minimo:Number(mv.minimo)||0, cantidad:a.cant, nivel:a.niv, lado:a.lado, familia:a.fam}, false);
     for(let i=0;i<3&&!r;i++){
@@ -3565,7 +3571,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-05.4";
+const APP_VERSION="2026-11-06.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
