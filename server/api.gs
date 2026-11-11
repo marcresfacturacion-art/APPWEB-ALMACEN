@@ -32,6 +32,7 @@ function doPost(e) {
     addShelves_();
     mayusculas_();
     fechas_();
+    baldas11_();
     tecnicos13_();
     var fn = fns[req.fn];
     out = fn ? fn.apply(null, Array.isArray(req.args) ? req.args : []) : { err: 'bad', msg: 'función desconocida' };
@@ -96,14 +97,21 @@ function setFamilia_(code, fam) {
  * Pestaña «Niveles» de la hoja: [código del producto, nivel]. La gestiona solo este archivo. */
 /* La balda se guarda como número: 1 = la de abajo. Cada estante tiene sus baldas (3 si no se dice otra cosa). */
 var NIV_SHEET_ = 'Niveles', NIV_OLD_ = { abajo: '1', medio: '2', arriba: '3' }, LADOS_ = ['izq', 'centro', 'der'];
-function normNivel_(v) { v = String(v == null ? '' : v).trim().toLowerCase(); if (NIV_OLD_[v]) return NIV_OLD_[v]; return /^[1-9]$/.test(v) ? v : ''; }
+function normNivel_(v) { v = String(v == null ? '' : v).trim().toLowerCase(); if (NIV_OLD_[v]) return NIV_OLD_[v]; return /^([1-9]|1[0-2])$/.test(v) ? v : ''; }
 function baldas_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('BALDAS') || '{}') || {}; } catch (e) { return {}; } }
-/** Xavi dice cuántas baldas tiene un estante (de 2 a 8). */
+/** Xavi dice cuántas baldas tiene un estante (de 2 a 12). */
+/* Una vez (11-11-2026): Maquinaria y Cables tienen 9 baldas y PVC 2 tiene 11. */
+function baldas11_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('BALDAS_V') === '1') return;
+  var b = baldas_(); b.cb_tapiado = 9; b.cb_cables = 9; b.cb_pvc2 = 11;
+  props.setProperty('BALDAS', JSON.stringify(b)); props.setProperty('BALDAS_V', '1');
+}
 function setBaldas_(token, shelf, n) {
   return guard_(function () {
     admin_(token);
     n = Math.floor(Number(n));
-    if (SHELVES.indexOf(shelf) < 0 || !(n >= 2 && n <= 8)) return { err: 'bad' };
+    if (SHELVES.indexOf(shelf) < 0 || !(n >= 2 && n <= 12)) return { err: 'bad' };
     var b = baldas_(); b[shelf] = n;
     PropertiesService.getScriptProperties().setProperty('BALDAS', JSON.stringify(b));
     return { ok: true, baldas: b };

@@ -1148,7 +1148,9 @@ function cbSvg(sel){
 /* ---------- Altura en el estante (arriba, en medio, abajo) con un dibujo en 3D del estante ---------- */
 /* Each shelf has its own number of levels (3 unless Xavi sets another in the map). Level 1 is the bottom one. */
 const NIV_OLD={abajo:1,medio:2,arriba:3};
-const nBaldas = k => Math.min(8,Math.max(2,Number(S.baldas[k])||3));
+/* Xavi (11-11-2026): Maquinaria y Cables tienen 9 baldas y PVC 2 tiene 11. Hasta 12. */
+const BALDAS_MAX=12, BALDAS_DEF={cb_tapiado:9, cb_cables:9, cb_pvc2:11};
+const nBaldas = k => Math.min(BALDAS_MAX,Math.max(2,Number(S.baldas[k])||BALDAS_DEF[k]||3));
 const LADOS={izq:"Izquierda",centro:"Centro",der:"Derecha"};
 /* Families (Xavi, 2026-10-16): small fittings and materials in the main warehouse; electrical, pumps,
    machines and anything expensive or delicate in the Cuarto blanco. Same keys as FAMILIAS_ in api.gs. */
@@ -1244,7 +1246,7 @@ function shelfRack(sel){
   const p=S.code&&S.products.get(S.code), n=nBaldas(sel), here=p&&locKey(p)===sel, lv=here?nivOf(p):0;
   return `<div class="rack"><div class="label">${esc(SHELVES[sel].name)} · ${n} baldas</div>${rack3d(SHELVES[sel].color,lv,n,here&&lv?ladoOf(p):"")}
     ${here&&nivLabel(p)?`<p class="note" style="margin:0;text-align:center">${esc(p.nombre)}: <b>${esc(nivLabel(p))}</b></p>`:""}
-    ${S.adminOk?`<div class="note" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Baldas de este estante: ${[2,3,4,5,6,7,8].map(k=>`<button class="btn" data-baldas="${k}" aria-pressed="${k===n}" style="min-width:44px;padding:6px 10px${k===n?";background:var(--brand);color:var(--brand-fg)":""}">${k}</button>`).join("")}</div>
+    ${S.adminOk?`<div class="note" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Baldas de este estante: ${Array.from({length:BALDAS_MAX-1},(_,i)=>i+2).map(k=>`<button class="btn" data-baldas="${k}" aria-pressed="${k===n}" style="min-width:44px;padding:6px 10px${k===n?";background:var(--brand);color:var(--brand-fg)":""}">${k}</button>`).join("")}</div>
       ${[...S.products.values()].some(p=>locKey(p)===sel&&nivOf(p))?`<div class="note" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Mover todo lo de este estante: <button class="btn" data-shift="1" style="padding:6px 12px">▲ Una balda arriba</button><button class="btn" data-shift="-1" style="padding:6px 12px">▼ Una balda abajo</button></div>`:""}`:""}</div>`;
 }
 /* Xavi (6-11-2026): Latón 2 tiene 7 baldas y se pusieron con 5; lo de arriba quedó en medio.
@@ -3603,7 +3605,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-11.1";
+const APP_VERSION="2026-11-11.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
