@@ -1247,10 +1247,31 @@ function shelfRack(sel){
   return `<div class="rack"><div class="label">${esc(SHELVES[sel].name)} · ${n} baldas</div>${rack3d(SHELVES[sel].color,lv,n,here&&lv?ladoOf(p):"")}
     ${here&&nivLabel(p)?`<p class="note" style="margin:0;text-align:center">${esc(p.nombre)}: <b>${esc(nivLabel(p))}</b></p>`:""}
     ${S.adminOk?`<div class="note" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Baldas de este estante: ${Array.from({length:BALDAS_MAX-1},(_,i)=>i+2).map(k=>`<button class="btn" data-baldas="${k}" aria-pressed="${k===n}" style="min-width:44px;padding:6px 10px${k===n?";background:var(--brand);color:var(--brand-fg)":""}">${k}</button>`).join("")}</div>
-      ${[...S.products.values()].some(p=>locKey(p)===sel&&nivOf(p))?`<div class="note" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Mover todo lo de este estante: <button class="btn" data-shift="1" style="padding:6px 12px">▲ Una balda arriba</button><button class="btn" data-shift="-1" style="padding:6px 12px">▼ Una balda abajo</button></div>`:""}`:""}</div>`;
+      ${[...S.products.values()].some(p=>locKey(p)===sel&&nivOf(p))?`<div class="note" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Mover todo lo de este estante: <button class="btn" data-shift="1" style="padding:6px 12px">▲ Una balda arriba</button><button class="btn" data-shift="-1" style="padding:6px 12px">▼ Una balda abajo</button></div>
+      <div class="note" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Poner todo en el lado (la balda no cambia): ${Object.entries(LADOS).map(([l,n])=>`<button class="btn" data-alllado="${l}" style="padding:6px 12px">${n}</button>`).join("")}</div>`:""}`:""}</div>`;
 }
 /* Xavi (6-11-2026): Latón 2 tiene 7 baldas y se pusieron con 5; lo de arriba quedó en medio.
    Sube o baja una balda todo lo del estante (lo que ya está arriba del todo se queda arriba). */
+/* Xavi (11-11-2026): en Latón 3 solo hay izquierda y derecha; todo a un lado sin tocar la balda. */
+async function shelfLado(k, l){
+  if(S.busy) return;
+  if(!confirm(`¿Poner todo lo de ${SHELVES[k].name} en el lado ${LADOS[l].toUpperCase()}? La balda de cada producto no cambia.`)) return;
+  S.busy=true;
+  try{
+    try{ await poll(); }catch(e){}
+    const list=[...S.products.values()].filter(p=>locKey(p)===k&&ladoOf(p)!==l);
+    if(!list.length){ toast(`Ya está todo en ${LADOS[l]}.`); return; }
+    let done=0;
+    for(const p of list){
+      toast(`Cambiando… ${done+1} de ${list.length}`);
+      const r=await api("api_saveProduct", tecAuth(), {codigo:p.codigo, nombre:p.nombre, descripcion:p.descripcion||"", ubicacion:p.ubicacion, foto:p.foto||"", prestamo:!!p.prestamo, proveedor:p.proveedor||"", minimo:Number(p.minimo)||0, cantidad:p.cantidad, nivel:S.niv[p.codigo]||"", lado:l}, false);
+      if(r&&r.product&&r.product.lado) S.lados[p.codigo]=r.product.lado;
+      done++;
+    }
+    toast(`Hecho: ${done} producto${done===1?"":"s"} en ${LADOS[l]}.`);
+  }catch(err){ handleWriteError(err); }
+  finally{ S.busy=false; if(S.view==="mapa") viewMap(); }
+}
 async function shelfShift(k, d){
   if(S.busy) return;
   const n=nBaldas(k);
@@ -1293,6 +1314,7 @@ function viewMap(){
   app.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ S.mapRoom=b.dataset.room; if(S.mapSel&&SHELVES[S.mapSel]&&roomOf(S.mapSel)!==S.mapRoom) S.mapSel=null; viewMap(); });
   const tf=$("#toficha"); if(tf) tf.onclick=()=>go("ficha",{code:S.code});
   app.querySelectorAll("[data-shift]").forEach(b=>b.onclick=()=>shelfShift(S.mapSel, +b.dataset.shift));
+  app.querySelectorAll("[data-alllado]").forEach(b=>b.onclick=()=>shelfLado(S.mapSel, b.dataset.alllado));
   app.querySelectorAll("[data-baldas]").forEach(b=>b.onclick=async()=>{
     const n=+b.dataset.baldas, k=S.mapSel, old=S.baldas[k];
     S.baldas[k]=n; viewMap();
@@ -3605,7 +3627,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-11.2";
+const APP_VERSION="2026-11-11.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
