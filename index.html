@@ -21,7 +21,7 @@
 :root{
   --bg:#F1F4F9; --surface:#FFFFFF; --surface-2:#EEF2F8; --fg:#0F1115; --muted:#59616E; --line:#D5DDE9;
   --accent:#184595; --accent-fg:#ffffff; --brand:#184595; --brand-fg:#ffffff; --danger:#8B1A1A; --ok:#2D6A4F; color-scheme:light;
-  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-verdeclaro:#a5d6a7; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff; --cb-lavanda:#c3b1f0; --cb-fitting:#d2392f; --cb-granate:#8e1b45;
+  --sh-azul:#2f5fd0; --sh-rojo:#d2392f; --sh-gris:#8a96a3; --sh-negro:#20262d; --sh-celeste:#3fb0e6; --sh-verde:#2f9e55; --sh-marron:#8a5a2b; --sh-verdeclaro:#a5d6a7; --sh-loan:#7a4fd0; --cb-amarillo:#f2c014; --cb-naranja:#f07a1f; --cb-rosa:#e2559b; --cb-turquesa:#14a89a; --cb-lima:#9ccc2e; --cb-dorado:#c99a1e; --cb-bombas:#cdb38a; --cb-cajas:#f2a27a; --cb-menta:#8fdcc2; --cb-blanco:#ffffff; --cb-lavanda:#c3b1f0; --cb-fitting:#ff8a80; --cb-morado:#6a3fb5; --cb-oliva:#827717; --cb-marino:#0b3d91; --cb-rosapalo:#f8bbd0; --cb-granate:#8e1b45;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -478,7 +478,7 @@ const SHELVES = {
   negro:  {name:"Estante negro",  color:"var(--sh-negro)"},
   verdeclaro:{name:"Estante verde claro", color:"var(--sh-verdeclaro)"},
   /* Cuarto blanco: lo eléctrico y las bombas. Colores que no se repiten en el almacén principal. */
-  /* Según el segundo dibujo de Xavi (2026-10-06), retocado por él en el editor del mapa (2026-10-19 y 2026-10-22). */
+  /* Según el segundo dibujo de Xavi (2026-10-06), retocado por él en el editor del mapa (último: 2026-11-11). Colores sin repetir salvo los blancos (eléctrico). */
   cb_bombas:    {name:"Zona de bombas",   color:"var(--cb-bombas)",   room:"cb"},
   cb_tapiado:   {name:"Maquinaria",       color:"var(--cb-dorado)",   room:"cb"},
   cb_blanca:    {name:"Eléctrico derecha",   color:"var(--cb-blanco)",   room:"cb"},
@@ -486,14 +486,18 @@ const SHELVES = {
   cb_almblanco: {name:"Eléctrico izquierda", color:"var(--cb-blanco)",   room:"cb"},
   cb_el1:       {name:"Eléctrico estante 1", color:"var(--cb-blanco)",   room:"cb"},
   cb_el2:       {name:"Galvanizado e inox",  color:"var(--cb-granate)",  room:"cb"},
-  cb_galv2:     {name:"Galvanizado e inox 2", color:"var(--cb-granate)", room:"cb"},
+  cb_galv2:     {name:"Galvanizado e inox 2", color:"var(--cb-morado)", room:"cb"},
   cb_pq:        {name:"Eléctrico pequeño", color:"var(--cb-blanco)",   room:"cb"},
   cb_e1:        {name:"Electrosoldables",        color:"var(--cb-amarillo)", room:"cb"},
   cb_e2:        {name:"Latón",               color:"var(--cb-naranja)",  room:"cb"},
   cb_laton2:    {name:"Latón 2",             color:"var(--cb-lavanda)",  room:"cb"},
+  cb_laton3:    {name:"Latón 3",             color:"var(--cb-menta)",    room:"cb"},
   cb_fitting:   {name:"Fitting",             color:"var(--cb-fitting)",  room:"cb"},
   cb_e3:        {name:"Estante rosa",        color:"var(--cb-rosa)",     room:"cb"},
-  cb_e4:        {name:"Estante lima",        color:"var(--cb-lima)",     room:"cb"},
+  cb_e4:        {name:"PVC",                 color:"var(--cb-lima)",     room:"cb"},
+  cb_pvc2:      {name:"PVC 2",               color:"var(--cb-marino)",   room:"cb"},
+  cb_cables:    {name:"Cables",              color:"var(--cb-oliva)",    room:"cb"},
+  cb_importante:{name:"Importante",          color:"var(--cb-rosapalo)", room:"cb"},
   cb_e5:        {name:"Azul del cuarto blanco",  color:"var(--cb-turquesa)", room:"cb"},
 };
 const ROOMS = {main:"Almacén principal", cb:"Cuarto blanco"};
@@ -1120,21 +1124,25 @@ function cbSvg(sel){
     <rect x="125" y="103" width="21" height="83" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
     <text transform="translate(135.5 144.5) rotate(-90)" text-anchor="middle" dominant-baseline="middle" style="font-size:9px;fill:var(--muted);font-weight:600">MESA</text>
     ${g("cb_bombas",r("cb_bombas",36.5,41.75,132,29.5,'stroke-dasharray="4 3"'),102.5,56.5,"BOMBAS",{size:11})}
-    ${g("cb_laton2",r("cb_laton2",10.75,41,24.5,59),23,70.5,"LATÓN 2",{rot:1,size:8})}
-    ${g("cb_e2",r("cb_e2",9.5,98,25,48),22,122,"LATÓN",{rot:1,size:9})}
-    ${g("cb_fitting",r("cb_fitting",10.5,145.75,25,39.5),23,165.5,"FITTING",{rot:1,size:7.5,fill:"#fff"})}
-    ${g("cb_e3",r("cb_e3",168.5,41.5,151,20),244,51.5,"ROSA",{size:11})}
-    ${g("cb_tapiado",r("cb_tapiado",319.5,40,20,65),329.5,72.5,"MAQUINARIA",{rot:1,size:7.5})}
-    ${g("cb_e4",r("cb_e4",323,106.25,16,71.5),331,142,"LIMA",{rot:1,size:9})}
     ${g("cb_e1",r("cb_e1",318,215.75,21,42.5),314,237,"ELECTROSOLD.",{size:8,anchor:"end"})}
-    ${g("cb_e5",r("cb_e5",159.5,229.5,25,30),172,244.5,"AZUL",{size:7})}
-    ${g("cb_galv2",r("cb_galv2",109,104.5,16,36),117,122.5,"GALV/INOX 2",{rot:1,size:4.6,fill:"#fff"})}
-    ${g("cb_el2",r("cb_el2",109,142,14,44),116,164,"GALV/INOX",{rot:1,size:5.5,fill:"#fff"})}
-    ${g("cb_el1",r("cb_el1",78.5,186.25,44,14.5),100.5,193.5,"ELÉC. 1",{size:7.5})}
-    ${g("cb_blanca",r("cb_blanca",10.5,186,67,16),44,194,"ELÉC. DCHA.",{size:7})}
-    ${g("cb_blanco",r("cb_blanco",11,202,20,43),21,223.5,"ELÉC. CEN.",{rot:1,size:6})}
-    ${g("cb_almblanco",r("cb_almblanco",11.5,245.5,75,15),49,253,"ELÉC. IZQ.",{size:7})}
-    ${g("cb_pq",r("cb_pq",88,245,57,15),116.5,252.5,"ELÉC. PEQ.",{size:7})}
+    ${g("cb_e2",r("cb_e2",9.25,105.25,24.5,40.5),21.5,125.5,"LATÓN",{rot:1,size:11})}
+    ${g("cb_e3",r("cb_e3",168.5,41.5,151,20),244,51.5,"ROSA",{size:11})}
+    ${g("cb_tapiado",r("cb_tapiado",320,39.25,20,32.5),330,55.5,"MAQUINARIA",{rot:1,size:4.34})}
+    ${g("cb_e4",r("cb_e4",319,143,22,35),330,160.5,"PVC",{rot:1,size:11})}
+    ${g("cb_e5",r("cb_e5",159.5,229.5,25,30),172,244.5,"AZUL",{size:8.09})}
+    ${g("cb_blanca",r("cb_blanca",10.5,186,67,16),44,194,"ELÉC. DCHA.",{size:8.56})}
+    ${g("cb_blanco",r("cb_blanco",11,202,20,43),21,223.5,"ELÉC. CEN.",{rot:1,size:5.88})}
+    ${g("cb_almblanco",r("cb_almblanco",11.5,245.5,75,15),49,253,"ELÉC. IZQ.",{size:8.25})}
+    ${g("cb_pq",r("cb_pq",88,245,57,15),116.5,252.5,"ELÉC. PEQ.",{size:7.94})}
+    ${g("cb_el1",r("cb_el1",78.5,186.25,44,14.5),100.5,193.5,"ELÉC. 1",{size:7.98})}
+    ${g("cb_el2",r("cb_el2",109,142,14,44),116,164,"GALV/INOX",{rot:1,size:6.7,fill:"#fff"})}
+    ${g("cb_laton2",r("cb_laton2",9.75,77.75,24.5,27.5),22,91.5,"LATÓN 2",{size:4.52})}
+    ${g("cb_galv2",r("cb_galv2",109,104.5,16,36),117,122.5,"GALV/INOX 2",{rot:1,size:4.41,fill:"#fff"})}
+    ${g("cb_fitting",r("cb_fitting",10.5,145.75,25,39.5),23,165.5,"FITTING",{rot:1,size:7.67})}
+    ${g("cb_laton3",r("cb_laton3",9,42.5,28,34),23,59.5,"LATÓN 3",{size:5.25})}
+    ${g("cb_cables",r("cb_cables",319.5,73.25,21,31.5),330,89,"CABLES",{rot:1,size:6.99,fill:"#fff"})}
+    ${g("cb_pvc2",r("cb_pvc2",318,178,24,37),330,196.5,"PVC 2",{rot:1,size:10,fill:"#fff"})}
+    ${g("cb_importante",r("cb_importante",319.75,105.75,21.5,38.5),330.5,125,"IMPORTANTE",{rot:1,size:5.22})}
   </svg>`;
 }
 /* ---------- Altura en el estante (arriba, en medio, abajo) con un dibujo en 3D del estante ---------- */
@@ -3595,7 +3603,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-06.2";
+const APP_VERSION="2026-11-11.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;

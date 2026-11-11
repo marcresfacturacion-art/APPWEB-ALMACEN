@@ -43,7 +43,7 @@ function doPost(e) {
 }
 
 /* Estantes del Cuarto blanco (lo eléctrico y las bombas), además de los del almacén principal. */
-var CB_SHELVES_ = ['cb_bombas', 'cb_cajas', 'cb_tapiado', 'cb_blanca', 'cb_blanco', 'cb_almblanco', 'cb_pq', 'cb_e1', 'cb_e2', 'cb_e3', 'cb_e4', 'cb_e5', 'cb_maq2', 'cb_pulidora', 'cb_el1', 'cb_el2', 'cb_laton2', 'cb_galv2', 'cb_fitting'];
+var CB_SHELVES_ = ['cb_bombas', 'cb_cajas', 'cb_tapiado', 'cb_blanca', 'cb_blanco', 'cb_almblanco', 'cb_pq', 'cb_e1', 'cb_e2', 'cb_e3', 'cb_e4', 'cb_e5', 'cb_maq2', 'cb_pulidora', 'cb_el1', 'cb_el2', 'cb_laton2', 'cb_galv2', 'cb_fitting', 'cb_laton3', 'cb_cables', 'cb_pvc2', 'cb_importante'];
 function addShelves_() {
   CB_SHELVES_.forEach(function (k) { if (SHELVES.indexOf(k) < 0) SHELVES.push(k); });
 }
