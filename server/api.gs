@@ -10,7 +10,7 @@
  * Propiedades de la secuencia de comandos), esa es la contraseña en todos los móviles y no se puede cambiar desde la app.
  */
 var TTL_INV_ = 60, TTL_TEC_ = 120, TTL_CLI_ = 1800;
-var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1, api_albRead: 1, api_albList: 1, api_pinLogin: 1, api_pinList: 1 };
+var READS_ = { api_bootstrap: 1, api_poll: 1, api_techs: 1, api_productMoves: 1, api_history: 1, api_adminLogin: 1, api_catalog: 1, api_plate: 1, api_barSearch: 1, api_barIA: 1, api_ppList: 1, api_albRead: 1, api_albList: 1, api_pinLogin: 1, api_pinList: 1, api_adminEnter: 1 };
 
 function doPost(e) {
   var out;
@@ -21,7 +21,8 @@ function doPost(e) {
       api_productMoves: productMoves_, api_move: api_move, api_lend: api_lend, api_return: api_return,
       api_saveProduct: saveProductUpper_, api_deleteProduct: api_deleteProduct, api_toggleLoan: api_toggleLoan,
       api_addClient: api_addClient, api_uploadPhoto: api_uploadPhoto, api_adminSetup: adminSetup_,
-      api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: api_history,
+      api_adminLogin: adminLogin_, api_adminChangePassword: adminChangePassword_, api_history: history_,
+      api_adminEnter: adminEnter_, api_moveMany: moveMany_,
       api_setMin: api_setMin, api_recount: api_recount, api_addTech: api_addTech, api_removeTech: api_removeTech,
       api_catalog: catalog_, api_catalogImport: catalogImport_, api_plate: plate_,
       api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_,
@@ -259,6 +260,70 @@ function adminLogin_(tecId, pw) {
       return { ok: true, token: r.token, moves: lastRows_('Movimientos', 1000).reverse(), sheetUrl: ss_().getUrl() };
     }
     return { ok: true, token: token_(tecId), moves: lastRows_('Movimientos', 1000).reverse(), sheetUrl: ss_().getUrl() };
+  });
+}
+/* Administrativos (Xavi, 13-11-2026): nombre + UNA contraseña igual para todos (propiedad ADMIN_PW, sin distinguir mayúsculas).
+ * Da a la vez la sesión de la persona (como el PIN) y el acceso restringido: dentro ya no se pide otra contraseña.
+ * Los técnicos siguen con su PIN. 6 fallos seguidos bloquean a esa persona 15 minutos. */
+function adminEnter_(tecId, pw) {
+  return guard_(function () {
+    var tid = plainId_(tecId), t = restrictedRow_(tid), c = CacheService.getScriptCache();
+    var fails = Number(c.get('admf_' + tid)) || 0;
+    if (fails >= 6) return { err: 'pinlock' };
+    var props = PropertiesService.getScriptProperties(), fixed = fixedPw_(), ok;
+    if (fixed) ok = String(pw || '').trim().toUpperCase() === String(fixed).trim().toUpperCase();
+    else if (props.getProperty('PW_HASH')) ok = hash_(pw, props.getProperty('PW_SALT')) === props.getProperty('PW_HASH');
+    else return { err: 'nopw' };
+    if (!ok) { Utilities.sleep(300); c.put('admf_' + tid, String(fails + 1), 900); return { err: 'wrong', left: 5 - fails }; }
+    c.remove('admf_' + tid);
+    var rec = pins_()[tid], tk = Utilities.getUuid();
+    c.put('tk_' + tk, tid + '|' + (rec ? rec.split('|')[0] : ''), 21600);
+    return { ok: true, tk: tk, token: token_(tid), nombre: t.nombre };
+  });
+}
+/* Historial de un mes (ym = '2026-11'). Sin mes, los 1000 últimos como antes. */
+function history_(token, ym) {
+  return guard_(function () {
+    admin_(token);
+    if (!/^\d{4}-\d{2}$/.test(String(ym || ''))) return api_history(token);
+    var y = Number(ym.slice(0, 4)), m = Number(ym.slice(5)) - 1;
+    var from = new Date(y, m, 1).getTime(), to = new Date(y, m + 1, 1).getTime();
+    var moves = rows_('Movimientos').filter(function (r) { var f = Number(r.fecha) || 0; return f >= from && f < to; })
+      .map(function (r) { delete r._row; return r; }).reverse();
+    return { moves: moves, ym: ym, sheetUrl: ss_().getUrl() };
+  });
+}
+/* «Sacar para un técnico» (lista del súper): todo de una vez, bajo un solo candado. Si de algo no queda bastante, no se saca nada. */
+function moveMany_(tecId, items, dest) {
+  return guard_(function () {
+    var t = tech_(tecId), d = dest_(dest), sum = {}, order = [];
+    (items || []).forEach(function (x) {
+      var code = String(x && x.code || ''), delta = Math.trunc(Number(x && x.delta));
+      if (!code || !delta) return;
+      if (!(code in sum)) { sum[code] = 0; order.push(code); }
+      sum[code] += delta;
+    });
+    if (!order.length || order.length > 150) return { err: 'bad' };
+    return locked_(function () {
+      var by = {}; rows_('Productos').forEach(function (p) { by[String(p.codigo)] = p; });
+      var gone = order.filter(function (c) { return !by[c]; });
+      if (gone.length) return { err: 'gone', codes: gone };
+      var short = order.filter(function (c) { return (Number(by[c].cantidad) || 0) + sum[c] < 0; })
+        .map(function (c) { return { code: c, cur: Number(by[c].cantidad) || 0 }; });
+      if (short.length) return { err: 'short', items: short };
+      var now = new Date(), next = {}, logs = [];
+      order.forEach(function (c) {
+        var p = by[c], cur = Number(p.cantidad) || 0, n = cur + sum[c];
+        p.cantidad = n; p.actualizado = now; p.actualizadoPor = t.nombre; write_('Productos', p);
+        logs.push(toRow_('Movimientos', Object.assign({ fecha: now, detalle: '' }, d,
+          { tipo: sum[c] < 0 ? 'salida' : 'entrada', codigo: p.codigo, producto: p.nombre, delta: sum[c], antes: cur, despues: n },
+          { tecnico: t.nombre, tecnicoId: t.id })));
+        next[c] = n;
+      });
+      var s = sh_('Movimientos');
+      s.getRange(s.getLastRow() + 1, 1, logs.length, logs[0].length).setValues(logs);
+      return { ok: true, next: next };
+    });
   });
 }
 function adminSetup_(tecId, pw) { return fixedPw_() ? { err: 'exists' } : api_adminSetup(tecId, pw); }

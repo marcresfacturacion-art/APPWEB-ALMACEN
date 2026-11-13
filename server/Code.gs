@@ -349,8 +349,9 @@ function restricted_(tecId) { const t = tech_(tecId); if (!bool_(t.restringido))
 function restrictedRow_(id) { const t = techRow_(id); if (!bool_(t.restringido)) throw new Error('auth'); return t; }
 function token_(tecId) { const tk = Utilities.getUuid(); CacheService.getScriptCache().put('adm_' + tk, plainId_(tecId), 3600); return tk; }
 function admin_(token) {
-  const id = token && CacheService.getScriptCache().get('adm_' + token);
+  const c = CacheService.getScriptCache(), id = token && c.get('adm_' + token);
   if (!id) throw new Error('auth');
+  c.put('adm_' + token, id, 3600);   // mientras se use, no caduca
   return restrictedRow_(id);
 }
 function api_adminSetup(tecId, pw) {

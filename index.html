@@ -184,8 +184,29 @@ form.edit input,form.edit select,form.edit textarea{min-height:48px;padding:10px
   #printsheet.plist td:first-child{font-family:monospace;white-space:nowrap}
   #printsheet.plist td:last-child,#printsheet.plist th:last-child{width:8mm;text-align:center}
   #printsheet.plist tr{break-inside:avoid;page-break-inside:avoid}
+  #printsheet .pp-page{break-after:page;page-break-after:always}#printsheet .pp-page:last-child{break-after:auto;page-break-after:auto}
+  #printsheet.parte-print td:last-child,#printsheet.parte-print th:last-child{width:14mm;text-align:right}
 }
 .qrcard button{border:1px solid #bbb;background:#f4f4f4;color:#111;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer}
+.giant.green{background:var(--ok);box-shadow:0 4px 0 color-mix(in srgb,var(--ok) 60%,#000);min-height:96px}.giant.green .gt{font-size:24px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:116px;padding:12px 8px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--accent);cursor:pointer;text-align:center;box-shadow:0 1px 3px rgba(15,17,21,.06)}
+.tile .ti{font-size:36px;line-height:1}.tile .tt{font-family:var(--f-display);font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase;line-height:1.15}.tile small{color:var(--muted);font-size:13px}
+.cart{display:flex;flex-direction:column;gap:12px}.chips.big .chip{font-size:16px;padding:9px 14px}
+#c_pbox{display:flex;flex-direction:column;gap:6px}#c_pbox[hidden]{display:none}#c_pbox input{min-height:46px;font-size:16px}
+.crow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:10px 10px;border-bottom:1px solid var(--line);background:var(--surface)}.crow:last-child{border-bottom:0}
+.crow .txt{min-width:0;cursor:pointer}.crow .name{font-weight:700;line-height:1.2}
+.cq{display:flex;align-items:center;gap:4px}.cb{width:40px;height:40px;border-radius:8px;border:2px solid var(--accent);background:var(--surface);color:var(--accent);font-size:22px;font-weight:800;cursor:pointer;line-height:1}
+.cn{width:48px;height:40px;text-align:center;font-size:19px;font-weight:800;border:1px solid var(--line);border-radius:8px;-moz-appearance:textfield}.cn::-webkit-inner-spin-button,.cn::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.cx{width:36px;height:40px;border:0;background:none;color:var(--danger);font-size:22px;font-weight:800;cursor:pointer}
+.tipbox{margin:0;padding:10px 12px;border:1.5px solid #e2b93b;background:#fff6d6;border-radius:10px;font-size:14px;color:#5b4a12}
+.cartgo{background:var(--ok);border-color:var(--ok);color:#fff;min-height:68px;font-size:22px}.cartgo:disabled{opacity:.45}
+.monthbar{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:8px;margin-bottom:10px}.monthbar h3{margin:0;text-align:center;font-size:22px}.monthbar h3:first-letter{text-transform:uppercase}.btn.mb{padding:0;font-size:26px;min-height:48px}
+.hfilt{margin-bottom:10px}.hfilt>summary{cursor:pointer;color:var(--accent);font-weight:600;padding:4px 0}.hfilt .filters{margin-top:8px}
+.hday>summary{list-style:none;cursor:pointer}.hday>summary::-webkit-details-marker{display:none}.hday>summary span:before{content:"▸ ";color:#d26b5d}.hday[open]>summary span:before{content:"▾ "}.hday:not([open])>summary{border-bottom:0}
+.hmore{display:block;width:100%;padding:12px 54px;border:0;background:none;color:var(--accent);font-weight:700;font-size:15px;text-align:left;cursor:pointer}
+.parte{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden;margin-bottom:12px;display:flex;flex-direction:column}.parte header{display:flex;justify-content:space-between;align-items:baseline;padding:10px 12px;background:var(--surface-2);font-size:17px}.parte header small{color:var(--muted)}
+.parte .pl{display:grid;grid-template-columns:48px 1fr auto;align-items:center;min-height:50px;border-bottom:1px solid var(--line)}.parte .btn{margin:10px;width:auto}
 .groups{display:flex;flex-direction:column;gap:8px}
 .roomlbl{margin-top:6px}
 .roomtabs{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--brand);border:2px solid var(--brand);border-radius:10px;overflow:hidden}
@@ -252,7 +273,7 @@ form.edit .check span{flex:1;min-width:0}
 .nbl:before{content:"";position:absolute;left:44px;top:0;bottom:0;border-left:2px solid #e3a59c}
 .nbt{font:700 13px var(--f-mono,ui-monospace,monospace);color:#6b6a5f;text-align:center;font-variant-numeric:tabular-nums}
 .nbx{padding:8px 10px;min-width:0;display:flex;flex-direction:column}
-.nbx b{font-size:15px;line-height:1.25}.nbx span{font-size:13px;color:#4f5b64}.nbx .nbd{font-family:ui-monospace,monospace;font-size:12px;color:#7a838a}
+.nbx b{font-size:15px;line-height:1.25}.nbx .nbp{color:var(--accent);font-weight:600}.nbx span{font-size:13px;color:#4f5b64}.nbx .nbd{font-family:ui-monospace,monospace;font-size:12px;color:#7a838a}
 .nbq{padding:0 12px;font:800 17px ui-monospace,monospace;white-space:nowrap}.nbq.neg{color:#c0392b}.nbq.pos{color:#1e8449}
 .nbq.tag{font:700 11px var(--f-body,system-ui);letter-spacing:.05em;text-transform:uppercase;color:#5b6670}
 .hello{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:.02em}
@@ -406,7 +427,7 @@ const APP_URL = IN_GAS ? (BOOT.url||"") : location.origin + location.pathname;
 if(!BOOT.p) BOOT.p = new URLSearchParams(location.search).get("p") || "";
 /* Every read and write goes to the Apps Script server; stock changes run there under a lock. */
 /* Every write is counted, so a refresh that was already on its way can't bring back what was just changed. */
-const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barSearch","api_barIA","api_ppList","api_albList","api_pinList"]);
+const READ_FNS=new Set(["api_bootstrap","api_poll","api_techs","api_productMoves","api_history","api_adminLogin","api_catalog","api_barSearch","api_barIA","api_ppList","api_albList","api_pinList","api_adminEnter"]);
 let WSEQ=0, WBUSY=0;
 function api(fn, ...args){
   if(READ_FNS.has(fn)) return apiRaw(fn, ...args);
@@ -567,17 +588,19 @@ function go(view, extra={}){
 /* ---------- Views ---------- */
 function render(){
   if(!VIEWS[S.view]) S.view="buscar";
-  $("#back").hidden = S.view==="buscar" || S.view==="login" || (S.view==="destino" && !S.destino);
+  $("#back").hidden = (S.view==="buscar"&&!S.browse) || S.view==="login" || (S.view==="destino" && !S.destino);
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", normas:"Normas", destino:"¿Para qué es?", etiquetas:"Etiquetas", alta:"Nuevo producto"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", normas:"Normas", destino:"¿Para qué es?", etiquetas:"Etiquetas", alta:"Nuevo producto", sacar:"Sacar"};
+  if(S.view==="admin"&&isAdmNew()) titles.admin=ADM_TITLES[S.adminTab]||"Restringido";
+  if(S.view==="buscar"&&S.browse) titles.buscar="Buscar";
   $("#title").textContent = titles[S.view]; $("#title").classList.toggle("long", titles[S.view].length>12);
   document.body.classList.toggle("wide", S.view==="admin"&&S.adminTab==="pc"&&isPC());
   VIEWS[S.view]();
   drawLblFab();
   const nl=$("#netlink"); if(nl) nl.hidden=!canRestricted();
 }
-const VIEWS={normas:viewNormas, login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest, etiquetas:viewLblCart, alta:viewAlta};
+const VIEWS={normas:viewNormas, login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest, etiquetas:viewLblCart, alta:viewAlta, sacar:viewCart};
 
 const LOGIN_MIN=3;
 function techMatches(q){
@@ -711,6 +734,7 @@ async function pinKey(k){
 function viewLogin(){
   if(S.normasFor) return viewNormas();
   if(S.pinFor) return viewPin();
+  if(S.admFor) return viewAdmEnter();
   const any=S.techs.some(t=>t.activo!==false);
   app.innerHTML = `<section class="login">
     <div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
@@ -751,6 +775,7 @@ function canRestricted(){
   return !!(t&&t.restringido&&t.activo!==false);
 }
 function login(t){
+  if(t.restringido){ S.admFor=t; S.admMsg=""; S.loginQ=""; return viewAdmEnter(); }
   if(t.pin){ S.pinFor=t; S.pinVal=""; S.pinMsg=""; S.loginQ=""; return viewPin(); }
   enter(t,"");
 }
@@ -762,7 +787,7 @@ function enter(t, tk){
 }
 function logout(msg){
   if(S.cat&&S.cat.admin) S.cat={ver:S.cat.ver, items:S.cat.items.map(r=>r.slice(0,4)), admin:false};
-  S.tecnico=null; S.pinFor=null; S.pinShow=null; S.normasFor=null; S.pinVal=""; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{},w:false};
+  S.tecnico=null; S.admFor=null; S.admNew=false; S.browse=false; S.histM={}; S.histRecent=false; S.cart=null; S.pinFor=null; S.pinShow=null; S.normasFor=null; S.pinVal=""; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{},w:false};
   go("login"); if(msg) toast(msg);
 }
 
@@ -795,6 +820,7 @@ function homeGroups(all){
   return room("main","📦")+room("cb","⚡")+flat("prestamos",LOAN_LOC,"🔁")+flat("none",NO_LOC,"❔");
 }
 function viewSearch(){
+  if(isAdmNew()&&!S.browse) return viewTiles();
   const q = S.q.trim().toLowerCase();
   const all = [...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
   const words = qWords(S.q);
@@ -819,7 +845,7 @@ function viewSearch(){
        <div class="groups">${homeGroups(all)}</div>`}
     ${canRestricted()&&lowList().length?`<button class="alert" id="tolow">⚠ ${lowList().length} producto${lowList().length===1?"":"s"} por debajo del mínimo</button>`:""}
     ${myLoans().length?`<div><div class="label" style="margin-bottom:6px">Lo que tienes prestado</div><div class="list">${myLoans().map(l=>`<div class="loan"><span class="txt"><div class="name">${esc(l.producto)}</div><div class="sub">${since(l.salida)}</div></span><button class="btn" data-ret="${esc(l.id)}">Devolver</button></div>`).join("")}</div></div>`:""}
-    <div class="${canRestricted()?"twobtn":""} homebtns"><button class="btn${canRestricted()?"":" block"}" id="tomap"><span class="emo" aria-hidden="true">🏭</span>Mapa</button>${canRestricted()?`<button class="btn" id="tohist" aria-label="Acceso restringido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Restringido</button>`:""}</div>`;
+    <div class="${canRestricted()&&!isAdmNew()?"twobtn":""} homebtns"><button class="btn${canRestricted()&&!isAdmNew()?"":" block"}" id="tomap"><span class="emo" aria-hidden="true">🏭</span>Mapa</button>${canRestricted()&&!isAdmNew()?`<button class="btn" id="tohist" aria-label="Acceso restringido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Restringido</button>`:""}</div>`;
   const qi=$("#q");
   qi.addEventListener("input",()=>{ S.q=qi.value; const pos=qi.selectionStart; viewSearch(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
   qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value))||(isBarText(qi.value)&&prodByBar(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
@@ -2232,11 +2258,279 @@ async function pcSave(){
   }
 }
 
+/* ---------- Administrativos (Xavi, 13-11-2026) ----------
+   Entran con su nombre y UNA contraseña igual para todos (en Apps Script, propiedad ADMIN_PW; da igual mayúsculas).
+   Eso ya abre todo: no hay otra contraseña para «Acceso restringido». El inicio son cuadraditos.
+   Los técnicos siguen igual: nombre + PIN. */
+function viewAdmEnter(){
+  const t=S.admFor;
+  app.innerHTML=`<form class="login" id="ae" novalidate>
+    <div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+    <h2>Hola, ${esc(t.nombre.split(" ")[0])}</h2>
+    <label class="field"><span class="label">Contraseña de administrativos</span><input id="ae_pw" type="password" autocomplete="current-password" autocapitalize="characters" spellcheck="false"></label>
+    <p class="pinmsg" id="ae_msg">${esc(S.admMsg||"")}</p>
+    <button class="btn primary block" type="submit" id="ae_go">Entrar</button>
+    <p class="note">La misma para todos los administrativos. Los técnicos siguen con su PIN de 4 números.<br>¿No eres tú? Cierra la app y vuelve a entrar.</p>
+  </form>`;
+  const f=$("#ae"), pw=$("#ae_pw");
+  setTimeout(()=>{ try{ pw.focus(); }catch(e){} },50);
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    if(S.admBusy) return;
+    const v=pw.value.trim(); if(!v){ pw.focus(); return; }
+    S.admBusy=true; $("#ae_go").disabled=true; const m=$("#ae_msg"); m.textContent="Comprobando…"; m.classList.add("wait");
+    try{
+      let r;
+      try{ r=await api("api_adminEnter", t.id, v); }
+      catch(e1){ if(!(e1&&e1.code==="slow")) throw e1; m.textContent="Google está tardando. Lo intento otra vez…"; r=await api("api_adminEnter", t.id, v); }
+      S.admBusy=false; S.admFor=null; S.admMsg="";
+      S.adminToken=r.token; S.adminOk=true; S.admNew=true; S.browse=false; S.hist=[]; S.histM={};
+      if(!normasOk(t)){ S.normasFor={t, tk:r.tk}; return viewNormas(); }
+      enter(t, r.tk);
+    }catch(err){
+      S.admBusy=false;
+      const c=err&&err.code;
+      if(oldServer(err)){
+        /* Servidor viejo pegado: se entra como antes (PIN y luego la contraseña de Acceso restringido). */
+        S.admFor=null; toast(OLD_SERVER_MSG);
+        if(t.pin){ S.pinFor=t; S.pinVal=""; S.pinMsg=""; return viewPin(); }
+        return enter(t,"");
+      }
+      S.admMsg=c==="wrong"?(err.left>0?`Contraseña incorrecta. ${err.left===1?"Te queda 1 intento":`Te quedan ${err.left} intentos`}.`:"Contraseña incorrecta. Espera 15 minutos."):c==="pinlock"?"Demasiados intentos. Espera 15 minutos.":c==="nopw"?"Falta poner la contraseña de administrativos en Apps Script (propiedad ADMIN_PW).":c==="auth"?"No estás en la lista de administrativos.":c==="network"?netMsg():c==="slow"?"Google no contesta. Espera un momento y vuelve a probar.":"No se ha podido comprobar. Inténtalo otra vez.";
+      if(S.view==="login"&&S.admFor){ viewAdmEnter(); }
+      if(navigator.vibrate) navigator.vibrate(120);
+    }
+  };
+}
+const isAdmNew = () => !!(S.admNew&&S.adminOk&&S.adminToken&&canRestricted());
+const ADM_TITLES={hist:"Historial", parte:"Stock del día", ped:"Pedir", pp:"Por pedir", rec:"Recuento", pc:"Contabilizar", tec:"Técnicos", pre:"Préstamos", qr:"Etiquetas QR"};
+function openAdm(tab){
+  S.browse=false; S.adminTab=tab; S.pinShow=null;
+  if(tab==="hist"){ S.hm=ymOf(new Date()); S.histOpen=new Set([new Date().toDateString()]); S.histAll=new Set(); loadHist(); }
+  if(tab==="parte"){ S.pd=new Date().toDateString(); loadHist(ymOf(new Date())); }
+  if(tab==="pp"){ S.ppSel=null; S.ppArr=null; if(S.pp) loadPP(); }
+  if(tab==="pc"&&!S.histRecent) loadRecent();
+  go("admin");
+}
+function viewTiles(){
+  const n=cartGet().items.length;
+  const T=[["buscar","🔎","Buscar",""],["mapa","🗺️","Mapa",""],["hist","📋","Historial","por días"],["parte","📄","Actualización de stock","parte del día"],
+    ["pp","🧾","Pedir",`y Por pedir${ppCount()?` · ${ppCount()}`:""}`],["pre","🔁","Préstamos",S.loans.length?`${S.loans.length} fuera`:""],["qr","🏷️","Etiquetas QR",""],["rec","🔢","Recuento",""],
+    ...(canAlta()?[["alta","➕","Material nuevo",""]]:[]),["tec","👷","Técnicos","y PIN"],...(isPC()?[["pc","🖥","Contabilizar","en el ordenador"]]:[])];
+  app.innerHTML=`
+    ${S.destino?`<div class="destbar"><span>Para: <b>${esc(destLabel())}</b></span><button class="linkbtn" id="d_change">Cambiar</button></div>`:""}
+    <button class="giant" id="scan"><span class="gt">📷 Escanear</span><small>QR o código de barras</small></button>
+    <button class="giant green" id="tocart"><span class="gt">🛒 Sacar para un técnico</span><small>${n?`${n} producto${n===1?"":"s"} en la lista, sin sacar todavía`:"Haz la lista y sácalo todo de una vez"}</small></button>
+    <div class="tiles">${T.map(([k,i,t,s])=>`<button class="tile" data-tile="${k}"><span class="ti" aria-hidden="true">${i}</span><span class="tt">${esc(t)}</span>${s?`<small>${esc(s)}</small>`:""}</button>`).join("")}</div>
+    ${lowList().length?`<button class="alert" id="tolow">⚠ ${lowList().length} producto${lowList().length===1?"":"s"} por debajo del mínimo</button>`:""}
+    ${myLoans().length?`<div><div class="label" style="margin-bottom:6px">Lo que tienes prestado</div><div class="list">${myLoans().map(l=>`<div class="loan"><span class="txt"><div class="name">${esc(l.producto)}</div><div class="sub">${since(l.salida)}</div></span><button class="btn" data-ret="${esc(l.id)}">Devolver</button></div>`).join("")}</div></div>`:""}`;
+  $("#scan").onclick=()=>{ S.scanFor=null; openScanner(); };
+  $("#tocart").onclick=()=>{ S.browse=false; go("sacar"); };
+  const dc=$("#d_change"); if(dc) dc.onclick=changeDest;
+  const tl=$("#tolow"); if(tl) tl.onclick=()=>openAdm("ped");
+  bindLoanButtons();
+  app.querySelectorAll("[data-tile]").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.tile;
+    if(k==="buscar"){ S.browse=true; S.q=""; go("buscar"); setTimeout(()=>{ const q=$("#q"); if(q) q.focus(); },60); }
+    else if(k==="mapa"){ S.browse=false; go("mapa",{mapSel:null}); }
+    else if(k==="alta"){ S.browse=false; startAlta(); }
+    else openAdm(k);
+  });
+  if(!S.pp&&!S.ppLoading) loadPP();
+}
+
+/* ---------- Sacar para un técnico: la lista del súper (Xavi, 13-11-2026) ----------
+   Se elige para quién (para mí o uno o varios técnicos), se añaden productos escaneando o buscando y se cambian
+   las cantidades. Nada queda en el historial hasta «Sacar todo»: entonces se apunta todo de una vez como
+   «Xavi lo saca para <técnico> · <destino>». La lista se guarda en el móvil por si se cierra la app. */
+const CART_KEY="almacen_cart", CART_RECENT="almacen_cart_recent";
+function cartGet(){
+  const id=S.tecnico&&S.tecnico.id;
+  if(S.cart&&S.cart.tec===id) return S.cart;
+  let c=null; try{ c=JSON.parse(localStorage.getItem(CART_KEY)||"null"); }catch(e){}
+  S.cart=c&&c.tec===id&&Array.isArray(c.items)?c:{tec:id,para:[],items:[]};
+  return S.cart;
+}
+function cartSave(){ try{ localStorage.setItem(CART_KEY,JSON.stringify(S.cart)); }catch(e){} }
+function cartRecent(){ try{ const v=JSON.parse(localStorage.getItem(CART_RECENT)||"[]"); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function cartAdd(code,n){
+  const c=cartGet(), p=S.products.get(code); if(!p) return;
+  const it=c.items.find(x=>x.code===code);
+  if(it) it.qty+=n||1; else c.items.unshift({code,qty:n||1});
+  cartSave();
+  const q=(it||c.items[0]).qty;
+  toast(p.cantidad<q?`${p.nombre}: en la lista ${q}, pero solo hay ${p.cantidad}.`:`Añadido a la lista: ${p.nombre}${q>1?` (${q})`:""}`);
+}
+function viewCart(){
+  const c=cartGet(), me=S.tecnico.nombre.split(" ")[0];
+  const recent=cartRecent().filter(n=>S.techs.some(t=>t.nombre===n&&t.activo!==false));
+  const chips=[...new Set([...c.para,...recent])].slice(0,6);
+  const total=c.items.reduce((t,x)=>t+x.qty,0);
+  const over=c.items.filter(x=>{ const p=S.products.get(x.code); return !p||x.qty>p.cantidad; });
+  const q=fold(S.cartQ||"").trim(), words=qWords(S.cartQ||"");
+  const hits=S.cartSearch&&q.length>=2?[...S.products.values()].filter(p=>!p.prestamo&&hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||"")+" "+barsOf(p.codigo).join(" "),words)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,12):[];
+  app.innerHTML=`<section class="cart">
+    ${S.destino?`<div class="destbar"><span>Para: <b>${esc(destLabel())}</b></span><button class="linkbtn" id="d_change">Cambiar</button></div>`:""}
+    <div class="label">¿Para quién?</div>
+    <div class="chips big">
+      <button type="button" class="chip${c.para.length?"":" on"}" id="c_me">Para mí</button>
+      ${chips.map(n=>`<button type="button" class="chip${c.para.includes(n)?" on":""}" data-pn="${esc(n)}">${esc(n)}</button>`).join("")}
+      <button type="button" class="chip" id="c_other">＋ Otro técnico</button>
+    </div>
+    <div id="c_pbox" ${S.cartWho?"":"hidden"}><input id="c_pq" type="search" autocomplete="off" placeholder="Nombre del técnico" value="${esc(S.cartWhoQ||"")}"><div id="c_psug" class="chips"></div></div>
+    <div class="label">La lista · ${c.items.length?`${c.items.length} producto${c.items.length===1?"":"s"}, `:""}aún no se ha sacado nada</div>
+    <div class="list">${c.items.length?c.items.map((x,i)=>{ const p=S.products.get(x.code);
+      if(!p) return `<div class="crow"><span class="txt"><div class="name">${esc(x.code)}</div><div class="code" style="color:var(--danger)">Ya no existe</div></span><span></span><button class="cx" data-rm="${i}" aria-label="Quitar">✕</button></div>`;
+      const sh=locKey(p)==="none"?null:locOf(p);
+      return `<div class="crow"><span class="txt" data-open="${esc(p.codigo)}"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)}${sh?" · "+esc(sh.name):""} · hay ${p.cantidad}</div>${x.qty>p.cantidad?`<div class="code" style="color:var(--danger);font-weight:700">Solo hay ${p.cantidad}</div>`:""}</span>
+        <span class="cq"><button class="cb" data-dec="${i}" aria-label="Uno menos">−</button><input class="cn" data-qty="${i}" type="number" inputmode="numeric" min="1" value="${x.qty}" aria-label="Cantidad"><button class="cb" data-inc="${i}" aria-label="Uno más">+</button></span>
+        <button class="cx" data-rm="${i}" aria-label="Quitar">✕</button></div>`; }).join(""):'<div class="empty">Escanea o busca lo que te llevas.</div>'}</div>
+    <div class="twobtn"><button class="btn" id="c_scan">📷 Escanear</button><button class="btn${S.cartSearch?" primary":""}" id="c_find">🔎 Buscar</button></div>
+    ${S.cartSearch?`<div class="search big"><input id="c_q" type="search" placeholder="🔍 Nombre o código" value="${esc(S.cartQ||"")}" autocomplete="off" aria-label="Buscar producto"></div>
+      <div class="list" id="c_hits">${q.length<2?'<div class="empty">Escribe al menos 2 letras.</div>':hits.length?hits.map(p=>`<button class="row" data-add="${esc(p.codigo)}"><span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · hay ${p.cantidad}</div></span><span class="go">＋</span></button>`).join(""):'<div class="empty">No hay nada con eso.</div>'}</div>`:""}
+    <p class="tipbox">Puedes añadir, cambiar cantidades y quitar lo que quieras: no queda nada en el historial hasta pulsar el botón verde.</p>
+    <button class="btn block cartgo" id="c_go" ${c.items.length&&!over.length&&!S.cartBusy?"":"disabled"}>${S.cartBusy?"Sacando…":`✓ Sacar todo · ${c.items.length} producto${c.items.length===1?"":"s"}`}</button>
+    ${over.length?`<p class="note" style="color:var(--danger);text-align:center">Corrige lo que está en rojo: no hay tantos.</p>`:""}
+    <p class="note" style="text-align:center">Queda apuntado: «${esc(me)} lo saca${c.para.length?" para "+esc(c.para.join(", ")):""} · ${esc(destLabel())}»${total?` · ${total} unidad${total===1?"":"es"}`:""}</p>
+    ${c.items.length?'<button class="linkbtn" id="c_clear" style="align-self:center">Vaciar la lista</button>':""}
+  </section>`;
+  const dc=$("#d_change"); if(dc) dc.onclick=changeDest;
+  $("#c_me").onclick=()=>{ c.para=[]; cartSave(); viewCart(); };
+  app.querySelectorAll("[data-pn]").forEach(b=>b.onclick=()=>{ const n=b.dataset.pn, i=c.para.indexOf(n); if(i>=0) c.para.splice(i,1); else c.para.push(n); cartSave(); viewCart(); });
+  $("#c_other").onclick=()=>{ S.cartWho=!S.cartWho; viewCart(); if(S.cartWho){ const i=$("#c_pq"); if(i) i.focus(); } };
+  const pq=$("#c_pq");
+  const drawWho=()=>{ const box=$("#c_psug"); if(!box) return; const w=fold(pq.value).trim();
+    const hits=w.length<2?[]:S.techs.filter(t=>t.activo!==false&&t.nombre!==S.tecnico.nombre&&!c.para.includes(t.nombre)&&w.split(/\s+/).every(x=>fold(t.nombre).includes(x))).slice(0,6);
+    box.innerHTML=w.length<2?'<span class="note">Escribe el nombre…</span>':hits.length?hits.map(t=>`<button type="button" class="chip" data-addp="${esc(t.nombre)}">＋ ${esc(t.nombre)}</button>`).join(""):'<span class="note">No hay nadie con ese nombre.</span>';
+    box.querySelectorAll("[data-addp]").forEach(b=>b.onclick=()=>{ c.para.push(b.dataset.addp); cartSave(); S.cartWho=false; S.cartWhoQ=""; viewCart(); }); };
+  if(pq){ pq.oninput=()=>{ S.cartWhoQ=pq.value; drawWho(); }; drawWho(); }
+  const it=i=>c.items[+i];
+  app.querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>{ const x=it(b.dataset.dec); if(x.qty>1){ x.qty--; cartSave(); viewCart(); } });
+  app.querySelectorAll("[data-inc]").forEach(b=>b.onclick=()=>{ const x=it(b.dataset.inc); x.qty++; cartSave(); viewCart(); });
+  app.querySelectorAll("[data-qty]").forEach(inp=>inp.onchange=()=>{ const x=it(inp.dataset.qty), n=Math.floor(Number(inp.value)||0); x.qty=Math.max(1,n); cartSave(); setTimeout(()=>{ if(S.view==="sacar") viewCart(); },0); });
+  app.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{ c.items.splice(+b.dataset.rm,1); cartSave(); viewCart(); });
+  app.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ cartAdd(b.dataset.add); S.cartQ=""; viewCart(); const q2=$("#c_q"); if(q2) q2.focus(); });
+  $("#c_scan").onclick=()=>{ S.scanFor="cart"; openScanner(); };
+  $("#c_find").onclick=()=>{ S.cartSearch=!S.cartSearch; viewCart(); const q2=$("#c_q"); if(q2) q2.focus(); };
+  const cq=$("#c_q"); if(cq){ cq.oninput=()=>{ S.cartQ=cq.value; const pos=cq.selectionStart; viewCart(); const n=$("#c_q"); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} }; }
+  const cl=$("#c_clear"); if(cl) cl.onclick=()=>{ if(confirmTap(cl,"¿Seguro? Toca otra vez para vaciar")){ c.items=[]; cartSave(); viewCart(); } };
+  $("#c_go").onclick=cartCheckout;
+}
+/* Second tap confirms (no browser dialogs). */
+function confirmTap(b,msg){ if(b.dataset.sure) return true; b.dataset.sure="1"; b.textContent=msg; setTimeout(()=>{ if(b.isConnected){ delete b.dataset.sure; b.textContent="Vaciar la lista"; } },4000); return false; }
+async function cartCheckout(){
+  const c=cartGet(); if(!c.items.length||S.cartBusy) return;
+  const items=c.items.filter(x=>S.products.has(x.code)).map(x=>({code:x.code,delta:-x.qty}));
+  const para=c.para.join(", "), dest=para?{...(S.destino||{}),para}:S.destino;
+  S.cartBusy=true; viewCart();
+  const done=[];
+  try{
+    try{
+      const r=await api("api_moveMany", tecAuth(), items, dest);
+      items.forEach(x=>done.push(x));
+      Object.entries(r.next||{}).forEach(([k,v])=>{ const p=S.products.get(k); if(p){ p.cantidad=v; remember("qty",k,v); } });
+    }catch(err){
+      if(!oldServer(err)) throw err;
+      /* Servidor viejo: uno a uno. */
+      for(const x of items){ const r=await api("api_move", tecAuth(), x.code, x.delta, dest); done.push(x); const p=S.products.get(x.code); if(p&&r){ p.cantidad=r.next; remember("qty",x.code,r.next); } }
+    }
+    S.cartBusy=false;
+    const n=done.length, names=c.para.slice();
+    try{ localStorage.setItem(CART_RECENT,JSON.stringify([...new Set([...names,...cartRecent()])].slice(0,6))); }catch(e){}
+    c.items=[]; c.para=[]; S.cartSearch=false; S.cartQ=""; cartSave();
+    const el=sheetEl();
+    el.innerHTML=`<div class="qdone"><div class="qcheck">✓</div><div class="qbig">Sacado: ${n} producto${n===1?"":"s"}</div><div class="qsub">${names.length?"Para "+esc(names.join(", "))+" · ":""}${esc(destLabel())}</div>
+      <button class="btn block" id="q_home">Volver al inicio</button><button class="btn block" id="q_stay">Hacer otra lista</button></div>`;
+    el.hidden=false;
+    $("#q_home").onclick=()=>{ closeSheet(); S.browse=false; go("buscar"); };
+    $("#q_stay").onclick=()=>{ closeSheet(); viewCart(); };
+    el.onclick=e=>{ if(e.target===el){ closeSheet(); viewCart(); } };
+    viewCart();
+  }catch(err){
+    S.cartBusy=false;
+    if(done.length){ c.items=c.items.filter(x=>!done.some(d=>d.code===x.code)); cartSave(); toast(`Se sacaron ${done.length}. Lo que queda en la lista no se ha sacado: vuelve a pulsar «Sacar todo».`); }
+    else if(err&&err.code==="short"&&err.items){ err.items.forEach(s=>{ const p=S.products.get(s.code); if(p) p.cantidad=s.cur; }); toast("De algo ya no queda tanto. Corrige lo que está en rojo. No se ha sacado nada."); }
+    else if(err&&err.code==="short"){ toast(`No se ha sacado nada: solo quedan ${err.cur}.`); }
+    else if(err&&err.code==="gone"){ toast("Algún producto ya no existe. Quítalo de la lista. No se ha sacado nada."); }
+    else handleWriteError(err);
+    if(S.view==="sacar") viewCart();
+  }
+}
+
+/* ---------- Historial por días (Xavi, 13-11-2026): un mes cada vez, cada día se despliega, al entrar solo hoy abierto. ---------- */
+const ymOf = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const ymShift = (ym,n) => ymOf(new Date(+ym.slice(0,4), +ym.slice(5)-1+n, 1));
+function ymLabel(ym){ const s=new Date(+ym.slice(0,4), +ym.slice(5)-1, 1).toLocaleDateString("es-ES",{month:"long"}); return s.charAt(0).toUpperCase()+s.slice(1)+" "+ym.slice(0,4); }
+async function loadHist(ym){
+  ym=ym||S.hm||(S.hm=ymOf(new Date()));
+  if(!S.histM) S.histM={};
+  try{
+    const r=await api("api_history", S.adminToken, ym);
+    S.histM[ym]=(r.moves||[]).filter(m=>ymOf(new Date(Number(m.fecha)))===ym);
+    if(!r.ym) S.histOldSrv=true;
+    S.sheetUrl=r.sheetUrl||S.sheetUrl||"";
+    if(S.view==="admin"&&S.adminTab==="hist"&&S.hm===ym) viewHist();
+    if(S.view==="admin"&&S.adminTab==="parte") viewParte();
+  }catch(err){ adminError(err); }
+}
+/* Lo último (1000 movimientos), para saber qué está contado en «Contabilizar». */
+async function loadRecent(){
+  try{ const r=await api("api_history", S.adminToken); S.hist=r.moves||[]; S.histRecent=true; if(S.view==="admin"&&S.adminTab==="pc") viewAdmin(); }
+  catch(err){ adminError(err); }
+}
+
+/* ---------- Actualización de stock: el parte del día por técnico, para imprimir.
+   De momento una lista sencilla; se hará igual que el papel que mande Xavi. ---------- */
+function parteRows(day){
+  const ym=ymOf(day), moves=(S.histM&&S.histM[ym])||null; if(!moves) return null;
+  const k=day.toDateString(), by=new Map();
+  moves.filter(m=>new Date(Number(m.fecha)).toDateString()===k&&["salida","entrada","prestamo","devolucion"].includes(m.tipo)).forEach(m=>{
+    const para=/^Para: /.test(m.detalle||"")?String(m.detalle).slice(6).split(/\s*,\s*/).filter(Boolean):[];
+    const who=para.length?para:[m.tecnico||"—"];
+    who.forEach(w=>{ if(!by.has(w)) by.set(w,[]); by.get(w).push({...m, por:para.length?m.tecnico:""}); });
+  });
+  return [...by.entries()].sort((a,b)=>a[0].localeCompare(b[0],"es"));
+}
+function viewParte(){
+  const day=new Date(S.pd||new Date().toDateString()), today=new Date().toDateString()===day.toDateString();
+  const groups=parteRows(day);
+  const qty=m=>{ const d=Number(m.delta)||0; return (d>0?"+":"−")+Math.abs(d); };
+  $("#adm").innerHTML=`<div class="monthbar"><button class="btn mb" id="pd_prev" aria-label="Día anterior">‹</button><h3>${esc(day.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"}))}</h3><button class="btn mb" id="pd_next" aria-label="Día siguiente" ${today?"disabled":""}>›</button></div>
+    ${!groups?loaderHtml("Cargando…"):!groups.length?'<div class="list"><div class="empty">Ese día nadie sacó ni añadió nada.</div></div>':
+    groups.map(([w,ms])=>`<section class="parte"><header><b>${esc(w)}</b><small>${ms.length} línea${ms.length===1?"":"s"}</small></header>
+      ${ms.map(m=>`<div class="pl"><span class="nbt">${new Date(Number(m.fecha)).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span><span class="nbx"><b>${esc(m.producto||m.codigo)}</b><span>${esc([m.codigo,m.comunidad,m.por?"lo saca "+m.por.split(" ")[0]:""].filter(Boolean).join(" · "))}</span></span><span class="nbq ${Number(m.delta)<0?"neg":"pos"}">${qty(m)}</span></div>`).join("")}
+      <button class="btn block" data-print="${esc(w)}">🖨 Imprimir el parte de ${esc(w.split(" ")[0])}</button></section>`).join("")}
+    ${groups&&groups.length>1?'<button class="btn primary block" id="pd_all">🖨 Imprimir todos</button>':""}
+    <p class="tipbox">Cuando me mandes la foto del papel, el parte saldrá igual que ese papel.</p>`;
+  const shift=n=>{ const d=new Date(day); d.setDate(d.getDate()+n); S.pd=d.toDateString(); if(!(S.histM&&S.histM[ymOf(d)])) loadHist(ymOf(d)); viewParte(); };
+  $("#pd_prev").onclick=()=>shift(-1); $("#pd_next").onclick=()=>shift(1);
+  const pr=list=>printParte(day,list);
+  app.querySelectorAll("[data-print]").forEach(b=>b.onclick=()=>pr(groups.filter(g=>g[0]===b.dataset.print)));
+  const pa=$("#pd_all"); if(pa) pa.onclick=()=>pr(groups);
+}
+function printParte(day,groups){
+  let sheet=$("#printsheet"); if(!sheet){ sheet=document.createElement("div"); sheet.id="printsheet"; document.body.appendChild(sheet); }
+  sheet.className="plist parte-print";
+  const d=day.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  sheet.innerHTML=groups.map(([w,ms])=>`<div class="pp-page"><h1>Actualización de stock · ${esc(w)}</h1><p>${esc(d)}</p><table><thead><tr><th>Hora</th><th>Código</th><th>Producto</th><th>Para</th><th>Cant.</th></tr></thead><tbody>${ms.map(m=>`<tr><td>${new Date(Number(m.fecha)).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</td><td>${esc(m.codigo)}</td><td>${esc(m.producto||"")}</td><td>${esc(m.comunidad||"")}</td><td>${(Number(m.delta)>0?"+":"−")+Math.abs(Number(m.delta)||0)}</td></tr>`).join("")}</tbody></table></div>`).join("");
+  const clean=()=>{ window.removeEventListener("afterprint",clean); sheet.innerHTML=""; sheet.className=""; };
+  window.addEventListener("afterprint",clean);
+  setTimeout(()=>window.print(),300);
+}
+
 /* ---------- Responsable: historial y técnicos ---------- */
 function viewAdmin(){
   const noTechs=S.techsLoaded&&!S.techs.some(t=>t.activo!==false);
   if(!canRestricted()&&!noTechs){ S.adminOk=false; app.innerHTML=`<div class="empty">Acceso restringido. Solo pueden entrar las personas autorizadas.</div>`; return; }
-  if(!S.adminOk||!S.adminToken) return viewAdminLock();
+  if(!S.adminOk||!S.adminToken) return S.admNew?logout("Vuelve a entrar."):viewAdminLock();
+  if(S.adminTab==="cat"||S.adminTab==="plate") S.adminTab="hist";
+  if(isAdmNew()){
+    app.innerHTML=(S.adminTab==="ped"||S.adminTab==="pp")?`<div class="tabs" role="tablist"><button role="tab" aria-selected="${S.adminTab==="ped"}" data-tab="ped">Pedir${lowList().length?` (${lowList().length})`:""}</button><button role="tab" aria-selected="${S.adminTab==="pp"}" data-tab="pp">Por pedir${ppCount()?` (${ppCount()})`:""}</button></div><div id="adm"></div>`:`<div id="adm"></div>`;
+    app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; if(S.adminTab==="pp"){ S.ppSel=null; S.ppArr=null; if(S.pp) loadPP(); } render(); });
+    if(S.adminTab==="pc"&&!isPC()) S.adminTab="rec";
+    ({hist:viewHist, parte:viewParte, ped:viewOrder, pp:viewPP, rec:viewRecount, pc:viewPC, tec:viewTechs, pre:viewLoans, qr:viewQR})[S.adminTab]();
+    return;
+  }
   app.innerHTML = `
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="${S.adminTab==="hist"}" data-tab="hist">Historial</button>
@@ -2247,13 +2541,11 @@ function viewAdmin(){
       <button role="tab" aria-selected="${S.adminTab==="tec"}" data-tab="tec">Técnicos</button>
       <button role="tab" aria-selected="${S.adminTab==="pre"}" data-tab="pre">Préstamos${S.loans.length?` (${S.loans.length})`:""}</button>
       <button role="tab" aria-selected="${S.adminTab==="qr"}" data-tab="qr">Etiquetas QR</button>
-      <button role="tab" aria-selected="${S.adminTab==="cat"}" data-tab="cat">Catálogo</button>
-      <button role="tab" aria-selected="${S.adminTab==="plate"}" data-tab="plate">IA</button>
     </div>
     <div id="adm"></div>`;
-  app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; S.pinShow=null; if(S.adminTab==="hist") loadHist(); if(S.adminTab==="pp"){ S.ppSel=null; S.ppArr=null; if(S.pp) loadPP(); } viewAdmin(); });
+  app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.adminTab=b.dataset.tab; S.pinShow=null; if(S.adminTab==="hist"){ S.hm=ymOf(new Date()); loadHist(); } if(S.adminTab==="pp"){ S.ppSel=null; S.ppArr=null; if(S.pp) loadPP(); } viewAdmin(); });
   if(S.adminTab==="pc"&&!isPC()) S.adminTab="rec";
-  ({hist:viewHist, ped:viewOrder, pp:viewPP, rec:viewRecount, pc:viewPC, tec:viewTechs, pre:viewLoans, qr:viewQR, cat:viewCatAdmin, plate:viewPlate})[S.adminTab]();
+  ({hist:viewHist, ped:viewOrder, pp:viewPP, rec:viewRecount, pc:viewPC, tec:viewTechs, pre:viewLoans, qr:viewQR})[S.adminTab]();
 }
 
 function viewAdminLock(){
@@ -2280,7 +2572,7 @@ function viewAdminLock(){
     try{
       if(mode==="first"){ const r=await api("api_adminSetup", tecAuth(), pw); S.hasPassword=true; S.adminToken=r.token; unlockAdmin(); toast("Contraseña guardada"); }
       else if(mode==="change"){ await api("api_adminChangePassword", S.adminToken, pw); S.changePw=false; toast("Contraseña cambiada"); viewAdmin(); }
-      else { const r=await api("api_adminLogin", tecAuth(), pw); S.adminToken=r.token; if(r.moves){ S.hist=r.moves; S.sheetUrl=r.sheetUrl||""; } unlockAdmin(!!r.moves); }
+      else { const r=await api("api_adminLogin", tecAuth(), pw); S.adminToken=r.token; if(r.moves){ S.hist=r.moves; S.histRecent=true; S.sheetUrl=r.sheetUrl||""; } unlockAdmin(); }
     }catch(err){
       btn.disabled=false;
       if(err&&err.code==="wrong"){ toast("Contraseña incorrecta."); $("#pw1").value=""; $("#pw1").focus(); }
@@ -2295,30 +2587,34 @@ function viewAdminLock(){
 
 function unlockAdmin(haveHist){
   S.adminOk=true; S.adminTab=S.adminWant||"hist"; S.adminWant=null; S.lastActive=Date.now();
-  if(!haveHist) loadHist();
+  S.hm=ymOf(new Date()); S.histOpen=new Set([new Date().toDateString()]); S.histAll=new Set(); loadHist();
+  if(!S.histRecent) loadRecent();
   viewAdmin();
-}
-async function loadHist(){
-  try{ const r=await api("api_history", S.adminToken); S.hist=r.moves||[]; S.sheetUrl=r.sheetUrl||""; if(S.view==="admin"&&S.adminTab==="hist") viewHist(); }
-  catch(err){ adminError(err); }
 }
 function adminError(err){
   if(err&&err.code==="pin") return logout("Vuelve a entrar con tu PIN.");
+  if(err&&err.code==="auth"&&S.admNew) return logout("Tu sesión ha caducado. Vuelve a entrar.");
   if(err&&err.code==="auth"){ S.adminOk=false; S.adminToken=null; toast("Tu sesión de acceso restringido ha caducado. Vuelve a entrar."); if(S.view==="admin") viewAdmin(); }
   else handleWriteError(err);
 }
 
 function viewHist(){
-  const tecs=[...new Set([...S.techs.map(t=>t.nombre),...S.hist.map(m=>m.tecnico).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,"es"));
+  const ym=S.hm||(S.hm=ymOf(new Date())), cur=ymOf(new Date()), moves=(S.histM&&S.histM[ym])||[];
+  if(!S.histOpen) S.histOpen=new Set([new Date().toDateString()]);
+  if(!S.histAll) S.histAll=new Set();
+  const tecs=[...new Set([...S.techs.map(t=>t.nombre),...moves.map(m=>m.tecnico).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,"es"));
   $("#adm").innerHTML = `
-    <div class="filters">
+    <div class="monthbar"><button class="btn mb" id="h_prev" aria-label="Mes anterior">‹</button><h3>${esc(ymLabel(ym))}</h3><button class="btn mb" id="h_next" aria-label="Mes siguiente" ${ym>=cur?"disabled":""}>›</button></div>
+    <details class="hfilt" ${S.hf.tec||S.hf.tipo||S.hf.q?"open":""}><summary>Filtrar por persona, tipo o producto</summary><div class="filters">
       <select id="h_tec" aria-label="Persona"><option value="">Todas las personas</option>${tecs.map(t=>`<option ${S.hf.tec===t?"selected":""}>${esc(t)}</option>`).join("")}</select>
       <select id="h_tipo" aria-label="Tipo"><option value="">Todo</option>${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${S.hf.tipo===k?"selected":""}>${v}</option>`).join("")}</select>
       <input id="h_q" type="search" placeholder="Producto, código o comunidad" value="${esc(S.hf.q)}" aria-label="Buscar">
-    </div>
+    </div></details>
     <div id="h_list"></div>
-    <button class="btn block" id="h_csv">Descargar historial (CSV)</button>
+    <button class="btn block" id="h_csv">Descargar este mes (CSV)</button>
     ${S.sheetUrl?`<a class="btn block" href="${esc(S.sheetUrl)}" target="_blank" rel="noopener">Abrir la hoja de Google</a>`:""}`;
+  const month=n=>{ S.hm=ymShift(ym,n); S.histAll=new Set(); if(!(S.histM&&S.histM[S.hm])) loadHist(S.hm); viewHist(); };
+  $("#h_prev").onclick=()=>month(-1); $("#h_next").onclick=()=>month(1);
   $("#h_tec").onchange=e=>{S.hf.tec=e.target.value; drawHist();};
   $("#h_tipo").onchange=e=>{S.hf.tipo=e.target.value; drawHist();};
   $("#h_q").oninput=e=>{S.hf.q=e.target.value; drawHist();};
@@ -2326,27 +2622,35 @@ function viewHist(){
   drawHist();
 }
 function histFiltered(){
-  const q=S.hf.q.trim().toLowerCase();
-  return S.hist.filter(m=>(!S.hf.tec||m.tecnico===S.hf.tec||fold(m.detalle||"").includes(fold(S.hf.tec)))&&(!S.hf.tipo||m.tipo===S.hf.tipo)&&(!q||fold((m.producto||"")+" "+(m.codigo||"")+" "+(m.comunidad||"")+" "+(m.empresa||"")+" "+(m.detalle||"")).includes(fold(q))));
+  const q=S.hf.q.trim().toLowerCase(), moves=(S.histM&&S.histM[S.hm])||[];
+  return moves.filter(m=>(!S.hf.tec||m.tecnico===S.hf.tec||fold(m.detalle||"").includes(fold(S.hf.tec)))&&(!S.hf.tipo||m.tipo===S.hf.tipo)&&(!q||fold((m.producto||"")+" "+(m.codigo||"")+" "+(m.comunidad||"")+" "+(m.empresa||"")+" "+(m.detalle||"")).includes(fold(q))));
+}
+const HIST_FIRST=5;
+function histLine(m){
+  const d=Number(m.delta)||0, num=["salida","entrada","recuento","ajuste","alta"].includes(m.tipo)&&d;
+  const forWho=/^Para: /.test(m.detalle||"")?String(m.detalle).slice(6):"";
+  const place=m.comunidad?[m.empresa,m.comunidad].filter(Boolean).join(" · "):(m.destino==="almacen"?"Almacén":"");
+  const who=[forWho?`${forWho} (lo saca ${String(m.tecnico||"").split(" ")[0]})`:(m.tecnico||"—"), place].filter(Boolean).join(" · ");
+  const extra=m.tipo==="edicion"?(m.detalle||""):num&&m.despues!==undefined&&m.despues!==""?`quedan ${m.despues}`:"";
+  return `<button class="nbl" data-open="${esc(m.codigo)}"><span class="nbt">${new Date(Number(m.fecha)).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span>
+    <span class="nbx"><b>${esc(m.producto||m.codigo)}</b><span${forWho?' class="nbp"':""}>${esc(who)}</span><span class="nbd">${esc(m.codigo)}${extra?" · "+esc(extra):""}</span></span>
+    <span class="nbq ${num?(d<0?"neg":"pos"):"tag t-"+esc(m.tipo)}">${num?(d>0?"+":"−")+Math.abs(d):esc(TIPOS[m.tipo]||m.tipo)}</span></button>`;
 }
 function drawHist(){
   const el=$("#h_list"); if(!el) return;
-  const rows=histFiltered();
-  if(!S.hist.length){ el.innerHTML='<div class="list"><div class="empty">Todavía no hay movimientos (o se están cargando). Aquí aparecerá cada vez que alguien saque o ingrese material.</div></div>'; return; }
-  /* Cuaderno: cada día es una hoja y cada movimiento una línea (hora, producto, quién y para qué, cantidad). */
-  const shown=rows.slice().sort((a,b)=>Number(b.fecha)-Number(a.fecha)).slice(0,300), days=[];
-  shown.forEach(m=>{ const d=new Date(m.fecha), k=d.toDateString(); let g=days[days.length-1]; if(!g||g.k!==k){ g={k,d,items:[]}; days.push(g); } g.items.push(m); });
-  const dayName=d=>{ const t=new Date(), y=new Date(); y.setDate(t.getDate()-1); const base=d.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})+(d.getFullYear()!==t.getFullYear()?" de "+d.getFullYear():""); return d.toDateString()===t.toDateString()?"Hoy · "+base:d.toDateString()===y.toDateString()?"Ayer · "+base:base; };
-  el.innerHTML = `<div class="label" style="margin-bottom:6px">${rows.length} movimiento${rows.length===1?"":"s"}</div>
-    ${rows.length?days.map(g=>`<section class="nb"><header class="nbh"><span>${esc(dayName(g.d))}</span><small>${g.items.length} movimiento${g.items.length===1?"":"s"}</small></header>${g.items.map(m=>{
-      const d=Number(m.delta)||0, num=["salida","entrada","recuento","ajuste","alta"].includes(m.tipo)&&d;
-      const who=[m.tecnico||"—", m.comunidad?[m.empresa,m.comunidad].filter(Boolean).join(" · "):(m.destino==="almacen"?"Almacén":"")].filter(Boolean).join(" · ");
-      const extra=m.tipo==="edicion"?(m.detalle||""):num&&m.despues!==undefined&&m.despues!==""?`quedan ${m.despues}`:"";
-      const forWho=/^Para: /.test(m.detalle||"")?String(m.detalle).slice(6):"";
-      return `<button class="nbl" data-open="${esc(m.codigo)}"><span class="nbt">${new Date(m.fecha).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span>
-        <span class="nbx"><b>${esc(m.producto||m.codigo)}</b><span>${esc(who)}</span>${forWho?`<span class="nbp">👤 Para ${esc(forWho)}</span>`:""}${extra?`<span class="nbd">${esc(m.codigo)} · ${esc(extra)}</span>`:`<span class="nbd">${esc(m.codigo)}</span>`}</span>
-        <span class="nbq ${num?(d<0?"neg":"pos"):"tag t-"+esc(m.tipo)}">${num?(d>0?"+":"−")+Math.abs(d):esc(TIPOS[m.tipo]||m.tipo)}</span></button>`;}).join("")}</section>`).join(""):'<div class="list"><div class="empty">Ningún movimiento coincide con el filtro.</div></div>'}
-    ${rows.length>300?'<p class="note">Se muestran los 300 más recientes. Descarga el CSV para verlos todos.</p>':""}`;
+  const moves=S.histM&&S.histM[S.hm];
+  if(!moves){ el.innerHTML=loaderHtml("Cargando el historial…"); return; }
+  if(!moves.length){ el.innerHTML=`<div class="list"><div class="empty">En ${esc(ymLabel(S.hm).toLowerCase())} no hay movimientos.</div></div>`; return; }
+  const rows=histFiltered(), filt=!!(S.hf.tec||S.hf.tipo||S.hf.q.trim()), days=[];
+  /* Cuaderno: cada día es una hoja que se despliega; al entrar solo está abierto el de hoy. */
+  rows.slice().sort((a,b)=>Number(b.fecha)-Number(a.fecha)).forEach(m=>{ const d=new Date(Number(m.fecha)), k=d.toDateString(); let g=days[days.length-1]; if(!g||g.k!==k){ g={k,d,items:[]}; days.push(g); } g.items.push(m); });
+  const cap=x=>x.charAt(0).toUpperCase()+x.slice(1);
+  const dayName=d=>{ const t=new Date(), y=new Date(); y.setDate(t.getDate()-1); const base=d.toLocaleDateString("es-ES",{weekday:"long"})+" "+d.getDate(); return d.toDateString()===t.toDateString()?"Hoy, "+base:d.toDateString()===y.toDateString()?"Ayer, "+base:cap(base); };
+  el.innerHTML = rows.length?days.map(g=>{ const all=filt||S.histAll.has(g.k)||g.items.length<=HIST_FIRST+1, show=all?g.items:g.items.slice(0,HIST_FIRST);
+    return `<details class="nb hday" data-day="${esc(g.k)}" ${filt||S.histOpen.has(g.k)?"open":""}><summary class="nbh"><span>${esc(dayName(g.d))}</span><small>${g.items.length} movimiento${g.items.length===1?"":"s"}</small></summary>${show.map(histLine).join("")}${all?"":`<button class="hmore" data-all="${esc(g.k)}">Ver los ${g.items.length} ›</button>`}</details>`; }).join("")
+    :'<div class="list"><div class="empty">Ningún movimiento coincide con el filtro.</div></div>';
+  el.querySelectorAll("details[data-day]").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.histOpen.add(d.dataset.day):S.histOpen.delete(d.dataset.day); }));
+  el.querySelectorAll("[data-all]").forEach(b=>b.onclick=()=>{ S.histAll.add(b.dataset.all); drawHist(); });
 }
 async function exportCsv(){
   const rows=histFiltered();
@@ -3292,7 +3596,7 @@ async function doMove(p,delta,undo,para){
     <button class="btn block" id="q_undo">↩ Me he equivocado, deshacer</button><button class="btn block" id="q_home">Volver al inicio</button><button class="btn block" id="q_stay">Seguir aquí</button></div>`;
   el.hidden=false;
   $("#q_undo").onclick=()=>doMove(S.products.get(code)||p,-delta,true,para);
-  $("#q_home").onclick=()=>{ closeSheet(); go("buscar"); };
+  $("#q_home").onclick=()=>{ closeSheet(); S.browse=false; go("buscar"); };
   $("#q_stay").onclick=closeSheet;
   el.onclick=e=>{ if(e.target===el) closeSheet(); };
   clearTimeout(closeSheet._t); closeSheet._t=setTimeout(closeSheet,6000);
@@ -3345,7 +3649,7 @@ function resumeSave(extra){
   try{
     if(!S.tecnico) return;
     const a=S.view==="alta"&&S.alta?{...S.alta}:null; if(a&&a.fotoB64&&a.fotoB64.length>600000) a.fotoB64="";
-    sessionStorage.setItem(RESUME_KEY,JSON.stringify({at:Date.now(),tecnico:S.tecnico,destino:S.destino,view:S.view,alta:a,...(extra||{})}));
+    sessionStorage.setItem(RESUME_KEY,JSON.stringify({at:Date.now(),tecnico:S.tecnico,destino:S.destino,view:S.view,alta:a,adm:S.admNew&&S.adminOk?{token:S.adminToken}:null,...(extra||{})}));
   }catch(e){}
 }
 function resumeClear(){ try{ sessionStorage.removeItem(RESUME_KEY); }catch(e){} }
@@ -3386,6 +3690,14 @@ function handleScanText(found, fmt){
     if(!isBar){ toast("Eso es un QR de la app. Escanea el código de barras que trae el producto."); return; }
     if(byBar){ toast(`Ese código ya es de ${byBar.nombre}.`); go("ficha",{code:byBar.codigo}); return; }
     if(S.view==="alta"&&S.alta){ S.alta.bar=raw; webSearch(raw); viewAlta(); }
+    return;
+  }
+  if(S.scanFor==="cart"){
+    S.scanFor=null;
+    if(isBar&&!code) toast(`El código de barras ${raw} no está en ningún producto. Búscalo por el nombre.`);
+    else if(code&&S.products.has(code)) cartAdd(code);
+    else toast(code?`No hay ningún producto con el código ${code}.`:"Ese es el QR general. Escanea la etiqueta de un producto.");
+    if(S.view==="sacar") viewCart(); else go("sacar");
     return;
   }
   if(S.scanFor==="link"){
@@ -3595,7 +3907,7 @@ $("#qrfile").addEventListener("change",async e=>{
   }catch(err){ toast("No se pudo leer la foto."); }
 });
 
-$("#back").onclick=()=>go(S.tecnico?"buscar":"login");
+$("#back").onclick=()=>{ if(S.view==="buscar"&&S.browse){ S.browse=false; S.q=""; go("buscar"); return; } go(S.tecnico?"buscar":"login"); };
 $("#who").onclick=()=>logout("Sesión cerrada. Elige tu nombre para entrar.");
 app.addEventListener("click",e=>{ const b=e.target.closest("[data-open]"); if(b&&S.products.has(b.dataset.open)) go("ficha",{code:b.dataset.open}); });
 
@@ -3627,7 +3939,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-11.3";
+const APP_VERSION="2026-11-13.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
@@ -3652,7 +3964,7 @@ async function poll(){
     applyData(r); saveCache({...r,loans:S.loans});
     if(S.busy) return;
     /* Reading the rules or typing a PIN: a refresh would scroll back up and clear the box. */
-    if(S.view==="normas"||S.normasFor||S.pinFor) return;
+    if(S.view==="normas"||S.normasFor||S.pinFor||S.admFor) return;
     if(S.view==="login"){ if($("#l_q")) drawLoginResults(); else render(); return; }
     if(S.view==="admin"){ if(S.adminOk&&S.adminTab==="ped"&&!typing()) drawLowList(); return; }
     if(S.view==="editar"||S.view==="destino"||typing()) return;
@@ -3671,6 +3983,7 @@ async function poll(){
   const rs=resumeTake();
   if(rs){
     S.tecnico=rs.tecnico; S.destino=rs.destino; S.lastActive=Date.now();
+    if(rs.adm&&rs.adm.token){ S.adminToken=rs.adm.token; S.adminOk=true; S.admNew=true; }
     if(rs.view==="alta"&&rs.alta){ S.alta=rs.alta; go("alta"); toast("Seguimos con el producto que estabas dando de alta."); }
     else if(rs.view==="editar"){ go("editar",{editCode:rs.editCode||null}); toast("Seguimos donde estabas. Repite la foto."); }
     else if(S.destino) go("buscar");
@@ -3681,7 +3994,7 @@ async function poll(){
   if(!IN_GAS&&!(cached&&cached.techs)) api("api_techs").then(r=>{
     if(full||!r||!r.techs) return;
     applyData(r);
-    if(S.view==="login"&&!S.normasFor&&!S.pinFor){ if($("#l_q")) drawLoginResults(); else render(); }
+    if(S.view==="login"&&!S.normasFor&&!S.pinFor&&!S.admFor){ if($("#l_q")) drawLoginResults(); else render(); }
   }).catch(()=>{});
   try{
     const r=await api("api_bootstrap"); full=true; applyData(r); saveCache(r);
@@ -3694,7 +4007,7 @@ async function poll(){
     }
     toast(navigator.onLine===false?"Sin conexión: se muestran los últimos datos guardados.":"El servidor de Google no responde: se muestran los últimos datos guardados.");
   }
-  if(S.view==="normas"||S.normasFor||S.pinFor){}
+  if(S.view==="normas"||S.normasFor||S.pinFor||S.admFor){}
   else if(!(S.view==="login"&&typing())) render(); else if($("#l_q")) drawLoginResults();
   setInterval(()=>{ if(document.visibilityState==="visible") poll(); }, 20000);
   if(!IN_GAS){ setTimeout(checkUpdate,3000); setInterval(checkUpdate,120000); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkUpdate(); }); }
