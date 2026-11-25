@@ -118,6 +118,13 @@ body.hasfab .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .log div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding-bottom:6px}
 .log .d{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .d.neg{color:var(--danger)} .d.pos{color:var(--ok)}
+.where{display:flex;flex-direction:column;gap:8px}.minimap{cursor:pointer}
+.map svg.dim .shelf:not(.hit){opacity:.28}.map svg .shelf.hit rect{stroke:var(--accent);stroke-width:4;animation:pulse 1.2s ease-in-out infinite}
+.map svg .route{stroke:var(--accent);stroke-width:3;stroke-dasharray:7 6;stroke-linecap:round;animation:routeMove 1s linear infinite}
+@keyframes routeMove{to{stroke-dashoffset:-13}}
+.map svg .doordot{fill:var(--ok);stroke:#fff;stroke-width:2}.map svg .pin{font-size:22px}
+.map svg .cnt{fill:var(--accent);stroke:#fff;stroke-width:2}.map svg .cntt{fill:#fff;font-size:12px;font-weight:800}
+@media (prefers-reduced-motion:reduce){.map svg .route,.map svg .shelf.hit rect{animation:none}}
 .map{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
 .map svg{width:100%;height:auto;display:block}
 .map text{font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.04em;fill:var(--fg)}
@@ -836,7 +843,7 @@ function viewSearch(){
     ${canAlta()&&!q?'<button class="btn block" id="tonew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Nuevo producto</button>':""}
     ${!S.loaded?loaderHtml("Cargando inventario…"):
       !all.length?'<div class="list"><div class="empty">Aún no hay productos. Pulsa «Nuevo producto» para dar de alta el primero.</div></div>':
-      q?(hits.length?`<div class="label">En el almacén · ${hits.length}</div><div class="list">${hits.map(productRow).join("")}</div>`
+      q?(hits.length?searchMap(hits)+`<div class="label">En el almacén · ${shown(hits).length}${S.qShelf?" en "+esc(locName(S.qShelf)):""}</div><div class="list">${shown(hits).map(productRow).join("")}</div>`
           :cat&&cat.n?`<div class="label">En el almacén no hay nada con «${esc(S.q)}»</div>`
           :bk?`<div class="label">Código de barras</div><div class="list"><div class="empty">El código de barras ${esc(S.q.trim())} aún no está en ningún producto.</div></div><button class="btn block" id="tobar">¿De qué producto es?</button>`
           :`<div class="label">0 resultados</div><div class="list"><div class="empty">Ningún producto coincide con «${esc(S.q)}».</div></div>`)+`
@@ -847,9 +854,10 @@ function viewSearch(){
     ${myLoans().length?`<div><div class="label" style="margin-bottom:6px">Lo que tienes prestado</div><div class="list">${myLoans().map(l=>`<div class="loan"><span class="txt"><div class="name">${esc(l.producto)}</div><div class="sub">${since(l.salida)}</div></span><button class="btn" data-ret="${esc(l.id)}">Devolver</button></div>`).join("")}</div></div>`:""}
     <div class="${canRestricted()&&!isAdmNew()?"twobtn":""} homebtns"><button class="btn${canRestricted()&&!isAdmNew()?"":" block"}" id="tomap"><span class="emo" aria-hidden="true">🏭</span>Mapa</button>${canRestricted()&&!isAdmNew()?`<button class="btn" id="tohist" aria-label="Acceso restringido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Restringido</button>`:""}</div>`;
   const qi=$("#q");
-  qi.addEventListener("input",()=>{ S.q=qi.value; const pos=qi.selectionStart; viewSearch(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
+  qi.addEventListener("input",()=>{ S.q=qi.value; S.qShelf=null; const pos=qi.selectionStart; viewSearch(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
   qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value))||(isBarText(qi.value)&&prodByBar(qi.value)); if(p) go("ficha",{code:p.codigo}); }});
   const tb=$("#tobar"); if(tb) tb.onclick=()=>openBar(S.q.trim());
+  bindSearchMap(hits);
   $("#scan").onclick=()=>{ S.scanFor=null; openScanner(); };
   $("#tomap").onclick=()=>go("mapa",{mapSel:null});
   bindLoanButtons();
@@ -904,7 +912,7 @@ function viewFicha(){
       <div class="fact"><span class="label">${p.prestamo?"Disponibles":"Cantidad"}</span><span class="big ${low?'qty low':''}">${p.cantidad}</span>${low?`<span class="chip" style="color:var(--danger)">Por debajo del mínimo (${Number(p.minimo)})</span>`:(p.prestamo&&S.adminOk&&loans.length?`<span class="chip">${loans.length} prestada${loans.length===1?"":"s"}</span>`:"")}</div>
       <div class="fact"><span class="label">${p.prestamo?"Su sitio":"Ubicación"}</span><button class="locbtn" id="loc"><span class="dot" style="background:${sh.color};width:14px;height:14px"></span>${esc(sh.name)}</button>${allOut(p)?`<span class="chip" style="color:var(--sh-loan)">🔁 Ahora está prestada</span>`:""}<span class="note">${nivLabel(p)?"<b>"+esc(nivLabel(p))+"</b> · ":""}${SHELVES[locKey(p)]?ROOMS[roomOf(locKey(p))]+" · ":""}Ver en el mapa</span></div>
     </div>
-    ${rackBlock(p)}
+    ${whereBlock(p)}
     ${actions}
     ${p.prestamo&&S.adminOk&&loans.length?`<div><div class="label" style="margin-bottom:6px">Quién la tiene</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
     ${S.adminOk?`<div><div class="label" style="margin-bottom:6px">Últimos movimientos</div><div class="log" id="log"></div></div>`:""}
@@ -914,6 +922,7 @@ function viewFicha(){
   renderLog();
   bindLoanButtons();
   bindBarLine(p);
+  const fm=$("#f_map"); if(fm){ markMap(fm,{[locKey(p)]:0},{pin:true,room:fm.dataset.room}); fm.onclick=()=>go("mapa",{mapSel:locKey(p)}); }
   $("#loc").onclick=()=>go("mapa",{mapSel:locKey(p)});
   const fl=$("#f_lbl"); if(fl) fl.onclick=()=>{ const on=!lblHas(p.codigo); lblToggle(p.codigo); toast(on?"Añadida a la lista de etiquetas.":"Quitada de la lista de etiquetas."); render(); };
   if(!S.canWrite) return;
@@ -1317,6 +1326,57 @@ async function shelfShift(k, d){
     toast(`Hecho: ${done} producto${done===1?"":"s"} movido${done===1?"":"s"} ${d>0?"arriba":"abajo"}.`);
   }catch(err){ handleWriteError(err); }
   finally{ S.busy=false; if(S.view==="mapa") viewMap(); }
+}
+
+/* ---------- Dónde está, en el plano grande (Xavi, 25-11-2026) ----------
+   Ficha: el plano de su almacén con el estante marcado (los demás apagados), un 📍 y el camino desde la puerta;
+   debajo, el dibujo del estante con la balda. Buscador: «Ver en el mapa» enciende los estantes donde hay
+   resultados, con cuántos hay en cada uno; tocar un estante deja solo los de ese estante. */
+const DOOR={main:[40,97], cb:[240.5,261]};
+const roomSvgOf = (room,sel) => room==="cb"?cbSvg(sel):shelfSvg(sel);
+function whereBlock(p){
+  const k=locKey(p); if(!SHELVES[k]||allOut(p)) return rackBlock(p);
+  const room=roomOf(k);
+  return `<div class="where"><div class="label">¿Dónde está? · ${esc(ROOMS[room])}</div>
+    <div class="map minimap" id="f_map" data-room="${room}" role="button" tabindex="0" aria-label="Ver el plano grande">${roomSvgOf(room,k)}</div>
+    <p class="note" style="margin:0;text-align:center">Entra por la puerta y ve al <b>${esc(SHELVES[k].name)}</b>${nivLabel(p)?` · <b>${esc(nivLabel(p))}</b>`:""}. Toca el plano para verlo grande.</p>
+    ${rackBlock(p)}</div>`;
+}
+function markMap(box, marks, opt={}){
+  const svg=box.querySelector("svg"); if(!svg) return;
+  const NS="http://www.w3.org/2000/svg", mk=(t,a,txt)=>{ const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); if(txt!=null) e.textContent=txt; return e; };
+  svg.classList.add("dim");
+  const keys=Object.keys(marks), first=svg.querySelector(".shelf");
+  keys.forEach(k=>{
+    const g=svg.querySelector(`.shelf[data-shelf="${k}"]`); if(!g) return;
+    g.classList.add("hit");
+    let b; try{ b=g.querySelector("rect").getBBox(); const t=g.querySelector("rect").getAttribute("transform"); if(t){ b=g.getBBox(); } }catch(e){ return; }
+    const cx=b.x+b.width/2, cy=b.y+b.height/2;
+    if(opt.pin&&opt.room&&DOOR[opt.room]){
+      const [dx,dy]=DOOR[opt.room];
+      svg.insertBefore(mk("line",{x1:dx,y1:dy,x2:cx,y2:cy,class:"route"}),first);
+      svg.appendChild(mk("circle",{cx:dx,cy:dy,r:6,class:"doordot"}));
+    }
+    if(opt.pin) svg.appendChild(mk("text",{x:cx,y:Math.max(16,b.y-2),"text-anchor":"middle",class:"pin"},"📍"));
+    if(marks[k]){ const x=Math.min(345,b.x+b.width), y=Math.max(12,b.y); svg.appendChild(mk("circle",{cx:x,cy:y,r:11,class:"cnt"})); svg.appendChild(mk("text",{x,y:y+4.5,"text-anchor":"middle",class:"cntt"},String(marks[k]))); }
+  });
+}
+function shown(hits){ return S.qShelf?hits.filter(p=>locKey(p)===S.qShelf):hits; }
+function searchMap(hits){
+  const by={}; hits.forEach(p=>{ const k=locKey(p); if(SHELVES[k]&&!allOut(p)) by[k]=(by[k]||0)+1; });
+  const ks=Object.keys(by); if(!ks.length) return "";
+  const rooms=["main","cb"].filter(r=>ks.some(k=>roomOf(k)===r));
+  return `<button class="btn block${S.qMap?" primary":""}" id="q_map">🗺 ${S.qMap?"Ocultar el mapa":`Ver en el mapa · ${ks.length} estante${ks.length===1?"":"s"}`}</button>
+    ${S.qMap?rooms.map(r=>`<div class="where"><div class="label">${esc(ROOMS[r])}</div><div class="map qmap" data-room="${r}">${roomSvgOf(r,S.qShelf)}</div></div>`).join("")+`<p class="note" style="margin:0;text-align:center">${S.qShelf?`Solo lo del <b>${esc(locName(S.qShelf))}</b> · <button class="linkbtn" id="q_all">Ver todos</button>`:"Toca un estante para ver solo lo que hay en él."}</p>`:""}`;
+}
+function bindSearchMap(hits){
+  const b=$("#q_map"); if(b) b.onclick=()=>{ S.qMap=!S.qMap; if(!S.qMap) S.qShelf=null; viewSearch(); };
+  const by={}; hits.forEach(p=>{ const k=locKey(p); if(SHELVES[k]&&!allOut(p)) by[k]=(by[k]||0)+1; });
+  app.querySelectorAll(".qmap").forEach(m=>{
+    markMap(m,by,{});
+    m.querySelectorAll("[data-shelf]").forEach(g=>g.onclick=()=>{ const k=g.dataset.shelf; if(!by[k]) return; S.qShelf=S.qShelf===k?null:k; viewSearch(); });
+  });
+  const a=$("#q_all"); if(a) a.onclick=()=>{ S.qShelf=null; viewSearch(); };
 }
 
 function viewMap(){
@@ -3939,7 +3999,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-13.1";
+const APP_VERSION="2026-11-25.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
