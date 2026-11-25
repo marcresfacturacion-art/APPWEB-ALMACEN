@@ -522,8 +522,7 @@ const SHELVES = {
   cb_laton3:    {name:"Latón 3",             color:"var(--cb-menta)",    room:"cb"},
   cb_fitting:   {name:"Fitting",             color:"var(--cb-fitting)",  room:"cb"},
   cb_e3:        {name:"Estante rosa",        color:"var(--cb-rosa)",     room:"cb"},
-  cb_e4:        {name:"PVC",                 color:"var(--cb-lima)",     room:"cb"},
-  cb_pvc2:      {name:"PVC 2",               color:"var(--cb-marino)",   room:"cb"},
+  cb_e4:        {name:"Pequeño material",                 color:"var(--cb-lima)",     room:"cb"},
   cb_cables:    {name:"Cables",              color:"var(--cb-oliva)",    room:"cb"},
   cb_importante:{name:"Importante",          color:"var(--cb-rosapalo)", room:"cb"},
   cb_e5:        {name:"Azul del cuarto blanco",  color:"var(--cb-turquesa)", room:"cb"},
@@ -1156,15 +1155,15 @@ function cbSvg(sel){
     <line x1="221.5" y1="260.8" x2="259.5" y2="260.6" stroke="var(--surface-2)" stroke-width="5"/>
     <path d="M240.5 292 v-20 m-6 6 l6 -6 l6 6" fill="none" stroke="var(--muted)" stroke-width="2"/>
     <text x="268" y="285" text-anchor="start" style="font-size:9px;fill:var(--muted);font-weight:600">PUERTA</text>
-    <rect x="125" y="103" width="21" height="83" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
-    <text transform="translate(135.5 144.5) rotate(-90)" text-anchor="middle" dominant-baseline="middle" style="font-size:9px;fill:var(--muted);font-weight:600">MESA</text>
+    <rect x="155" y="242.5" width="56" height="17" rx="2" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="183" y="251" text-anchor="middle" dominant-baseline="middle" style="font-size:9px;fill:var(--muted);font-weight:600">MESA</text>
     ${g("cb_bombas",r("cb_bombas",36.5,41.75,132,29.5,'stroke-dasharray="4 3"'),102.5,56.5,"BOMBAS",{size:11})}
     ${g("cb_e1",r("cb_e1",318,215.75,21,42.5),314,237,"ELECTROSOLD.",{size:8,anchor:"end"})}
     ${g("cb_e2",r("cb_e2",9.25,105.25,24.5,40.5),21.5,125.5,"LATÓN",{rot:1,size:11})}
     ${g("cb_e3",r("cb_e3",168.5,41.5,151,20),244,51.5,"ROSA",{size:11})}
     ${g("cb_tapiado",r("cb_tapiado",320,39.25,20,32.5),330,55.5,"MAQUINARIA",{rot:1,size:4.34})}
-    ${g("cb_e4",r("cb_e4",319,143,22,35),330,160.5,"PVC",{rot:1,size:11})}
-    ${g("cb_e5",r("cb_e5",159.5,229.5,25,30),172,244.5,"AZUL",{size:8.09})}
+    ${g("cb_e4",r("cb_e4",319,143,22,35),330,160.5,"PEQUEÑO MAT.",{rot:1,size:4.6})}
+    ${g("cb_e5",r("cb_e5",318.5,180,20,31),328.5,195.5,"AZUL",{rot:1,size:8})}
     ${g("cb_blanca",r("cb_blanca",10.5,186,67,16),44,194,"ELÉC. DCHA.",{size:8.56})}
     ${g("cb_blanco",r("cb_blanco",11,202,20,43),21,223.5,"ELÉC. CEN.",{rot:1,size:5.88})}
     ${g("cb_almblanco",r("cb_almblanco",11.5,245.5,75,15),49,253,"ELÉC. IZQ.",{size:8.25})}
@@ -1176,7 +1175,6 @@ function cbSvg(sel){
     ${g("cb_fitting",r("cb_fitting",10.5,145.75,25,39.5),23,165.5,"FITTING",{rot:1,size:7.67})}
     ${g("cb_laton3",r("cb_laton3",9,42.5,28,34),23,59.5,"LATÓN 3",{size:5.25})}
     ${g("cb_cables",r("cb_cables",319.5,73.25,21,31.5),330,89,"CABLES",{rot:1,size:6.99,fill:"#fff"})}
-    ${g("cb_pvc2",r("cb_pvc2",318,178,24,37),330,196.5,"PVC 2",{rot:1,size:10,fill:"#fff"})}
     ${g("cb_importante",r("cb_importante",319.75,105.75,21.5,38.5),330.5,125,"IMPORTANTE",{rot:1,size:5.22})}
   </svg>`;
 }
@@ -3999,7 +3997,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-25.1";
+const APP_VERSION="2026-11-25.2";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
