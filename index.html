@@ -1390,6 +1390,7 @@ function viewMap(){
       <div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">No hay productos en esta ubicación.</div>'}</div>`
       :'<p class="note">Toca un estante para ver qué hay en él.</p>'}
     ${shelfRack(sel)}
+    ${S.adminOk&&S.adminToken&&sel&&(SHELVES[sel]||sel==="none")&&items.length?`<button class="btn block" id="m_qr">🏷️ Imprimir los QR de este estante (${items.length})</button>`:""}
     ${S.code&&S.products.get(S.code)?`<button class="btn block" id="toficha">Volver a ${esc(S.products.get(S.code).nombre)}</button>`:""}`;
   app.querySelectorAll("[data-shelf]").forEach(el=>{
     const f=()=>{S.mapSel=el.dataset.shelf; viewMap();};
@@ -1397,6 +1398,7 @@ function viewMap(){
   });
   app.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ S.mapRoom=b.dataset.room; if(S.mapSel&&SHELVES[S.mapSel]&&roomOf(S.mapSel)!==S.mapRoom) S.mapSel=null; viewMap(); });
   const tf=$("#toficha"); if(tf) tf.onclick=()=>go("ficha",{code:S.code});
+  const mq=$("#m_qr"); if(mq) mq.onclick=()=>{ S.qrShelf=sel; S.qrQ=""; S.qrNoBar=false; S.qrSkip.clear(); if(isAdmNew()) openAdm("qr"); else { S.adminTab="qr"; go("admin"); } };
   app.querySelectorAll("[data-shift]").forEach(b=>b.onclick=()=>shelfShift(S.mapSel, +b.dataset.shift));
   app.querySelectorAll("[data-alllado]").forEach(b=>b.onclick=()=>shelfLado(S.mapSel, b.dataset.alllado));
   app.querySelectorAll("[data-baldas]").forEach(b=>b.onclick=async()=>{
@@ -3501,12 +3503,16 @@ function viewQR(){
   const noBar=all.filter(p=>!barsOf(p.codigo).length), only=S.qrNoBar===true;
   const words=qWords(S.qrQ||"");
   const alta=new Map([...S.products.keys()].map((c,i)=>[c,i]));
-  let list=(only?noBar:all).filter(p=>!words.length||hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""),words));
+  const shelfN=k=>all.filter(p=>locKey(p)===k&&(!only||!barsOf(p.codigo).length)).length;
+  if(S.qrShelf&&!SHELVES[S.qrShelf]&&S.qrShelf!=="none") S.qrShelf="";
+  let list=(only?noBar:all).filter(p=>(!S.qrShelf||locKey(p)===S.qrShelf)&&(!words.length||hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||""),words)));
   const so=qrSortGet(), price=p=>{ const r=catByCode(p.codigo); return r&&S.cat.admin&&r.length>=6&&r[5]!==""&&!isNaN(Number(r[5]))?Number(r[5]):null; };
   if(so.k==="pre"){ if(!(S.cat&&S.cat.admin)) ensureCat(); const w=list.filter(p=>price(p)!==null).sort((a,b)=>price(b)-price(a)); if(so.inv) w.reverse(); list=w.concat(list.filter(p=>price(p)===null)); }
   else { list.sort(QR_SORT[so.k].f(alta)); if(so.inv) list.reverse(); }
   box.innerHTML = `
     <div class="links" role="group" aria-label="Qué etiquetas ver"><button class="btn${only?"":" primary"}" id="q_f_all">Todos (${all.length})</button><button class="btn${only?" primary":""}" id="q_f_nobar">Sin código de barras (${noBar.length})</button></div>
+    <label class="field"><span class="label">Estante</span><select id="q_shelf"><option value="">Todos los estantes</option>${["main","cb"].map(r=>`<optgroup label="${esc(ROOMS[r])}">${shelvesIn(r).map(([k,v])=>`<option value="${k}" ${S.qrShelf===k?"selected":""}>${esc(v.name)} (${shelfN(k)})</option>`).join("")}</optgroup>`).join("")}<option value="none" ${S.qrShelf==="none"?"selected":""}>Sin ubicación (${shelfN("none")})</option></select></label>
+    ${S.qrShelf?`<p class="note">Solo las etiquetas de <b>${esc(locName(S.qrShelf))}</b>: ${list.length}. «Imprimir las marcadas» imprime solo estas.</p>`:""}
     <div class="search"><input id="q_q" type="search" placeholder="Buscar producto por nombre o código" value="${esc(S.qrQ||"")}" autocomplete="off" aria-label="Buscar etiqueta"></div>
     ${words.length?`<p class="note">${list.length} producto${list.length===1?"":"s"} con «${esc(S.qrQ)}». «Imprimir las marcadas» imprime solo estos.</p>`:""}
     ${only?`<p class="note">Estos productos no tienen código de barras guardado en la app: necesitan su etiqueta QR.</p><button class="btn block" id="q_list">📄 Imprimir el listado (${noBar.length})</button>`:""}
@@ -3535,10 +3541,11 @@ function viewQR(){
     const b=document.createElement("button"); b.textContent="Descargar etiqueta"; b.onclick=async()=>{ try{ const blob=await labelPng(title,code,text); saveFile(file,blob); }catch(e){ toast("No se pudo descargar la etiqueta."); } }; card.appendChild(b);
     qg.appendChild(card);
   };
-  if(!only&&!words.length) add("QR general · Buscador","ALMACÉN",base,"qr-general.png");
+  if(!only&&!words.length&&!S.qrShelf) add("QR general · Buscador","ALMACÉN",base,"qr-general.png");
   list.forEach(p=>add(p.nombre,p.codigo,base+"?p="+encodeURIComponent(p.codigo),"qr-"+p.codigo+".png",p));
   const boxes=()=>[...qg.querySelectorAll("[data-pick]")];
   boxes().forEach(b=>b.onchange=()=>{ const c=items[b.dataset.pick].code; if(b.checked) S.qrSkip.delete(c); else S.qrSkip.add(c); });
+  $("#q_shelf").onchange=e=>{ S.qrShelf=e.target.value; viewQR(); };
   $("#q_all").onclick=()=>{ S.qrSkip.clear(); boxes().forEach(b=>b.checked=true); };
   $("#q_none").onclick=()=>{ items.forEach(i=>S.qrSkip.add(i.code)); boxes().forEach(b=>b.checked=false); };
   $("#q_cm").onchange=e=>{ S.qrCm=Number(e.target.value); };
@@ -3997,7 +4004,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-25.2";
+const APP_VERSION="2026-11-25.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
