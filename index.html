@@ -576,7 +576,7 @@ const showLow = p => canRestricted() && isLow(p);
 const IDLE_MS = 15*60*1000;
 const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolucion:"Devuelto", recuento:"Recuento", alta:"Alta", ajuste:"Ajuste", edicion:"Cambio", baja:"Baja"};
 
-const S = { view:"login", lista:null, modo:null, rev:null, actAs:null, code:null, q:"", products:new Map(), loaded:false, canWrite:true,
+const S = { view:"login", lista:null, listaPrev:null, modo:null, rev:null, actAs:null, code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
   hf:{tec:"", tipo:"", q:""}, pinFor:null, pinShow:null, normasFor:null, normasBack:null, pinVal:"", pinMsg:"", pinBusy:false, pinEdit:null, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLines:[{v:"",c:""}], ppLoading:false, ppMark:new Set(), alb:null, albs:null, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
@@ -596,7 +596,7 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; cle
 
 const OPEN_VIEWS = new Set(["login","admin","normas"]);
 /* Every change of screen shows the Marcres/Rivagua logo animation for 1 s on top (the user wants it to feel like it loads). */
-const VEIL_MS = window.__NO_VEIL ? 0 : 1000;
+const VEIL_MS = window.__NO_VEIL ? 0 : 450;
 let veilT=null;
 function veil(){
   if(!VEIL_MS) return;
@@ -854,7 +854,7 @@ function enter(t, tk){
 }
 function logout(msg){
   if(S.cat&&S.cat.admin) S.cat={ver:S.cat.ver, items:S.cat.items.map(r=>r.slice(0,4)), admin:false};
-  S.tecnico=null; S.lista=null; S.modo=null; S.rev=null; S.actAs=null; S.admFor=null; S.admNew=false; S.browse=false; S.histM={}; S.histRecent=false; S.cart=null; S.pinFor=null; S.pinShow=null; S.normasFor=null; S.pinVal=""; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{},w:false};
+  S.tecnico=null; S.lista=null; S.listaPrev=null; S.modo=null; S.rev=null; S.actAs=null; S.admFor=null; S.admNew=false; S.browse=false; S.histM={}; S.histRecent=false; S.cart=null; S.pinFor=null; S.pinShow=null; S.normasFor=null; S.pinVal=""; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{},w:false};
   go("login"); if(msg) toast(msg);
 }
 
@@ -948,11 +948,12 @@ function listaLoad(){
   S.destino=S.lista?S.lista.dest:null;
 }
 function startLista(d){
+  S.listaPrev=null;
   S.lista={dest:d, items:[], day:dayKey(), at:Date.now()}; S.destino=d; S.q=""; listaSave();
   const c=S.pending; S.pending=null;
   if(c&&S.products.has(c)) go("ficha",{code:c}); else go("buscar");
 }
-function endLista(){ S.lista=null; S.destino=null; S.q=""; listaSave(); }
+function endLista(){ S.lista=null; S.listaPrev=null; S.destino=null; S.q=""; listaSave(); }
 function listaAdd(p,delta,loan){
   if(!S.lista||!isTec()||!p||!delta) return;
   const it=S.lista.items.find(x=>x.code===p.codigo&&!!x.loan===!!loan);
@@ -980,9 +981,11 @@ function viewTecHome(){
       ${van?'<button class="linkbtn" id="t_van2">Hoy llevo otra furgoneta</button>':""}
       ${myLoansHtml()}
       <button class="linkbtn" id="tomap">🏭 Ver el mapa</button>
+      ${S.listaPrev?'<button class="linkbtn" id="t_prev">↩ Me he equivocado, volver a la lista anterior</button>':""}
       ${modoBack()}
     </section>`;
     bindModoBack();
+    const pv=$("#t_prev"); if(pv) pv.onclick=()=>{ S.lista=S.listaPrev; S.listaPrev=null; S.destino=S.lista?S.lista.dest:null; listaSave(); go("ticket"); };
     $("#t_com").onclick=()=>{ S.destStep="com"; S.destNew=false; S.comunidad=""; go("destino"); setTimeout(()=>{ const i=$("#pk_com"); if(i) i.focus(); },50); };
     $("#t_van").onclick=()=>{ if(van) startLista({tipo:"furgoneta",matricula:van.matricula,empresa:van.empresa,comunidad:`Furgoneta ${van.matricula}`}); else { S.destStep="van"; go("destino"); } };
     const v2=$("#t_van2"); if(v2) v2.onclick=()=>{ S.destStep="van"; go("destino"); };
@@ -1203,7 +1206,7 @@ function viewTicket(){
     <div class="tyn"><button class="y" id="tk_yes">SÍ</button><button class="n" id="tk_no">NO, YA ESTÁ</button></div>
     <button class="linkbtn" id="tk_back">‹ Seguir con esta lista</button>
   </section>`;
-  $("#tk_yes").onclick=()=>{ endLista(); S.destStep="com"; S.destNew=false; S.comunidad=""; go("destino"); };
+  $("#tk_yes").onclick=()=>{ S.listaPrev=S.lista; S.lista=null; S.destino=null; S.q=""; listaSave(); S.destStep="q1"; go("buscar"); };
   $("#tk_no").onclick=()=>{ endLista(); go("buscar"); toast("Lista terminada. ¡Buen trabajo!"); };
   $("#tk_back").onclick=()=>go("buscar");
 }
@@ -4081,11 +4084,13 @@ async function doMove(p,delta,undo,para){
     /* Técnicos: big green screen, then back to their list by itself after 3 s. */
     listaAdd(p,delta);
     el.innerHTML=`<div class="qdone"><div class="qcheck">✓</div><div class="qbig">${delta<0?"TE LLEVAS":"DEVUELVES"} ${Math.abs(delta)}</div><div class="qsub">${esc(p.nombre)}</div><div class="qsub">para ${esc(destLabel())}</div>${isDemo()?'<div class="qsub">👻 PRUEBA · no se ha apuntado</div>':""}
-      <button class="btn block" id="q_undo">↩ Me he equivocado</button><div class="qsub" style="font-size:15px;opacity:.85">Vuelve a la lista solo en 3 segundos</div></div>`;
+      <button class="btn block" id="q_undo">↩ Me he equivocado</button><div class="qsub" style="font-size:15px;opacity:.85">Toca para seguir</div></div>`;
     el.hidden=false;
-    $("#q_undo").onclick=()=>doMove(S.products.get(code)||p,-delta,true);
-    el.onclick=null;
-    clearTimeout(closeSheet._t); closeSheet._t=setTimeout(()=>{ closeSheet(); if(S.view==="ficha") go("buscar",{q:""}); },3000);
+    const leave=()=>{ closeSheet(); if(S.view==="ficha") go("buscar",{q:""}); };
+    const shownAt=Date.now();   // ignora el propio toque que abrió la pantalla (evita que se cierre sola)
+    $("#q_undo").onclick=e=>{ e.stopPropagation(); doMove(S.products.get(code)||p,-delta,true); };
+    el.onclick=e=>{ if(e.target.closest("#q_undo")||Date.now()-shownAt<350) return; clearTimeout(closeSheet._t); leave(); };
+    clearTimeout(closeSheet._t); closeSheet._t=setTimeout(leave,1200);
     if(!(await pr)){ listaAdd(p,-delta); closeSheet(); }
     return;
   }
@@ -4436,7 +4441,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-27.3";
+const APP_VERSION="2026-11-27.4";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
