@@ -956,11 +956,27 @@ function devReset_(token, tecId) {
 }
 function pinsVer_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('PINS_VER') || '{}'); } catch (e) { return {}; } }
 /** Solo Xavi y Nicusor: los PIN de cada persona. Los puestos antes de guardar la copia legible salen vacíos. */
+/** Recupera un PIN de 4 cifras a partir de su hash guardado (solo hay 10.000 posibles). Para ver los PIN
+ * puestos antes de guardar la copia legible, sin que Xavi tenga que volver a ponerlos. */
+function pinCrack_(rec) {
+  var parts = String(rec || '').split('|'), salt = parts[0], want = parts[1];
+  if (!salt || !want) return '';
+  for (var i = 0; i < 10000; i++) {
+    var d = ('000' + i).slice(-4);
+    if (hash_(d, salt) === want) return d;
+  }
+  return '';
+}
 function pinList_(token) {
   return guard_(function () {
     gestorTok_(token);
-    var all = pins_(), ver = pinsVer_(), out = {};
-    Object.keys(all).forEach(function (k) { out[k] = ver[k] || ''; });
+    var all = pins_(), ver = pinsVer_(), out = {}, add = false;
+    Object.keys(all).forEach(function (k) {
+      if (!all[k]) { out[k] = ''; return; }
+      if (!ver[k]) { var p = pinCrack_(all[k]); if (p) { ver[k] = p; add = true; } }   // viejo: recuperarlo y guardarlo
+      out[k] = ver[k] || '';
+    });
+    if (add) PropertiesService.getScriptProperties().setProperty('PINS_VER', JSON.stringify(ver));
     return { pins: out };
   });
 }
