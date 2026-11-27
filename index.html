@@ -348,7 +348,7 @@ form.edit .check span{flex:1;min-width:0}
 .tmore{font-family:var(--f-display);font-weight:700;font-size:32px;line-height:1.1;text-align:center;margin:4px 0 0}
 .tyn{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tyn button{min-height:80px;border:0;border-radius:18px;color:#fff;font-family:var(--f-display);font-weight:700;font-size:26px;cursor:pointer}
 .tyn .y{background:var(--accent);font-size:34px}.tyn .n{background:var(--muted)}
-#demobar.act{background:var(--accent);color:var(--accent-fg)}#demobar{position:sticky;top:0;z-index:30;background:#e2b93b;color:#3b300c;font-weight:700;font-size:15px;letter-spacing:.03em;text-align:center;padding:7px 10px}#demobar[hidden]{display:none}
+#demobar.act{background:var(--accent);color:var(--accent-fg)}.demo-head{background:#e2b93b;color:#3b300c;font-weight:700;font-size:14px;letter-spacing:.03em;text-align:center;border-radius:10px;padding:8px 10px;margin-bottom:10px}#demobar{position:sticky;top:0;z-index:30;background:#e2b93b;color:#3b300c;font-weight:700;font-size:15px;letter-spacing:.03em;text-align:center;padding:7px 10px}#demobar[hidden]{display:none}
 .tmode{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:18px;border:3px solid var(--line);background:var(--surface);text-align:left;cursor:pointer;color:var(--fg)}
 .tmode .ci{font-size:34px;line-height:1}.tmode b{display:block;font-family:var(--f-display);font-weight:700;font-size:23px;color:var(--accent);letter-spacing:.02em}.tmode small{display:block;font-size:14px;color:var(--muted);font-weight:500;line-height:1.3}
 .tmode.ghost{border-color:#e2b93b;background:#fffbea}
@@ -628,7 +628,7 @@ function render(){
   $("#back").hidden = (S.view==="buscar"&&!S.browse) || S.view==="login" || (S.view==="destino" && !S.destino && !isTec()) || S.view==="modo";
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", normas:"Normas", destino:"¿Para qué es?", ticket:"Ticket", modo:"Almacén", revision:"Revisión", etiquetas:"Etiquetas", alta:"Nuevo producto", sacar:"Sacar", mover:"Mover de estante"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", normas:"Normas", destino:"¿Para qué es?", ticket:"Ticket", modo:"Almacén", revision:"Revisión", demologin:"Demostración", etiquetas:"Etiquetas", alta:"Nuevo producto", sacar:"Sacar", mover:"Mover de estante"};
   if(S.view==="admin"&&isAdmNew()) titles.admin=ADM_TITLES[S.adminTab]||"Restringido";
   if(S.view==="buscar"&&S.browse) titles.buscar="Buscar";
   $("#title").textContent = titles[S.view]; $("#title").classList.toggle("long", titles[S.view].length>12);
@@ -636,12 +636,12 @@ function render(){
   VIEWS[S.view]();
   drawLblFab();
   let db=$("#demobar");
-  const bar=isDemo()?"👻 DEMOSTRACIÓN · NO SE APUNTA NADA":S.modo==="lista"&&S.actAs&&S.tecnico?"🛒 SE APUNTA A "+S.actAs.nombre.toUpperCase():"";
+  const bar=isDemo()&&S.actAs?"👻 DEMOSTRACIÓN · NO SE APUNTA NADA":S.modo==="lista"&&S.actAs&&S.tecnico?"🛒 SE APUNTA A "+S.actAs.nombre.toUpperCase():"";
   if(bar){ if(!db){ db=document.createElement("div"); db.id="demobar"; app.parentNode.insertBefore(db,app); } db.textContent=bar; db.classList.toggle("act",!isDemo()); db.hidden=false; }
   else if(db) db.hidden=true;
   const nl=$("#netlink"); if(nl) nl.hidden=!canRestricted();
 }
-const VIEWS={normas:viewNormas, login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest, etiquetas:viewLblCart, alta:viewAlta, sacar:viewCart, mover:viewMove, ticket:viewTicket, modo:viewModo, revision:viewRev};
+const VIEWS={normas:viewNormas, login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest, etiquetas:viewLblCart, alta:viewAlta, sacar:viewCart, mover:viewMove, ticket:viewTicket, modo:viewModo, revision:viewRev, demologin:viewDemoLogin};
 
 const LOGIN_MIN=3;
 function techMatches(q){
@@ -656,8 +656,8 @@ function techMatches(q){
    Only Xavi and Nicusor set PINs (Acceso restringido → Técnicos). Without a PIN, entering by name still works. */
 const tecAuth = () => S.tecnico ? (S.modo==="lista"&&S.actAs&&S.adminToken ? S.actAs.id+"*"+S.adminToken : S.tecnico.id+(S.tecnico.tk?"~"+S.tecnico.tk:"")) : "";
 /* Who the technician screens are about: in Xavi's «Lista de técnico» it is the technician he chose. */
-const meId = () => S.modo==="lista"&&S.actAs ? S.actAs.id : S.tecnico ? S.tecnico.id : "";
-const meName = () => S.modo==="lista"&&S.actAs ? S.actAs.nombre : S.tecnico ? S.tecnico.nombre : "";
+const meId = () => (S.modo==="lista"||S.modo==="demo")&&S.actAs ? S.actAs.id : S.tecnico ? S.tecnico.id : "";
+const meName = () => (S.modo==="lista"||S.modo==="demo")&&S.actAs ? S.actAs.nombre : S.tecnico ? S.tecnico.nombre : "";
 function viewPin(){
   const t=S.pinFor;
   app.innerHTML=`<section class="login pinbox">
@@ -1018,6 +1018,75 @@ function viewTecHome(){
 }
 function modoBack(){ return S.modo&&isXavi()?'<button class="linkbtn" id="t_modo">↩ Cambiar cómo entro</button>':""; }
 function bindModoBack(){ const b=$("#t_modo"); if(b) b.onclick=()=>{ S.lista=null; S.destino=null; S.q=""; S.modo=null; S.actAs=null; go("modo"); }; }
+/* Demostración (Xavi, 27-11-2026): entra «paso a paso» como un técnico, con su nombre y su PIN real,
+   para enseñarle a usarla. No se apunta nada del stock. Si el técnico aún no tiene PIN, Xavi se lo pone
+   aquí y SÍ se guarda (api_setPin, solo gestores). */
+function startDemoAs(t){
+  S.actAs={id:t.id,nombre:t.nombre}; S.modo="demo"; S.demoFor=null; S.demoVal=""; S.demoMsg=""; S.demoStep="name";
+  S.q=""; S.lista=null; listaLoad(); go("buscar");
+}
+function viewDemoLogin(){
+  if(!isXavi()||!S.adminOk){ go("modo"); return; }
+  const st=S.demoStep||"name";
+  if(st==="name"){
+    const words=qWords(S.loginQ||""), parts=words.join("").length>=LOGIN_MIN;
+    const list=parts?S.techs.filter(t=>t.activo!==false&&!t.restringido&&hasWords(t.nombre,words)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,6):[];
+    app.innerHTML=`<section class="login">
+      <div class="demo-head">👻 DEMOSTRACIÓN · no se apunta nada</div>
+      <h2>¿Quién eres?</h2>
+      <p class="note">Escribe el nombre del técnico y tócalo. Entrará con su PIN como lo haría él, pero esto es una prueba.</p>
+      <label class="field"><span class="label">Nombre del técnico</span><input id="dl_q" type="search" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Empieza a escribir…" value="${esc(S.loginQ||"")}"></label>
+      <div id="dl_res">${parts?(list.length?`<div class="list">${list.map(t=>`<button class="row" data-dt="${esc(t.id)}"><span class="txt"><div class="name">${esc(t.nombre)}</div><div class="code">${t.pin?"Tiene PIN":"Sin PIN todavía"}</div></span><span class="go">Entrar</span></button>`).join("")}</div>`:'<div class="empty">No hay ningún técnico con ese nombre.</div>'):""}</div>
+    </section>`;
+    const q=$("#dl_q");
+    q.oninput=()=>{ S.loginQ=q.value; viewDemoLogin(); const n=$("#dl_q"); if(n){ n.focus(); try{n.setSelectionRange(n.value.length,n.value.length)}catch(e){} } };
+    app.querySelectorAll("[data-dt]").forEach(b=>b.onclick=()=>{ const t=S.techs.find(x=>x.id===b.dataset.dt); if(!t) return; S.demoFor=t; S.demoVal=""; S.demoMsg=""; S.demoStep=t.pin?"pin":"set"; viewDemoLogin(); });
+    setTimeout(()=>{ try{ q.focus(); }catch(e){} },50);
+    return;
+  }
+  const t=S.demoFor; if(!t){ S.demoStep="name"; return viewDemoLogin(); }
+  const setp=st==="set";
+  app.innerHTML=`<section class="login pinbox">
+    <div class="demo-head">👻 DEMOSTRACIÓN · no se apunta nada</div>
+    <h2>${setp?"Ponle un PIN a "+esc(t.nombre.split(" ")[0]):"Hola, "+esc(t.nombre.split(" ")[0])}</h2>
+    <p class="pinhint">${setp?"Elige 4 números. Se guardarán como su PIN.":"Escribe tu PIN de 4 números"}</p>
+    <div class="pindots" aria-live="polite">${[0,1,2,3].map(i=>`<span class="${i<(S.demoVal||"").length?"on":""}"></span>`).join("")}</div>
+    <p class="pinmsg" id="dpin_msg">${esc(S.demoMsg||"")}</p>
+    <div class="pinpad">${["1","2","3","4","5","6","7","8","9","","0","<"].map(k=>k===""?`<span></span>`:k==="<"?`<button class="pinkey small" data-dk="<" aria-label="Borrar">⌫</button>`:`<button class="pinkey" data-dk="${k}">${k}</button>`).join("")}</div>
+    <button class="linkbtn" id="dl_back2">Otro técnico</button>
+  </section>`;
+  app.querySelectorAll("[data-dk]").forEach(b=>b.onclick=()=>demoKey(b.dataset.dk));
+  $("#dl_back2").onclick=()=>{ S.demoStep="name"; S.demoFor=null; S.demoVal=""; S.demoMsg=""; viewDemoLogin(); };
+}
+async function demoKey(k){
+  if(S.demoBusy) return;
+  if(k==="<"){ S.demoVal=(S.demoVal||"").slice(0,-1); S.demoMsg=""; return viewDemoLogin(); }
+  if((S.demoVal||"").length>=4) return;
+  S.demoVal=(S.demoVal||"")+k; S.demoMsg=""; viewDemoLogin();
+  if(S.demoVal.length<4) return;
+  const t=S.demoFor, pin=S.demoVal, setp=S.demoStep==="set"; S.demoBusy=true;
+  const wait=txt=>{ const m=$("#dpin_msg"); if(m){ m.textContent=txt; m.classList.add("wait"); } };
+  wait(setp?"Guardando…":"Comprobando…");
+  try{
+    if(setp){
+      const r=await api("api_setPin", S.adminToken, t.id, pin);
+      if(r.techs) S.techs=r.techs;
+      S.demoBusy=false; startDemoAs(t); toast(`PIN guardado para ${t.nombre}.`);
+    }else{
+      await api("api_pinLogin", t.id, pin, devId());
+      S.demoBusy=false; startDemoAs(t);
+    }
+  }catch(err){
+    S.demoBusy=false; S.demoVal="";
+    const c=err&&err.code;
+    S.demoMsg=c==="pinwrong"?(err.left>0?`PIN incorrecto. ${err.left===1?"Queda 1 intento":`Quedan ${err.left} intentos`}.`:"PIN incorrecto."):
+      c==="pinlock"?"Demasiados intentos. Espera 15 minutos.":c==="pindup"?`Ese PIN ya lo tiene ${err.quien||"otro"}. Elige otro.`:
+      c==="pinbad"?"El PIN tiene que ser de 4 números.":c==="auth"?"Solo Xavi y Nicusor pueden poner PIN.":
+      oldServer(err)?"Falta pegar el servidor nuevo para esto.":c==="network"?netMsg():"No se ha podido. Inténtalo otra vez.";
+    if(S.view==="demologin") viewDemoLogin();
+    if(navigator.vibrate) navigator.vibrate(120);
+  }
+}
 function viewModo(){
   if(!isXavi()||!S.adminOk){ go("buscar"); return; }
   app.innerHTML=`<section class="tec">
@@ -1034,6 +1103,7 @@ function viewModo(){
     if(m==="normal"){ S.modo=null; S.destStep="q1"; go("destino"); return; }
     if(m==="rev"){ S.modo="rev"; S.rev={q:"",tid:null,range:"semana",pick:"rev"}; go("revision"); return; }
     if(m==="lista"){ S.modo="rev"; S.actAs=null; S.rev={q:"",tid:null,range:"semana",pick:"lista"}; go("revision"); return; }
+    if(m==="demo"){ S.modo="demo"; S.actAs=null; S.demoStep="name"; S.demoFor=null; S.demoVal=""; S.demoMsg=""; S.loginQ=""; go("demologin"); return; }
     S.modo=m; S.actAs=null; listaLoad(); go("buscar");
   });
 }
@@ -4334,7 +4404,7 @@ $("#qrfile").addEventListener("change",async e=>{
   }catch(err){ toast("No se pudo leer la foto."); }
 });
 
-$("#back").onclick=()=>{ if(S.view==="revision"){ if(S.rev&&S.rev.tid){ S.rev.tid=null; viewRev(); return; } go("modo"); return; } if(S.view==="buscar"&&S.browse){ S.browse=false; S.q=""; go("buscar"); return; } go(S.tecnico?"buscar":"login"); };
+$("#back").onclick=()=>{ if(S.view==="demologin"){ if(S.demoStep==="name"){ S.modo=null; S.actAs=null; go("modo"); } else { S.demoStep="name"; S.demoFor=null; S.demoVal=""; S.demoMsg=""; viewDemoLogin(); } return; } if(S.view==="revision"){ if(S.rev&&S.rev.tid){ S.rev.tid=null; viewRev(); return; } go("modo"); return; } if(S.view==="buscar"&&S.browse){ S.browse=false; S.q=""; go("buscar"); return; } go(S.tecnico?"buscar":"login"); };
 $("#who").onclick=()=>logout("Sesión cerrada. Elige tu nombre para entrar.");
 app.addEventListener("click",e=>{ const b=e.target.closest("[data-open]"); if(b&&S.products.has(b.dataset.open)) go("ficha",{code:b.dataset.open}); });
 
@@ -4366,7 +4436,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-27.2";
+const APP_VERSION="2026-11-27.3";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
