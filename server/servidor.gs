@@ -149,9 +149,18 @@ function techRow_(id) {
 }
 /* PIN por técnico (Xavi, 26-10-2026). El móvil manda «id~sesión»; la sesión se da al escribir el PIN (pinLogin_ en api.gs).
  * Quien todavía no tiene PIN entra solo con el nombre, como antes, hasta que Xavi o Nicusor se lo pongan. */
-function plainId_(id) { return String(id || '').split('~')[0]; }
+function plainId_(id) { return String(id || '').split(/[~*]/)[0]; }
+/* «Lista de técnico» (Xavi, 27-11-2026): Xavi o Nicusor apuntan en nombre de un técnico. El móvil manda «idTécnico*tokenAdmin»;
+ * el movimiento queda a nombre del técnico y en Detalle «Lo apuntó …». */
+var ACT_BY_ = null;
 function tech_(id) {
   var raw = String(id || ''), tid = plainId_(raw), tk = raw.indexOf('~') > 0 ? raw.slice(raw.indexOf('~') + 1) : '';
+  if (raw.indexOf('*') > 0) {
+    var by = admin_(raw.slice(raw.indexOf('*') + 1));
+    if (!gestor_(by)) throw new Error('auth');
+    ACT_BY_ = by;
+    return techRow_(tid);
+  }
   var t = techRow_(tid), rec = pins_()[tid];
   if (!rec) return t;
   var c = CacheService.getScriptCache(), v = tk && c.get('tk_' + tk);
@@ -170,6 +179,7 @@ function dest_(d) {
 }
 function logMove_(m, t, d) {
   const o = Object.assign({ fecha: new Date(), detalle: '' }, d || {}, m, { tecnico: t ? t.nombre : '', tecnicoId: t ? t.id : '' });
+  if (ACT_BY_ && t && String(t.id) !== String(ACT_BY_.id)) o.detalle = [o.detalle, 'Lo apuntó ' + ACT_BY_.nombre].filter(String).join(' · ');
   append_('Movimientos', o);
 }
 function prodOut_(o) {
