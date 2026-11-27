@@ -28,7 +28,7 @@ function doPost(e) {
       api_setBarcode: setBarcode_, api_barSearch: barSearch_, api_barIA: barIA_, api_setBaldas: setBaldas_,
       api_ppList: ppList_, api_ppSave: ppSave_, api_ppDelete: ppDelete_, api_ppArrive: ppArrive_,
       api_albRead: albRead_, api_albSave: albSave_, api_albList: albList_,
-      api_pinLogin: pinLogin_, api_setPin: setPin_, api_acceptNormas: acceptNormas_, api_pinList: pinList_
+      api_pinLogin: pinLogin_, api_setPin: setPin_, api_devReset: devReset_, api_acceptNormas: acceptNormas_, api_pinList: pinList_
     };
     addShelves_();
     mayusculas_();
@@ -265,7 +265,7 @@ function adminLogin_(tecId, pw) {
 /* Administrativos (Xavi, 13-11-2026): nombre + UNA contraseña igual para todos (propiedad ADMIN_PW, sin distinguir mayúsculas).
  * Da a la vez la sesión de la persona (como el PIN) y el acceso restringido: dentro ya no se pide otra contraseña.
  * Los técnicos siguen con su PIN. 6 fallos seguidos bloquean a esa persona 15 minutos. */
-function adminEnter_(tecId, pw) {
+function adminEnter_(tecId, pw, dev) {
   return guard_(function () {
     var tid = plainId_(tecId), t = restrictedRow_(tid), c = CacheService.getScriptCache();
     var fails = Number(c.get('admf_' + tid)) || 0;
@@ -276,6 +276,7 @@ function adminEnter_(tecId, pw) {
     else return { err: 'nopw' };
     if (!ok) { Utilities.sleep(300); c.put('admf_' + tid, String(fails + 1), 900); return { err: 'wrong', left: 5 - fails }; }
     c.remove('admf_' + tid);
+    admDevAdd_(dev, tid);
     var rec = pins_()[tid], tk = Utilities.getUuid();
     c.put('tk_' + tk, tid + '|' + (rec ? rec.split('|')[0] : ''), 21600);
     return { ok: true, tk: tk, token: token_(tid), nombre: t.nombre };
@@ -886,10 +887,13 @@ function gestor_(t, list) {
 }
 function gestorTok_(token) { var t = admin_(token); if (!gestor_(t)) throw new Error('auth'); return t; }
 function pins_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('PINS') || '{}'); } catch (e) { return {}; } }
-function pinLogin_(tecId, pin) {
+function pinLogin_(tecId, pin, dev) {
   return guard_(function () {
     var tid = plainId_(tecId), t = techRow_(tid), rec = pins_()[tid], c = CacheService.getScriptCache();
-    if (!rec) { var tk0 = Utilities.getUuid(); c.put('tk_' + tk0, tid + '|', 21600); return { ok: true, tk: tk0, nopin: true }; }
+    if (!rec) {
+      if (!devOk_(t, dev)) return { err: 'otherdev' };
+      var tk0 = Utilities.getUuid(); c.put('tk_' + tk0, tid + '|', 21600); return { ok: true, tk: tk0, nopin: true };
+    }
     var fails = Number(c.get('pinf_' + tid)) || 0;
     if (fails >= 4) return { err: 'pinlock' };
     var salt = rec.split('|')[0];
@@ -899,8 +903,55 @@ function pinLogin_(tecId, pin) {
       return { err: 'pinwrong', left: 3 - fails };
     }
     c.remove('pinf_' + tid);
+    if (!devOk_(t, dev)) return { err: 'otherdev' };
     var tk = Utilities.getUuid(); c.put('tk_' + tk, tid + '|' + salt, 21600);
     return { ok: true, tk: tk, nombre: t.nombre };
+  });
+}
+/* ---------- Un solo móvil por técnico (Xavi, 27-11-2026) ----------
+ * Cada móvil guarda un número al azar (localStorage) y lo manda al entrar. La primera vez que un técnico entra,
+ * ese móvil queda registrado (propiedad DEVS) y desde otro móvil u ordenador ya no puede entrar.
+ * Los administrativos (Acceso restringido) entran desde donde quieran, y el móvil u ordenador donde un administrativo
+ * ha entrado con la contraseña puede entrar también con la cuenta de cualquier técnico (para revisar o enseñarle),
+ * sin que quede registrado como el móvil de ese técnico (propiedad ADMDEVS). Xavi y Nicusor lo liberan con
+ * «Cambiar de móvil» en Técnicos (si cambia de móvil o borra los datos del navegador). */
+function devs_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('DEVS') || '{}'); } catch (e) { return {}; } }
+function devKey_(dev) { return String(dev || '').replace(/[^a-z0-9]/gi, '').slice(0, 40); }
+function admDevs_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('ADMDEVS') || '{}'); } catch (e) { return {}; } }
+function admDevAdd_(dev, tid) {
+  dev = devKey_(dev); if (!dev) return;
+  var all = admDevs_(); if (all[dev] && all[dev].t === tid) return;
+  all[dev] = { t: tid, at: Date.now() };
+  PropertiesService.getScriptProperties().setProperty('ADMDEVS', JSON.stringify(all));
+}
+function devOk_(t, dev) {
+  if (bool_(t.restringido)) return true;
+  dev = devKey_(dev);
+  if (!dev) return true;   // móvil con la versión vieja de la app: entra y se registra cuando se actualice
+  if (admDevs_()[dev]) return true;   // móvil u ordenador de un administrativo: entra y no se registra
+  var tid = String(t.id), rec = devs_()[tid];
+  if (rec && rec.d === dev) return true;
+  if (rec) return false;
+  return locked_(function () {
+    var all = devs_();
+    if (all[tid]) return all[tid].d === dev;
+    all[tid] = { d: dev, at: Date.now() };
+    PropertiesService.getScriptProperties().setProperty('DEVS', JSON.stringify(all));
+    dropCache_();
+    return true;
+  });
+}
+/** Solo Xavi y Nicusor: borra el móvil registrado de un técnico; el siguiente móvil con el que entre queda como el suyo. */
+function devReset_(token, tecId) {
+  return guard_(function () {
+    var g = gestorTok_(token), tid = plainId_(tecId), t = techRow_(tid);
+    return locked_(function () {
+      var all = devs_(); delete all[tid];
+      PropertiesService.getScriptProperties().setProperty('DEVS', JSON.stringify(all));
+      dropCache_();
+      console.log('Móvil liberado de ' + t.nombre + ' por ' + g.nombre);
+      return { ok: true, techs: techsOut_() };
+    });
   });
 }
 function pinsVer_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('PINS_VER') || '{}'); } catch (e) { return {}; } }

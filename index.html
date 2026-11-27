@@ -118,6 +118,9 @@ body.hasfab .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .log div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding-bottom:6px}
 .log .d{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .d.neg{color:var(--danger)} .d.pos{color:var(--ok)}
+.mover{display:flex;flex-direction:column;gap:10px}.mvrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer}.mvrow:last-child{border-bottom:0}.mvrow.on{background:#e8eef8}.mvrow input{width:24px;height:24px;flex:none}.mvrow .name{font-weight:700}
+.mvto{display:flex;align-items:center;gap:8px;margin:0;font-size:17px}.mvto .dot{width:16px;height:16px;border-radius:4px;border:1px solid var(--fg)}
+.mvniv,.mvlado{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.mvniv .btn,.mvlado .btn{font-size:16px;min-height:50px;padding:0 6px}.mvniv small{font-size:12px;opacity:.8}
 .where{display:flex;flex-direction:column;gap:8px}.minimap{cursor:pointer}
 .map svg.dim .shelf:not(.hit){opacity:.28}.map svg .shelf.hit rect{stroke:var(--accent);stroke-width:4;animation:pulse 1.2s ease-in-out infinite}
 .map svg .route{stroke:var(--accent);stroke-width:3;stroke-dasharray:7 6;stroke-linecap:round;animation:routeMove 1s linear infinite}
@@ -325,6 +328,26 @@ form.edit .check span{flex:1;min-width:0}
 @media print{.credit{display:none}}
 .destbar{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--surface);font-size:14px;color:var(--muted)}
 .destbar b{color:var(--fg)}
+/* App sencilla de técnicos (2026-11-27): destino, lista del súper y ticket. */
+.tec{display:flex;flex-direction:column;gap:14px}
+.tq{font-family:var(--f-display);font-weight:700;font-size:28px;margin:0}
+.tchoice{display:flex;align-items:center;gap:14px;width:100%;min-height:96px;padding:12px 18px;border-radius:20px;border:3px solid var(--accent);background:var(--surface);color:var(--accent);text-align:left;cursor:pointer}
+.tchoice .ci{font-size:40px;line-height:1}.tchoice b{display:block;font-family:var(--f-display);font-weight:700;font-size:26px;letter-spacing:.03em}.tchoice small{display:block;font-size:15px;color:var(--muted);font-weight:600}
+.tdest{background:var(--accent);color:var(--accent-fg);border-radius:14px;padding:10px 14px;font-size:15px;font-weight:600}.tdest b{display:block;font-family:var(--f-display);font-size:23px;letter-spacing:.02em}
+.tdest.small b{font-size:19px}
+.tlist{background:var(--surface);border:2px solid var(--line);border-radius:14px;overflow:hidden}
+.tli{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:16px}.tli:last-child{border-bottom:0}
+.tli b{font-family:var(--f-display);font-size:22px;color:var(--danger);min-width:42px;text-align:right}.tli.in b{color:var(--ok)}
+.tfin{min-height:76px;border:0;border-radius:18px;background:var(--ok);color:#fff;font-family:var(--f-display);font-weight:700;font-size:28px;letter-spacing:.04em;cursor:pointer;box-shadow:0 4px 0 color-mix(in srgb,var(--ok) 60%,#000)}
+.thay{font-size:18px;color:var(--muted);font-weight:600}.thay b{color:var(--fg)}
+.tbig{display:grid;gap:12px}.tbb{min-height:100px;border:0;border-radius:18px;color:#fff;font-family:var(--f-display);font-weight:700;font-size:32px;letter-spacing:.04em;cursor:pointer}
+.tbb.out{background:var(--danger);box-shadow:0 4px 0 color-mix(in srgb,var(--danger) 60%,#000)}.tbb.in{background:var(--ok);box-shadow:0 4px 0 color-mix(in srgb,var(--ok) 60%,#000)}.tbb:disabled{opacity:.45}
+.qn.qot{font-size:22px}
+.ticket{background:#fff;color:#222;margin:0 4px;padding:16px 16px 20px;font:500 15px/1.5 ui-monospace,"Courier New",monospace;box-shadow:0 2px 8px rgba(0,0,0,.15);border-top:3px dashed #bbb;border-bottom:3px dashed #bbb}
+.ticket .c{text-align:center}.ticket .r{display:flex;justify-content:space-between;gap:10px}.ticket .r span:last-child{white-space:nowrap}.ticket hr{border:0;border-top:1px dashed #999;margin:8px 0}
+.tmore{font-family:var(--f-display);font-weight:700;font-size:32px;line-height:1.1;text-align:center;margin:4px 0 0}
+.tyn{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tyn button{min-height:80px;border:0;border-radius:18px;color:#fff;font-family:var(--f-display);font-weight:700;font-size:26px;cursor:pointer}
+.tyn .y{background:var(--accent);font-size:34px}.tyn .n{background:var(--muted)}
 .destbar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bigyes{min-height:72px;font-size:22px}
 .sheet{display:flex;flex-direction:column;gap:10px;border:2px solid var(--fg);border-radius:12px;padding:14px;background:var(--surface)}
@@ -547,7 +570,7 @@ const showLow = p => canRestricted() && isLow(p);
 const IDLE_MS = 15*60*1000;
 const TIPOS = {salida:"Sacado", entrada:"Añadido", prestamo:"Préstamo", devolucion:"Devuelto", recuento:"Recuento", alta:"Alta", ajuste:"Ajuste", edicion:"Cambio", baja:"Baja"};
 
-const S = { view:"login", code:null, q:"", products:new Map(), loaded:false, canWrite:true,
+const S = { view:"login", lista:null, code:null, q:"", products:new Map(), loaded:false, canWrite:true,
   db:null, user:null, assets:null, downloads:null, uid:null, moves:[], unMoves:null, mapSel:null, editCode:null, amount:1, busy:false, openGroups:new Set(),
   techs:[], techsLoaded:false, tecnico:null, pending:null, adminOk:false, adminDoc:undefined, adminTab:"hist", hist:[], unHist:null,
   hf:{tec:"", tipo:"", q:""}, pinFor:null, pinShow:null, normasFor:null, normasBack:null, pinVal:"", pinMsg:"", pinBusy:false, pinEdit:null, hasPassword:false, adminToken:null, sheetUrl:"", sheet:null, destino:null, destStep:"q1", destNew:false, empresa:"", comunidad:"", clientes:[], appClients:[], listClients:[], proveedores:[], loans:[], rc:{shelf:"",counts:{},cur:null,val:"",done:{},w:false}, qrCm:4, qrSkip:new Set(), cat:null, catVer:null, catLoading:false, catSku:null, prefill:null, catImp:null, plate:null, niv:{}, lados:{}, fam:{}, baldas:{}, bars:new Map(), bar:"", barPick:null, minQ:"", pp:null, ppTab:"porpedir", ppSel:null, ppArr:null, ppQ:"", ppCode:"", ppLines:[{v:"",c:""}], ppLoading:false, ppMark:new Set(), alb:null, albs:null, adminWant:null, lastActive:Date.now(), tabId:Math.random().toString(36).slice(2) };
@@ -581,7 +604,8 @@ function go(view, extra={}){
   const from=S.view, fromCode=S.code;
   if (S.unMoves && !(view==="ficha" && extra.code===S.code)) { S.unMoves(); S.unMoves=null; S.moves=[]; }
   if (!S.tecnico && !OPEN_VIEWS.has(view)) { if(view==="ficha"&&extra.code) S.pending=extra.code; view="login"; extra={}; }
-  if (S.tecnico && !S.destino && view!=="destino" && view!=="login" && view!=="normas") { if(view==="ficha"&&extra.code) S.pending=extra.code; view="destino"; extra={}; }
+  if (S.tecnico && !isTec() && !S.destino && view!=="destino" && view!=="login" && view!=="normas") { if(view==="ficha"&&extra.code) S.pending=extra.code; view="destino"; extra={}; }
+  if (isTec() && !S.lista && view==="ficha") { if(extra.code) S.pending=extra.code; view="buscar"; extra={}; }
   if (!(view==="ficha" && extra.code===S.code)) S.sheet=null;
   S.prefill=null; S.newBar=null; S.editBar=null;
   if(view!=="alta"&&view!=="editar") resumeClear();
@@ -594,10 +618,10 @@ function go(view, extra={}){
 /* ---------- Views ---------- */
 function render(){
   if(!VIEWS[S.view]) S.view="buscar";
-  $("#back").hidden = (S.view==="buscar"&&!S.browse) || S.view==="login" || (S.view==="destino" && !S.destino);
+  $("#back").hidden = (S.view==="buscar"&&!S.browse) || S.view==="login" || (S.view==="destino" && !S.destino && !isTec());
   $("#rotag").hidden = S.canWrite;
   const who=$("#who"); who.hidden=!S.tecnico; if(S.tecnico) $("#whoname").textContent=S.tecnico.nombre;
-  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", normas:"Normas", destino:"¿Para qué es?", etiquetas:"Etiquetas", alta:"Nuevo producto", sacar:"Sacar"};
+  const titles={login:"Almacén Marcres", buscar:"Almacén", catitem:"Ficha", ficha:"Ficha", mapa:"Mapa", editar:S.editCode?"Editar producto":"Nuevo producto", barra:"Código de barras", admin:"Restringido", normas:"Normas", destino:"¿Para qué es?", ticket:"Ticket", etiquetas:"Etiquetas", alta:"Nuevo producto", sacar:"Sacar", mover:"Mover de estante"};
   if(S.view==="admin"&&isAdmNew()) titles.admin=ADM_TITLES[S.adminTab]||"Restringido";
   if(S.view==="buscar"&&S.browse) titles.buscar="Buscar";
   $("#title").textContent = titles[S.view]; $("#title").classList.toggle("long", titles[S.view].length>12);
@@ -606,7 +630,7 @@ function render(){
   drawLblFab();
   const nl=$("#netlink"); if(nl) nl.hidden=!canRestricted();
 }
-const VIEWS={normas:viewNormas, login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest, etiquetas:viewLblCart, alta:viewAlta, sacar:viewCart};
+const VIEWS={normas:viewNormas, login:viewLogin, buscar:viewSearch, catitem:viewCatItem, ficha:viewFicha, mapa:viewMap, editar:viewEdit, barra:viewBar, admin:viewAdmin, destino:viewDest, etiquetas:viewLblCart, alta:viewAlta, sacar:viewCart, mover:viewMove, ticket:viewTicket};
 
 const LOGIN_MIN=3;
 function techMatches(q){
@@ -724,15 +748,15 @@ async function pinKey(k){
   wait("Comprobando…");
   try{
     let r;
-    try{ r=await api("api_pinLogin", t.id, S.pinVal); }
-    catch(e){ if(!(e&&e.code==="slow")) throw e; wait("Google está tardando. Lo intento otra vez…"); r=await api("api_pinLogin", t.id, S.pinVal); }
+    try{ r=await api("api_pinLogin", t.id, S.pinVal, devId()); }
+    catch(e){ if(!(e&&e.code==="slow")) throw e; wait("Google está tardando. Lo intento otra vez…"); r=await api("api_pinLogin", t.id, S.pinVal, devId()); }
     S.pinBusy=false; S.pinFor=null; S.pinVal=""; S.pinMsg="";
     if(!normasOk(t)){ S.normasFor={t, tk:r.tk}; return viewNormas(); }
     enter(t, r.tk);
   }catch(err){
     S.pinBusy=false; S.pinVal="";
     const c=err&&err.code;
-    S.pinMsg=c==="pinwrong"?(err.left>0?`PIN incorrecto. ${err.left===1?"Te queda 1 intento":`Te quedan ${err.left} intentos`}.`:"PIN incorrecto. Espera 15 minutos o pide a Xavi o Nicusor un PIN nuevo."):c==="pinlock"?"Demasiados intentos. Espera 15 minutos o pide a Xavi o Nicusor un PIN nuevo.":c==="network"?netMsg():c==="slow"?"Google no contesta. Espera un momento y vuelve a escribir tu PIN.":"No se ha podido comprobar el PIN. Inténtalo otra vez.";
+    S.pinMsg=c==="pinwrong"?(err.left>0?`PIN incorrecto. ${err.left===1?"Te queda 1 intento":`Te quedan ${err.left} intentos`}.`:"PIN incorrecto. Espera 15 minutos o pide a Xavi o Nicusor un PIN nuevo."):c==="pinlock"?"Demasiados intentos. Espera 15 minutos o pide a Xavi o Nicusor un PIN nuevo.":c==="otherdev"?OTHERDEV_MSG:c==="network"?netMsg():c==="slow"?"Google no contesta. Espera un momento y vuelve a escribir tu PIN.":"No se ha podido comprobar el PIN. Inténtalo otra vez.";
     if(S.view==="login"&&S.pinFor) viewPin();
     if(navigator.vibrate) navigator.vibrate(120);
   }
@@ -745,6 +769,7 @@ function viewLogin(){
   app.innerHTML = `<section class="login">
     <div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
     <h2>¿Quién eres?</h2>
+    ${S.loginMsg?`<div class="sheet albmsg" role="alert">${esc(S.loginMsg)}</div>`:""}
     <p class="note">Escribe tu nombre o apellido y tócalo para entrar. Cada producto que saques o ingreses quedará registrado a tu nombre.</p>
     ${!S.techsLoaded?loaderHtml("Cargando técnicos…"):
       !any?'<div class="empty">Todavía no hay técnicos en la lista. Se añaden desde «Acceso restringido».</div>':
@@ -755,7 +780,7 @@ function viewLogin(){
   </section>`;
   const q=$("#l_q");
   if(q){
-    q.oninput=()=>{ S.loginQ=q.value; drawLoginResults(); };
+    q.oninput=()=>{ S.loginQ=q.value; if(S.loginMsg){ S.loginMsg=""; const m=app.querySelector("[role=alert]"); if(m) m.remove(); } drawLoginResults(); };
     q.onkeydown=e=>{ if(e.key==="Enter"){ const m=techMatches(q.value); if(m.length===1) login(m[0]); } };
     drawLoginResults();
     setTimeout(()=>{ try{ q.focus(); }catch(e){} },50);
@@ -780,20 +805,41 @@ function canRestricted(){
   const t=S.techs.find(x=>x.id===S.tecnico.id);
   return !!(t&&t.restringido&&t.activo!==false);
 }
-function login(t){
+/* Un solo móvil por técnico (Xavi, 27-11-2026): each phone keeps a random id; the server ties it to the technician
+   the first time they enter and refuses any other phone or computer. Administrativos can enter from anywhere. */
+const OTHERDEV_MSG="Este no es tu móvil. Solo puedes entrar desde tu móvil. Si has cambiado de móvil, pide a Xavi o a Nicusor que te lo cambien.";
+function devId(){
+  try{
+    let d=localStorage.getItem("almacen_dev");
+    if(!d||!/^[a-z0-9]{12,40}$/.test(d)){ d=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,"0")).join(""); localStorage.setItem("almacen_dev",d); }
+    return d;
+  }catch(e){ return ""; }
+}
+async function login(t){
   if(t.restringido){ S.admFor=t; S.admMsg=""; S.loginQ=""; return viewAdmEnter(); }
   if(t.pin){ S.pinFor=t; S.pinVal=""; S.pinMsg=""; S.loginQ=""; return viewPin(); }
-  enter(t,"");
+  /* Without a PIN the phone is still checked (and registered the first time). */
+  if(S.busy) return; S.busy=true;
+  let tk="";
+  try{ const r=await api("api_pinLogin", t.id, "", devId()); tk=r&&r.tk||""; }
+  catch(err){
+    S.busy=false;
+    if(err&&err.code==="otherdev"){ S.loginMsg=OTHERDEV_MSG; if(S.view==="login") viewLogin(); return; }
+    if(!(err&&(err.code==="network"||err.code==="slow"||oldServer(err)))){ toast("No se ha podido entrar. Inténtalo otra vez."); return; }
+  }
+  S.busy=false;
+  enter(t,tk);
 }
 function enter(t, tk){
   S.tecnico={id:t.id,nombre:t.nombre,tk:tk||""}; S.lastActive=Date.now(); S.loginQ="";
   S.destino=null; S.destStep="q1"; S.destNew=false; S.empresa=""; S.comunidad="";
-  go("destino");
+  if(!t.restringido){ listaLoad(); go(S.pending&&S.lista?"ficha":"buscar", S.pending&&S.lista?{code:S.pending}:{}); if(S.lista) S.pending=null; }
+  else go("destino");
   toast(`Hola, ${t.nombre}`);
 }
 function logout(msg){
   if(S.cat&&S.cat.admin) S.cat={ver:S.cat.ver, items:S.cat.items.map(r=>r.slice(0,4)), admin:false};
-  S.tecnico=null; S.admFor=null; S.admNew=false; S.browse=false; S.histM={}; S.histRecent=false; S.cart=null; S.pinFor=null; S.pinShow=null; S.normasFor=null; S.pinVal=""; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{},w:false};
+  S.tecnico=null; S.lista=null; S.admFor=null; S.admNew=false; S.browse=false; S.histM={}; S.histRecent=false; S.cart=null; S.pinFor=null; S.pinShow=null; S.normasFor=null; S.pinVal=""; S.adminOk=false; S.adminToken=null; S.changePw=false; S.hist=[]; S.q=""; S.sheet=null; S.destino=null; S.destStep="q1"; S.empresa=""; S.comunidad=""; S.rc={shelf:"",counts:{},cur:null,val:"",done:{},w:false};
   go("login"); if(msg) toast(msg);
 }
 
@@ -826,6 +872,7 @@ function homeGroups(all){
   return room("main","📦")+room("cb","⚡")+flat("prestamos",LOAN_LOC,"🔁")+flat("none",NO_LOC,"❔");
 }
 function viewSearch(){
+  if(isTec()) return viewTecHome();
   if(isAdmNew()&&!S.browse) return viewTiles();
   const q = S.q.trim().toLowerCase();
   const all = [...S.products.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
@@ -868,6 +915,128 @@ function viewSearch(){
   app.querySelectorAll("details[data-g]").forEach(d=>d.addEventListener("toggle",e=>{ if(e.target!==d) return; d.open?S.openGroups.add(d.dataset.g):S.openGroups.delete(d.dataset.g); groupsSave(); }));
 }
 
+/* ---------- App sencilla para técnicos (Xavi, 27-11-2026) ----------
+   «Como si fueran críos de 5 años»: al entrar solo «¿Para dónde es?» (una comunidad, mi furgoneta o almacén/taller).
+   Luego una lista como el carro del súper para ese sitio: escanean uno tras otro, cada producto se apunta en el momento
+   y al «Finalizar lista» sale un ticket y «¿Necesitas para más comunidades?». Los administrativos siguen como antes. */
+const isTec = () => !!S.tecnico && !canRestricted();
+const LISTA_KEY = () => "almacen_lista_"+(S.tecnico?S.tecnico.id:"");
+const VAN_KEY = () => "almacen_van_"+(S.tecnico?S.tecnico.id:"");
+const dayKey = () => new Date().toLocaleDateString("es-ES");
+function listaSave(){ try{ if(S.lista) localStorage.setItem(LISTA_KEY(),JSON.stringify(S.lista)); else localStorage.removeItem(LISTA_KEY()); }catch(e){} }
+function listaLoad(){
+  S.lista=null;
+  try{ const l=JSON.parse(localStorage.getItem(LISTA_KEY())||"null"); if(l&&l.dest&&Array.isArray(l.items)&&l.day===dayKey()) S.lista=l; }catch(e){}
+  S.destino=S.lista?S.lista.dest:null;
+}
+function startLista(d){
+  S.lista={dest:d, items:[], day:dayKey(), at:Date.now()}; S.destino=d; S.q=""; listaSave();
+  const c=S.pending; S.pending=null;
+  if(c&&S.products.has(c)) go("ficha",{code:c}); else go("buscar");
+}
+function endLista(){ S.lista=null; S.destino=null; S.q=""; listaSave(); }
+function listaAdd(p,delta,loan){
+  if(!S.lista||!isTec()||!p||!delta) return;
+  const it=S.lista.items.find(x=>x.code===p.codigo&&!!x.loan===!!loan);
+  if(it){ it.delta+=delta; if(!it.delta) S.lista.items=S.lista.items.filter(x=>x!==it); }
+  else S.lista.items.push({code:p.codigo, nombre:p.nombre, delta, loan:!!loan});
+  listaSave();
+}
+const listaLabel = d => !d?"—":d.tipo==="almacen"?"Almacén / taller":d.tipo==="furgoneta"?`Furgoneta ${d.matricula}`:d.comunidad;
+function myVan(){ try{ const v=JSON.parse(localStorage.getItem(VAN_KEY())||"null"); return v&&v.matricula?v:null; }catch(e){ return null; } }
+function vanSave(d){ try{ localStorage.setItem(VAN_KEY(),JSON.stringify({matricula:d.matricula,empresa:d.empresa||""})); }catch(e){} }
+function myLoansHtml(){
+  return myLoans().length?`<div><div class="label" style="margin-bottom:6px">Lo que tienes prestado</div><div class="list">${myLoans().map(l=>`<div class="loan"><span class="txt"><div class="name">${esc(l.producto)}</div><div class="sub">${since(l.salida)}</div></span><button class="btn" data-ret="${esc(l.id)}">Devolver</button></div>`).join("")}</div></div>`:"";
+}
+function viewTecHome(){
+  const L=S.lista, first=esc(S.tecnico.nombre.split(" ")[0]);
+  if(!L){
+    const van=myVan();
+    app.innerHTML=`<section class="tec">
+      <div class="hello">Hola, ${first} 👋</div>
+      <h2 class="tq">¿Para dónde es?</h2>
+      ${S.pending?`<p class="note">Primero elige para dónde es. Después se abre el producto.</p>`:""}
+      <button class="tchoice" id="t_com"><span class="ci">🏢</span><span><b>UNA COMUNIDAD</b><small>Lista para una comunidad</small></span></button>
+      <button class="tchoice" id="t_van"><span class="ci">🚐</span><span><b>MI FURGONETA</b>${van?`<small>${esc(van.matricula)}</small>`:""}</span></button>
+      <button class="tchoice" id="t_alm"><span class="ci">📦</span><span><b>ALMACÉN / TALLER</b></span></button>
+      ${van?'<button class="linkbtn" id="t_van2">Hoy llevo otra furgoneta</button>':""}
+      ${myLoansHtml()}
+      <button class="linkbtn" id="tomap">🏭 Ver el mapa</button>
+    </section>`;
+    $("#t_com").onclick=()=>{ S.destStep="com"; S.destNew=false; S.comunidad=""; go("destino"); setTimeout(()=>{ const i=$("#pk_com"); if(i) i.focus(); },50); };
+    $("#t_van").onclick=()=>{ if(van) startLista({tipo:"furgoneta",matricula:van.matricula,empresa:van.empresa,comunidad:`Furgoneta ${van.matricula}`}); else { S.destStep="van"; go("destino"); } };
+    const v2=$("#t_van2"); if(v2) v2.onclick=()=>{ S.destStep="van"; go("destino"); };
+    $("#t_alm").onclick=()=>startLista({tipo:"almacen"});
+    $("#tomap").onclick=()=>go("mapa",{mapSel:null});
+    bindLoanButtons();
+    return;
+  }
+  const q=S.q.trim(), words=qWords(S.q);
+  const bk=isBarText(S.q)?barKey(S.q):null, byBar=bk?S.bars.get(bk):null;
+  const hits=q?[...S.products.values()].filter(p=>p.codigo===byBar||hasWords(p.codigo+" "+p.nombre+" "+(p.descripcion||"")+" "+barsOf(p.codigo).join(" "),words)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")):[];
+  app.innerHTML=`<section class="tec">
+    <div class="tdest"><span>Lista para</span><b>${esc(listaLabel(L.dest))}</b></div>
+    ${q?"":'<button class="giant" id="scan"><span class="gt">📷 Escanear</span><small>Apunta al QR del producto</small></button>'}
+    <div class="search big"><input id="q" type="search" inputmode="search" placeholder="🔍 Buscar por nombre" value="${esc(S.q)}" autocomplete="off" aria-label="Buscar por nombre"></div>
+    ${q?(hits.length?searchMap(hits)+`<div class="list">${shown(hits).slice(0,40).map(productRow).join("")}</div>`:`<div class="list"><div class="empty">No hay nada con «${esc(S.q)}». Prueba con otra palabra.</div></div>`)
+      :`${L.items.length?`<div class="tlist">${L.items.map(it=>`<div class="tli${it.delta>0?" in":""}"><span>${esc(it.nombre)}${it.loan?" 🔁":""}</span><b>${it.delta>0?"+"+it.delta:-it.delta}</b></div>`).join("")}</div>
+        <button class="tfin" id="t_fin">🧾 FINALIZAR LISTA</button>`
+        :`<p class="note" style="text-align:center">Todavía no hay nada. Escanea el primer producto.</p><button class="linkbtn" id="t_change">Me he equivocado de sitio</button>`}
+      ${myLoansHtml()}
+      <button class="linkbtn" id="tomap">🏭 Ver el mapa</button>`}
+  </section>`;
+  const qi=$("#q");
+  qi.addEventListener("input",()=>{ S.q=qi.value; S.qShelf=null; const pos=qi.selectionStart; viewTecHome(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} });
+  qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ const p=S.products.get(normCode(qi.value))||(isBarText(qi.value)&&prodByBar(qi.value)); if(p){ S.q=""; go("ficha",{code:p.codigo}); } }});
+  if(q) bindSearchMap(hits);
+  const sc=$("#scan"); if(sc) sc.onclick=()=>{ S.scanFor=null; openScanner(); };
+  const fin=$("#t_fin"); if(fin) fin.onclick=()=>go("ticket");
+  const ch=$("#t_change"); if(ch) ch.onclick=()=>{ endLista(); go("buscar"); };
+  const tm=$("#tomap"); if(tm) tm.onclick=()=>go("mapa",{mapSel:null});
+  bindLoanButtons();
+}
+function viewTecFicha(p){
+  const img=imgFor(p), sh=allOut(p)?LOAN_LOC:locOf(p), niv=nivLabel(p);
+  const allLoans=S.loans.filter(l=>l.codigo===p.codigo).sort((a,b)=>a.salida-b.salida);
+  const mine=allLoans.filter(l=>S.tecnico&&l.tecnicoId===S.tecnico.id);
+  const off=S.busy;
+  app.innerHTML=`<section class="ficha tec">
+    ${S.lista?`<div class="tdest small"><span>Para</span><b>${esc(listaLabel(S.lista.dest))}</b></div>`:""}
+    <div class="photo${img?"":" nophoto"}">${img?`<img src="${img}" alt="Foto de ${esc(p.nombre)}" id="f_img">`:esc(initials(p.nombre))}</div>
+    <div><h2 style="margin:0">${esc(p.nombre)}</h2><div class="thay">${p.prestamo?"Quedan":"Hay"} <b>${p.cantidad}</b> · ${esc(sh.name)}${niv?", "+esc(niv):""}</div>
+      ${p.descripcion?`<p class="note" style="margin:4px 0 0">${esc(p.descripcion)}</p>`:""}</div>
+    ${!S.canWrite?`<p class="note">Tienes acceso de solo lectura.</p>`:`<div class="tbig">
+      <button class="tbb out" id="t_out" ${off||p.cantidad<1?"disabled":""}>➖ ME LLEVO</button>
+      <button class="tbb in" id="t_in" ${off||(p.prestamo&&!allLoans.length)?"disabled":""}>➕ DEVUELVO</button></div>`}
+    ${p.cantidad<1?`<p class="note" style="text-align:center">No queda ninguno en el almacén.</p>`:""}
+    ${whereBlock(p)}
+  </section>`;
+  const fm=$("#f_map"); if(fm){ markMap(fm,{[locKey(p)]:0},{pin:true,room:fm.dataset.room}); fm.onclick=()=>go("mapa",{mapSel:locKey(p)}); }
+  if(!S.canWrite) return;
+  $("#t_out").onclick=()=>p.prestamo?lend(p.codigo):askQty(p,-1);
+  $("#t_in").onclick=()=>{ if(!p.prestamo) return askQty(p,1); const l=mine[0]||allLoans[0]; if(l) returnLoan(l); };
+}
+function viewTicket(){
+  const L=S.lista; if(!L||!isTec()){ go("buscar"); return; }
+  const uds=L.items.reduce((t,i)=>t+Math.abs(i.delta),0);
+  const when=new Date().toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  app.innerHTML=`<section class="tec">
+    <div class="ticket">
+      <div class="c"><b>ALMACÉN MARCRES · RIVAGUA</b><br>${esc(when)} · ${esc(S.tecnico.nombre.split(" ")[0])}</div><hr>
+      <div class="c"><b>${esc(listaLabel(L.dest).toUpperCase())}</b>${L.dest.empresa?`<br>${esc(L.dest.empresa)}`:""}</div><hr>
+      ${L.items.map(i=>`<div class="r"><span>${Math.abs(i.delta)} ${esc(i.nombre)}</span><span>${i.delta<0?"sale":"vuelve"}</span></div>`).join("")}<hr>
+      <div class="r"><b>${L.items.length} PRODUCTO${L.items.length===1?"":"S"}</b><b>${uds} UDS.</b></div>
+      <div class="c">Todo queda apuntado. ¡Gracias!</div>
+    </div>
+    <h2 class="tmore">¿Necesitas para más comunidades?</h2>
+    <div class="tyn"><button class="y" id="tk_yes">SÍ</button><button class="n" id="tk_no">NO, YA ESTÁ</button></div>
+    <button class="linkbtn" id="tk_back">‹ Seguir con esta lista</button>
+  </section>`;
+  $("#tk_yes").onclick=()=>{ endLista(); S.destStep="com"; S.destNew=false; S.comunidad=""; go("destino"); };
+  $("#tk_no").onclick=()=>{ endLista(); go("buscar"); toast("Lista terminada. ¡Buen trabajo!"); };
+  $("#tk_back").onclick=()=>go("buscar");
+}
+
 /* Tocar la foto la abre a pantalla completa, entera. */
 function openImg(src){
   const v=document.createElement("div"); v.className="imgview"; v.innerHTML=`<img src="${String(src).replace("sz=w800","sz=w2000")}" alt=""><button type="button" aria-label="Cerrar">✕</button>`;
@@ -880,6 +1049,7 @@ function viewFicha(){
     const ci=S.loaded&&catByCode(S.code);
     if(ci){ go("catitem",{catSku:ci[0]}); return; }
     app.innerHTML=S.loaded?`<div class="empty">No existe ningún producto con el código <b>${esc(S.code)}</b>.</div><button class="btn block" id="b2">Ir al buscador</button>`:loaderHtml("Cargando…")+`<button class="btn block" id="b2">Ir al buscador</button>`; $("#b2").onclick=()=>go("buscar"); return; }
+  if(isTec()) return viewTecFicha(p);
   const sh = locOf(p);
   const img = imgFor(p);
   const low = showLow(p);
@@ -916,6 +1086,7 @@ function viewFicha(){
     ${p.prestamo&&S.adminOk&&loans.length?`<div><div class="label" style="margin-bottom:6px">Quién la tiene</div><div class="list">${loans.map(loanRow).join("")}</div></div>`:""}
     ${S.adminOk?`<div><div class="label" style="margin-bottom:6px">Últimos movimientos</div><div class="log" id="log"></div></div>`:""}
     ${S.canWrite&&!S.sheet?(p.prestamo&&!S.adminOk?`<button class="btn block" id="edit">Editar producto</button>`:`<div class="twobtn"><button class="btn" id="toggleLoan" ${S.busy?"disabled":""}>${p.prestamo?"Quitar de préstamos":"Llevar"}</button><button class="btn" id="edit">Editar producto</button></div>`):''}
+    ${canAlta()&&!p.prestamo?`<button class="btn block" id="f_move">↔ Cambiar de estante</button>`:""}
     ${canRestricted()?`<button class="btn block lbladd${lblHas(p.codigo)?" primary":""}" id="f_lbl" aria-pressed="${lblHas(p.codigo)}">${lblHas(p.codigo)?"✓ En la lista de etiquetas":"🏷️ Imprimir etiqueta"}</button>${lblHas(p.codigo)?'<p class="note" style="margin:-6px 0 0">Toca otra vez para quitarlo de la lista.</p>':""}`:""}
   </section>`;
   renderLog();
@@ -923,6 +1094,7 @@ function viewFicha(){
   bindBarLine(p);
   const fm=$("#f_map"); if(fm){ markMap(fm,{[locKey(p)]:0},{pin:true,room:fm.dataset.room}); fm.onclick=()=>go("mapa",{mapSel:locKey(p)}); }
   $("#loc").onclick=()=>go("mapa",{mapSel:locKey(p)});
+  const fmv=$("#f_move"); if(fmv) fmv.onclick=()=>startMove([p.codigo]);
   const fl=$("#f_lbl"); if(fl) fl.onclick=()=>{ const on=!lblHas(p.codigo); lblToggle(p.codigo); toast(on?"Añadida a la lista de etiquetas.":"Quitada de la lista de etiquetas."); render(); };
   if(!S.canWrite) return;
   app.querySelectorAll("[data-dchange]").forEach(b=>b.onclick=changeDest);
@@ -975,6 +1147,7 @@ function destFields(){ const d=S.destino; if(!d) return {}; return d.tipo==="alm
 function changeDest(){ S.destStep="q1"; S.destNew=false; S.comunidad=""; go("destino"); }
 function exactClient(){ const i=$("#pk_com"); if(!i||!S.empresa) return null; const q=fold(i.value); return q?S.clientes.find(c=>fold(c.nombre)===q&&(!c.empresa||c.empresa===S.empresa))||null:null; }
 function finishDest(d){
+  if(isTec()){ S.destStep="q1"; S.destNew=false; if(d.tipo==="furgoneta") vanSave(d); startLista(d); return; }
   S.destino=d; S.destStep="q1"; S.destNew=false;
   const c=S.pending; S.pending=null;
   if(c&&S.products.has(c)) go("ficha",{code:c}); else go("buscar");
@@ -1002,7 +1175,7 @@ function viewDest(){
     $("#d_van").onclick=()=>{ veil(); S.destStep="van"; viewDest(); setTimeout(()=>{const i=$("#v_q"); if(i) i.focus();},50); };
     return;
   }
-  $("#d_back").onclick=()=>{ veil(); S.destStep="q1"; viewDest(); };
+  $("#d_back").onclick=()=>{ if(isTec()){ S.destStep="q1"; go("buscar"); return; } veil(); S.destStep="q1"; viewDest(); };
   if(st==="van"){ const i=$("#v_q"); i.oninput=drawVans; drawVans(); return; }
   bindPicker();
   $("#d_ok").onclick=()=>{
@@ -1091,7 +1264,7 @@ async function lend(code){
     const r=await api("api_lend", tecAuth(), code, S.destino);
     p.cantidad=r.next; remember("qty",code,r.next); remember("added",r.loan.id,r.loan);
     S.loans=[...S.loans.filter(l=>l.id!==r.loan.id), r.loan]; saveCache({loans:S.loans});
-    toast(`Apuntado: te llevas ${p.nombre}. Al devolverla vuelve a ${locOf(p).name.toLowerCase()}.`); refreshMoves();
+    toast(`Apuntado: te llevas ${p.nombre}. Al devolverla vuelve a ${locOf(p).name.toLowerCase()}.`); refreshMoves(); listaAdd(p,-1,true);
   }catch(err){
     if(err&&err.code==="gone") toast("Este producto ya no existe.");
     else if(err&&err.code==="none") toast("No queda ninguna disponible.");
@@ -1106,7 +1279,7 @@ async function returnLoan(l){
     const r=await api("api_return", tecAuth(), l.id);
     remember("gone",l.id,true); S.loans=S.loans.filter(x=>x.id!==l.id); saveCache({loans:S.loans});
     const p=S.products.get(l.codigo); if(p&&!r.gone){ p.cantidad=r.next; remember("qty",l.codigo,r.next); }
-    toast(p?`Devuelta: ${l.producto} vuelve a ${locOf(p).name.toLowerCase()}.`:`${l.producto} devuelto.`); refreshMoves();
+    toast(p?`Devuelta: ${l.producto} vuelve a ${locOf(p).name.toLowerCase()}.`:`${l.producto} devuelto.`); refreshMoves(); if(p) listaAdd(p,1,true);
   }catch(err){
     if(err&&err.code==="done"){ remember("gone",l.id,true); S.loans=S.loans.filter(x=>x.id!==l.id); saveCache({loans:S.loans}); toast("Este préstamo ya estaba devuelto."); }
     else handleWriteError(err);
@@ -1355,7 +1528,7 @@ function markMap(box, marks, opt={}){
       svg.insertBefore(mk("line",{x1:dx,y1:dy,x2:cx,y2:cy,class:"route"}),first);
       svg.appendChild(mk("circle",{cx:dx,cy:dy,r:6,class:"doordot"}));
     }
-    if(opt.pin) svg.appendChild(mk("text",{x:cx,y:Math.max(16,b.y-2),"text-anchor":"middle",class:"pin"},"📍"));
+    if(opt.pin) svg.appendChild(mk("text",{x:cx,y:cy+4,"text-anchor":"middle",class:"pin"},"📍"));
     if(marks[k]){ const x=Math.min(345,b.x+b.width), y=Math.max(12,b.y); svg.appendChild(mk("circle",{cx:x,cy:y,r:11,class:"cnt"})); svg.appendChild(mk("text",{x,y:y+4.5,"text-anchor":"middle",class:"cntt"},String(marks[k]))); }
   });
 }
@@ -1377,6 +1550,68 @@ function bindSearchMap(hits){
   const a=$("#q_all"); if(a) a.onclick=()=>{ S.qShelf=null; viewSearch(); };
 }
 
+/* ---------- Mover de estante (Xavi, 25-11-2026): uno o varios productos a otro estante, tocando el mapa.
+   Desde la ficha (ese producto) o desde el Mapa (eliges cuáles del estante). Luego el estante nuevo en el plano,
+   la balda y el lado. Solo administrativos. Guarda cada producto con su número de siempre. ---------- */
+function startMove(codes, from){
+  const first=S.products.get(codes[0]), k=from||(first?locKey(first):"");
+  S.mv={from:from||null, codes:new Set(codes), to:"", room:SHELVES[k]?roomOf(k):"main", niv:0, lado:"", busy:false};
+  go("mover");
+}
+function viewMove(){
+  const M=S.mv; if(!M){ go("buscar"); return; }
+  const pool=M.from?[...S.products.values()].filter(p=>locKey(p)===M.from&&!allOut(p)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")):[...M.codes].map(c=>S.products.get(c)).filter(Boolean);
+  const sel=pool.filter(p=>M.codes.has(p.codigo)), n=M.to?nBaldas(M.to):0, to=SHELVES[M.to];
+  const ok=sel.length&&to&&M.niv&&M.lado&&!M.busy;
+  app.innerHTML=`<section class="mover">
+    <div class="label">1 · ${M.from?`¿Qué mueves de ${esc(locName(M.from))}?`:"Lo que mueves"}</div>
+    ${M.from?`<div class="links"><button class="btn" id="mv_all">Marcar todos</button><button class="btn" id="mv_none">Ninguno</button></div>`:""}
+    <div class="list">${pool.length?pool.map(p=>`<label class="mvrow${M.codes.has(p.codigo)?" on":""}">${M.from?`<input type="checkbox" data-mv="${esc(p.codigo)}" ${M.codes.has(p.codigo)?"checked":""}>`:""}<span class="txt"><div class="name">${esc(p.nombre)}</div><div class="code">${esc(p.codigo)} · ahora en ${esc(locName(locKey(p)))}${nivLabel(p)?" · "+esc(nivLabel(p)):""}</div></span></label>`).join(""):'<div class="empty">No hay productos en este estante.</div>'}</div>
+    <div class="label">2 · Toca el estante nuevo en el plano</div>
+    <div class="roomtabs">${Object.entries(ROOMS).map(([k,v])=>`<button data-mroom="${k}" aria-pressed="${M.room===k}">${v}</button>`).join("")}</div>
+    <div class="map" id="mv_map">${roomSvgOf(M.room,M.to)}</div>
+    ${to?`<p class="mvto"><span class="dot" style="background:${to.color}"></span>Estante nuevo: <b>${esc(to.name)}</b></p>
+    <div class="label">3 · ¿En qué balda?</div>
+    <div class="mvniv">${[...Array(n)].map((_,j)=>n-j).map(i=>`<button class="btn${M.niv===i?" primary":""}" data-mniv="${i}">${esc(nivName(i,n))}${n>3?` <small>(${i})</small>`:""}</button>`).join("")}</div>
+    <div class="label">4 · ¿Qué lado?</div>
+    <div class="mvlado">${Object.entries(LADOS).map(([k,v])=>`<button class="btn${M.lado===k?" primary":""}" data-mlado="${k}">${v}</button>`).join("")}</div>
+    ${M.niv?`<div class="rack">${rack3d(to.color,M.niv,n,M.lado)}</div>`:""}`:'<p class="note" style="text-align:center">Toca el estante a donde lo llevas. Si está en el otro almacén, cambia arriba.</p>'}
+    <button class="btn block cartgo" id="mv_go" ${ok?"":"disabled"}>${M.busy?"Moviendo…":`✓ Mover ${sel.length||""} ${sel.length===1?"producto":"productos"}${to?" a "+esc(to.name):""}`}</button>
+    <p class="note" style="text-align:center">Cada producto sigue con su número y su cantidad. Solo cambia dónde está.</p>
+  </section>`;
+  app.querySelectorAll("[data-mv]").forEach(c=>c.onchange=()=>{ c.checked?M.codes.add(c.dataset.mv):M.codes.delete(c.dataset.mv); viewMove(); });
+  const ma=$("#mv_all"); if(ma) ma.onclick=()=>{ pool.forEach(p=>M.codes.add(p.codigo)); viewMove(); };
+  const mn=$("#mv_none"); if(mn) mn.onclick=()=>{ M.codes.clear(); viewMove(); };
+  app.querySelectorAll("[data-mroom]").forEach(b=>b.onclick=()=>{ M.room=b.dataset.mroom; viewMove(); });
+  const mm=$("#mv_map");
+  if(M.to&&roomOf(M.to)===M.room) markMap(mm,{[M.to]:0},{pin:true});
+  mm.querySelectorAll("[data-shelf]").forEach(g=>g.onclick=()=>{ const k=g.dataset.shelf; if(!SHELVES[k]) return; M.to=k; if(M.niv>nBaldas(k)) M.niv=0; viewMove(); setTimeout(()=>{ const l=app.querySelector(".mvniv"); if(l) l.scrollIntoView({behavior:"smooth",block:"center"}); },50); });
+  app.querySelectorAll("[data-mniv]").forEach(b=>b.onclick=()=>{ M.niv=+b.dataset.mniv; viewMove(); });
+  app.querySelectorAll("[data-mlado]").forEach(b=>b.onclick=()=>{ M.lado=b.dataset.mlado; viewMove(); });
+  $("#mv_go").onclick=()=>doMoveShelf(sel);
+}
+async function doMoveShelf(list){
+  const M=S.mv; if(!M||M.busy||!list.length||!M.to||!M.niv||!M.lado) return;
+  M.busy=true; viewMove();
+  let done=0;
+  try{
+    for(const p of list){
+      if(list.length>1) toast(`Moviendo… ${done+1} de ${list.length}`);
+      const r=await api("api_saveProduct", tecAuth(), {codigo:p.codigo, nombre:p.nombre, descripcion:p.descripcion||"", ubicacion:M.to, foto:p.foto||"", prestamo:!!p.prestamo, proveedor:p.proveedor||"", minimo:Number(p.minimo)||0, cantidad:p.cantidad, nivel:M.niv, lado:M.lado}, false);
+      p.ubicacion=(r&&r.product&&r.product.ubicacion)||M.to;
+      S.niv[p.codigo]=(r&&r.product&&r.product.nivel)||String(M.niv); S.lados[p.codigo]=(r&&r.product&&r.product.lado)||M.lado;
+      done++;
+    }
+    const to=M.to; S.mv=null;
+    toast(`Hecho: ${done} producto${done===1?"":"s"} en ${SHELVES[to].name}.`);
+    if(list.length===1) go("ficha",{code:list[0].codigo}); else go("mapa",{mapSel:to});
+  }catch(err){
+    M.busy=false; list.slice(0,done).forEach(p=>M.codes.delete(p.codigo));
+    if(done) toast(`Se movieron ${done}. Vuelve a pulsar para mover el resto.`);
+    handleWriteError(err); if(S.view==="mover") viewMove();
+  }
+}
+
 function viewMap(){
   const sel=S.mapSel;
   if(sel&&SHELVES[sel]) S.mapRoom=roomOf(sel);
@@ -1390,6 +1625,7 @@ function viewMap(){
       <div class="list">${items.length?items.map(productRow).join(""):'<div class="empty">No hay productos en esta ubicación.</div>'}</div>`
       :'<p class="note">Toca un estante para ver qué hay en él.</p>'}
     ${shelfRack(sel)}
+    ${canAlta()&&sel&&(SHELVES[sel]||sel==="none")&&items.length?`<button class="btn block" id="m_mv">↔ Mover productos de este estante</button>`:""}
     ${S.adminOk&&S.adminToken&&sel&&(SHELVES[sel]||sel==="none")&&items.length?`<button class="btn block" id="m_qr">🏷️ Imprimir los QR de este estante (${items.length})</button>`:""}
     ${S.code&&S.products.get(S.code)?`<button class="btn block" id="toficha">Volver a ${esc(S.products.get(S.code).nombre)}</button>`:""}`;
   app.querySelectorAll("[data-shelf]").forEach(el=>{
@@ -1398,6 +1634,7 @@ function viewMap(){
   });
   app.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ S.mapRoom=b.dataset.room; if(S.mapSel&&SHELVES[S.mapSel]&&roomOf(S.mapSel)!==S.mapRoom) S.mapSel=null; viewMap(); });
   const tf=$("#toficha"); if(tf) tf.onclick=()=>go("ficha",{code:S.code});
+  const mmv=$("#m_mv"); if(mmv) mmv.onclick=()=>startMove([],sel);
   const mq=$("#m_qr"); if(mq) mq.onclick=()=>{ S.qrShelf=sel; S.qrQ=""; S.qrNoBar=false; S.qrSkip.clear(); if(isAdmNew()) openAdm("qr"); else { S.adminTab="qr"; go("admin"); } };
   app.querySelectorAll("[data-shift]").forEach(b=>b.onclick=()=>shelfShift(S.mapSel, +b.dataset.shift));
   app.querySelectorAll("[data-alllado]").forEach(b=>b.onclick=()=>shelfLado(S.mapSel, b.dataset.alllado));
@@ -2341,8 +2578,8 @@ function viewAdmEnter(){
     S.admBusy=true; $("#ae_go").disabled=true; const m=$("#ae_msg"); m.textContent="Comprobando…"; m.classList.add("wait");
     try{
       let r;
-      try{ r=await api("api_adminEnter", t.id, v); }
-      catch(e1){ if(!(e1&&e1.code==="slow")) throw e1; m.textContent="Google está tardando. Lo intento otra vez…"; r=await api("api_adminEnter", t.id, v); }
+      try{ r=await api("api_adminEnter", t.id, v, devId()); }
+      catch(e1){ if(!(e1&&e1.code==="slow")) throw e1; m.textContent="Google está tardando. Lo intento otra vez…"; r=await api("api_adminEnter", t.id, v, devId()); }
       S.admBusy=false; S.admFor=null; S.admMsg="";
       S.adminToken=r.token; S.adminOk=true; S.admNew=true; S.browse=false; S.hist=[]; S.histM={};
       if(!normasOk(t)){ S.normasFor={t, tk:r.tk}; return viewNormas(); }
@@ -3345,12 +3582,13 @@ function viewTechs(){
   const G=isGestor(), me=S.techs.find(x=>S.tecnico&&x.id===S.tecnico.id), sinPin=list.filter(t=>!t.pin).length;
   const trow=t=>`<div class="trow tpin"><span class="name">${esc(t.nombre)}${t.prueba?'<span class="pill">Prueba</span>':""}
       <span class="pinst ${t.pin?"ok":"no"}">${t.pin?(S.pinShow?(S.pinShow[t.id]?`🔑 PIN: <b class="pinval">${esc(S.pinShow[t.id])}</b>`:"🔑 Tiene PIN (puesto antes: vuelve a ponerlo para verlo)"):"🔑 Tiene PIN"):"Sin PIN"}</span>
-      <span class="pinst ${normasOk(t)?"ok":"mut"}">${normasOk(t)?"📄 Aceptó las normas el "+new Date(t.normas.fecha).toLocaleDateString("es-ES"):"Sin aceptar las normas"}</span></span>
-      ${G?`<span class="tbtns"><button class="btn" data-pin="${esc(t.id)}">${t.pin?"Cambiar PIN":"Poner PIN"}</button>${t.restringido?"":`<button class="linkbtn danger" data-del="${esc(t.id)}">Quitar</button>`}</span>`:""}</div>
+      <span class="pinst ${normasOk(t)?"ok":"mut"}">${normasOk(t)?"📄 Aceptó las normas el "+new Date(t.normas.fecha).toLocaleDateString("es-ES"):"Sin aceptar las normas"}</span>
+      ${t.restringido?"":`<span class="pinst ${t.movil?"ok":"mut"}">${t.movil?"📱 Su móvil, desde el "+new Date(t.movil).toLocaleDateString("es-ES"):"📱 Aún no ha entrado con su móvil"}</span>`}</span>
+      ${G?`<span class="tbtns"><button class="btn" data-pin="${esc(t.id)}">${t.pin?"Cambiar PIN":"Poner PIN"}</button>${t.restringido||!t.movil?"":`<button class="btn" data-dev="${esc(t.id)}">Cambiar de móvil</button>`}${t.restringido?"":`<button class="linkbtn danger" data-del="${esc(t.id)}">Quitar</button>`}</span>`:""}</div>
     ${S.pinEdit===t.id?`<form class="pinedit" data-pf="${esc(t.id)}" novalidate><input id="pe_val" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="4 números" aria-label="PIN nuevo de ${esc(t.nombre)}">
       <button class="btn primary" type="submit">Guardar</button><button class="btn" type="button" id="pe_no">Cancelar</button>${t.pin?`<button class="linkbtn danger" type="button" id="pe_del">Quitar el PIN</button>`:""}</form>`:""}`;
   $("#adm").innerHTML = `
-    <p class="note">Estos nombres son los que aparecen al entrar en la app. Quien tiene PIN tiene que escribirlo para entrar.${G?"":" Solo Xavi y Nicusor pueden poner PIN y añadir o quitar personas."}</p>
+    <p class="note">Estos nombres son los que aparecen al entrar en la app. Quien tiene PIN tiene que escribirlo para entrar. Cada técnico solo puede entrar desde su móvil (el primero con el que entró) o desde un móvil u ordenador donde haya entrado un administrativo.${G?"":" Solo Xavi y Nicusor pueden poner PIN y añadir o quitar personas."}</p>
     ${G&&me&&!me.pin?'<div class="sheet albmsg">Pon primero tu propio PIN: si no, cualquiera podría entrar con tu nombre.</div>':""}
     ${G?`<button class="btn block" id="t_show">${S.pinShow?"🙈 Ocultar los PIN":"👁 Ver los PIN"}</button>`:""}
     ${sinPin?`<p class="note"><b>${sinPin}</b> persona${sinPin===1?"":"s"} todavía sin PIN: entra${sinPin===1?"":"n"} solo con el nombre.</p>`:""}
@@ -3384,6 +3622,13 @@ function viewTechs(){
     c.hidden=false; c.innerHTML=`<span>¿Quitar a <b>${esc(t.nombre)}</b> de la lista? Su historial se conserva.</span><div class="twobtn"><button class="btn" id="tc_no">Cancelar</button><button class="btn out" id="tc_yes">Quitar</button></div>`;
     $("#tc_no").onclick=()=>{c.hidden=true;};
     $("#tc_yes").onclick=async()=>{ try{ await api("api_removeTech", S.adminToken, t.id); toast(`${t.nombre} quitado`); await poll(); if(S.view==="admin"&&S.adminTab==="tec") viewTechs(); }catch(err){ adminError(err); } };
+  });
+  app.querySelectorAll("[data-dev]").forEach(b=>b.onclick=()=>{
+    const t=list.find(x=>x.id===b.dataset.dev); const c=$("#t_confirm");
+    c.hidden=false; c.innerHTML=`<span>¿Liberar el móvil de <b>${esc(t.nombre)}</b>? El próximo móvil con el que entre quedará como el suyo.</span><div class="twobtn"><button class="btn" id="tc_no">Cancelar</button><button class="btn primary" id="tc_yes">Liberar</button></div>`;
+    c.scrollIntoView({block:"center"});
+    $("#tc_no").onclick=()=>{c.hidden=true;};
+    $("#tc_yes").onclick=async()=>{ try{ const r=await api("api_devReset", S.adminToken, t.id); if(r.techs) S.techs=r.techs; toast(`Listo: ${t.nombre} ya puede entrar con su móvil nuevo.`); }catch(err){ if(err&&err.code==="auth") toast("Solo Xavi y Nicusor pueden cambiar el móvil."); else if(oldServer(err)) toast(OLD_SERVER_MSG); else adminError(err); } if(S.view==="admin"&&S.adminTab==="tec") viewTechs(); };
   });
   $("#t_pw").onclick=()=>{ S.changePw=true; viewAdminLock(); };
 }
@@ -3621,13 +3866,13 @@ function askQty(p,sign){
   if(sign<0&&p.cantidad<1){ toast("No queda ninguno en el almacén."); return; }
   const el=sheetEl(), max=sign<0?p.cantidad:Infinity;
   el.innerHTML=`<div class="qcard">
-    <div class="qtitle">${sign<0?"¿Cuántos sacas?":"¿Cuántos añades?"}</div>
+    <div class="qtitle">${isTec()?(sign<0?"¿Cuántos te llevas?":"¿Cuántos devuelves?"):sign<0?"¿Cuántos sacas?":"¿Cuántos añades?"}</div>
     <div class="note">${esc(p.nombre)} · hay ${p.cantidad}</div>
     ${sign<0&&canRestricted()?`<div class="paraq"><button type="button" class="linkbtn" id="q_para">👤 ¿Para quién? <small>(opcional)</small></button>
       <div id="q_pbox" hidden><div id="q_chips" class="chips"></div><input id="q_pq" type="search" autocomplete="off" placeholder="Nombre del técnico"><div id="q_psug" class="chips"></div></div></div>`:""}
-    <div class="qnums">${[1,2,3,4,5,10].map(n=>`<button class="qn" data-n="${n}" ${n>max?"disabled":""}>${n}</button>`).join("")}</div>
+    <div class="qnums">${(isTec()?[1,2,3,4,5,6,8,10]:[1,2,3,4,5,10]).map(n=>`<button class="qn" data-n="${n}" ${n>max?"disabled":""}>${n}</button>`).join("")}${isTec()?'<button class="qn qot" id="q_more">Otro</button>':""}</div>
     <div class="qother" id="q_other" hidden><input id="q_val" type="number" inputmode="numeric" min="1" step="1" placeholder="Cantidad"><button class="btn primary" id="q_ok">Vale</button></div>
-    <button class="btn block" id="q_more">Otro número</button>
+    ${isTec()?"":'<button class="btn block" id="q_more">Otro número</button>'}
     <button class="btn block" id="q_cancel">Cancelar</button></div>`;
   el.hidden=false;
   /* Administrativos: who it is for (several people allowed); goes to the history as «Para: …». */
@@ -3655,8 +3900,20 @@ async function doMove(p,delta,undo,para){
   const code=p.codigo;
   const pr=move(code,delta,true,para);
   const q=S.products.get(code);
-  if(undo){ closeSheet(); if(await pr) toast("Deshecho. Hay "+(S.products.get(code)||q).cantidad+"."); return; }
+  if(undo){ closeSheet(); if(await pr){ listaAdd(p,delta); toast("Deshecho. Hay "+(S.products.get(code)||q).cantidad+"."); } return; }
   const el=sheetEl();
+  if(isTec()){
+    /* Técnicos: big green screen, then back to their list by itself after 3 s. */
+    listaAdd(p,delta);
+    el.innerHTML=`<div class="qdone"><div class="qcheck">✓</div><div class="qbig">${delta<0?"TE LLEVAS":"DEVUELVES"} ${Math.abs(delta)}</div><div class="qsub">${esc(p.nombre)}</div><div class="qsub">para ${esc(destLabel())}</div>
+      <button class="btn block" id="q_undo">↩ Me he equivocado</button><div class="qsub" style="font-size:15px;opacity:.85">Vuelve a la lista solo en 3 segundos</div></div>`;
+    el.hidden=false;
+    $("#q_undo").onclick=()=>doMove(S.products.get(code)||p,-delta,true);
+    el.onclick=null;
+    clearTimeout(closeSheet._t); closeSheet._t=setTimeout(()=>{ closeSheet(); if(S.view==="ficha") go("buscar",{q:""}); },3000);
+    if(!(await pr)){ listaAdd(p,-delta); closeSheet(); }
+    return;
+  }
   el.innerHTML=`<div class="qdone"><div class="qcheck">✓</div><div class="qbig">${delta<0?"Has sacado":"Has añadido"} ${Math.abs(delta)}</div><div class="qsub">${delta<0?"Quedan":"Ahora hay"} ${q?q.cantidad:""} · Para ${esc(destLabel())}</div>${para?`<div class="qsub">👤 ${esc(para)}</div>`:""}
     <button class="btn block" id="q_undo">↩ Me he equivocado, deshacer</button><button class="btn block" id="q_home">Volver al inicio</button><button class="btn block" id="q_stay">Seguir aquí</button></div>`;
   el.hidden=false;
@@ -3920,7 +4177,7 @@ async function openScanner(){
         if(!found&&SCAN.cand) $("#scanmsg").textContent="Leyendo el código… no muevas el móvil";
       }
       if(found){ SCAN.cand=null;
-        if(!S.scanFor||S.scanFor==="count") pickScan(found,fmt);   // several labels may be together: show the name and wait for OK
+        if((!S.scanFor&&!isTec())||S.scanFor==="count") pickScan(found,fmt);   // several labels may be together: show the name and wait for OK
         else { if(navigator.vibrate) navigator.vibrate(60); closeScanner(); handleScanText(found,fmt); } }
     }catch(e){}
     finally{ SCAN.busy=false; }
@@ -4004,7 +4261,7 @@ function applyData(r){
 function typing(){ const a=document.activeElement; return a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"); }
 /* Each publish changes APP_VERSION. The phone checks for a newer copy of the page and reloads by itself,
    so nobody stays on an old version because of the browser cache. */
-const APP_VERSION="2026-11-25.3";
+const APP_VERSION="2026-11-27.1";
 async function checkUpdate(){
   try{
     const url=location.origin+location.pathname;
@@ -4051,6 +4308,7 @@ async function poll(){
     if(rs.adm&&rs.adm.token){ S.adminToken=rs.adm.token; S.adminOk=true; S.admNew=true; }
     if(rs.view==="alta"&&rs.alta){ S.alta=rs.alta; go("alta"); toast("Seguimos con el producto que estabas dando de alta."); }
     else if(rs.view==="editar"){ go("editar",{editCode:rs.editCode||null}); toast("Seguimos donde estabas. Repite la foto."); }
+    else if(isTec()){ listaLoad(); go("buscar"); }
     else if(S.destino) go("buscar");
     else go("destino");
   }
